@@ -244,3 +244,15 @@ Consequences:
 - Canonical normalization now includes `session.experiment_description`, `subject.description`, and `subject.date_of_birth`
 - The mapping planner and PyNWB writer now carry those fields through to NWB objects
 - The next assembly expansion should move to devices, acquisition streams, and richer modality content rather than revisiting these core subject/session fields first
+
+### DEC-021: Add device support to the manifest-backed supported path before acquisition streams
+Status: Accepted
+
+Reasoning:
+- Devices are already first-class canonical models in the architecture and were the next narrow assembly slice after richer subject/session metadata.
+- This expands the supported-path pilot meaningfully without yet taking on timeseries or multimodal stream assembly complexity.
+
+Consequences:
+- `SessionManifestAdapter` now flattens list-of-dict device records into stable extracted fields
+- Rule-based normalization, mapping, and assembly now carry device metadata through to `NWBFile.create_device`
+- Device manufacturer is currently written through PyNWB's deprecated `manufacturer` argument as a temporary bridge pending a fuller `DeviceModel` design

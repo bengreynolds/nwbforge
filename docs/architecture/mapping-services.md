@@ -28,6 +28,7 @@ The first planner handles a conservative core:
 - NWB identifier seeding from session id
 - experimenter, institution, lab, keywords
 - subject id, species, sex, age, date of birth, description, genotype, strain
+- device name, description, and manufacturer
 - unmatched additional metadata as `DESCRIBE` decisions
 
 ## Design constraints
@@ -39,6 +40,6 @@ The first planner handles a conservative core:
 
 ## Immediate follow-on work
 
-1. Add device and acquisition-stream mapping decisions.
+1. Add acquisition-stream mapping decisions.
 2. Introduce lab-profile-aware mapping templates.
-3. Connect the planner to a future NWB assembly layer.
+3. Add explicit device-model policy rather than relying on temporary manufacturer bridging.

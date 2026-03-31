@@ -15,6 +15,7 @@ Location: `src/nwbforge/adapters/supported/session_manifest.py`
 Responsibilities:
 - read a structured `session_manifest.json` source from either a file or directory input
 - emit `ExtractionResult` records with stable field keys for the normalization layer
+- flatten nested device records from manifest lists into stable extracted keys
 - act as the first adapter that can flow through inspection, normalization, and mapping in integration tests
 
 ## Scope and non-goals

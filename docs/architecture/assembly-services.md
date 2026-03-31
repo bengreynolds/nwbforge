@@ -31,19 +31,19 @@ The first writer intentionally covers a narrow, high-confidence subset:
 - institution
 - keywords
 - subject id, species, sex, age, date of birth, description, genotype, strain
+- devices with name, description, and manufacturer
 
-This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved.
-
-This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved. It also brings the manifest-backed supported-path pilot to the point where writer-generated files can satisfy the current validation stack when the source provides the needed subject metadata.
+This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved. It also brings the manifest-backed supported-path pilot to the point where writer-generated files can satisfy the current validation stack when the source provides the needed subject metadata and device records.
 
 ## Design constraints
 
 - writer logic consumes normalized metadata and mapping intent, not raw source fields
 - identifier policy is currently conservative and derived from normalized session id or the conversion session id
-- the writer emits a minimal file and does not yet assemble devices, acquisitions, or multimodal content
+- the writer emits a minimal file and does not yet assemble acquisition streams or multimodal content
+- device manufacturer is currently written through PyNWB's deprecated `manufacturer` argument as a temporary bridge pending a fuller `DeviceModel` design
 
 ## Immediate follow-on work
 
-1. Expand assembly coverage to devices, acquisitions, and richer metadata.
-2. Add device and acquisition assembly without collapsing raw-source concerns into the writer.
+1. Expand assembly coverage to acquisition streams and richer modality content.
+2. Replace temporary device manufacturer bridging with a deliberate `DeviceModel` strategy.
 3. Refine identifier and metadata policy as real supported formats are integrated.
