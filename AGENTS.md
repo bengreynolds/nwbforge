@@ -42,6 +42,8 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 ## Commit Policy
 
 - Commit frequently with meaningful, scoped messages
+- When work can be split cleanly, prefer more small commits over fewer large commits
+- Do not batch multiple independent implementation steps into one commit just because they were completed in the same session
 - Separate planning/doc changes from implementation changes when practical
 - Do not squash unrelated work into a single commit just to keep history short
 
