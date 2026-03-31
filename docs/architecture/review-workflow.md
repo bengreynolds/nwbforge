@@ -39,7 +39,7 @@ Responsibilities:
 - review persistence is currently artifact-based, not database-backed
 - issue acknowledgement currently keys off validation issue refs derived from `code` and optional `location`
 - blocked approvals require an explicit override and rationale
-- execution review does not yet mutate broader session lifecycle state beyond persisted artifacts
+- execution review can now be reflected in persisted session snapshots, but history remains latest-state oriented
 
 ## Immediate follow-on work
 

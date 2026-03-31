@@ -66,6 +66,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Machine-readable JSON validation report artifacts emitted by the execution pipeline
 - Explicit validation review outcomes that classify execution results as `pass`, `review`, or `blocked`
 - Persisted review-decision artifacts that record approval, rejection, acknowledgements, and blocked overrides
+- Resumable JSON session snapshots for the latest execution and review state
 - Composite validation made up of artifact-policy checks, PyNWB schema validation, and NWB Inspector best-practice checks
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 
@@ -73,7 +74,7 @@ The supported-path pilot adapter is intentionally a repo-native fixture source f
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
-The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and a generic inline acquisition-stream path needed for the manifest-backed pilot to pass the active validation stack when the source actually provides them. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, and supports persisted post-execution review decisions so future UI flows do not need to infer or reconstruct approval state from raw warning and error lists.
+The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and a generic inline acquisition-stream path needed for the manifest-backed pilot to pass the active validation stack when the source actually provides them. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
 ## Local development
 
@@ -97,7 +98,7 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 ## Initial next steps
 
-1. Add resumable review history and broader session persistence on top of the current artifact-based approval baseline.
+1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current subject/session, device, and generic stream baseline into richer modality-specific and multimodal content.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.

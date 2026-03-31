@@ -24,6 +24,7 @@ Completed:
 - Added machine-readable validation report artifacts to the execution pipeline
 - Added an explicit validation review-outcome policy for UI and workflow consumers
 - Added persisted post-execution review decisions and override records as machine-readable artifacts
+- Added resumable JSON session snapshots for execution and review state
 - Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
@@ -32,9 +33,9 @@ In progress:
 
 Next:
 - First real supported acquisition adapter selection and spike
-- Persistence contract decisions
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
-- Review history and resumable session persistence beyond the current artifact-based approval baseline
+- Preview-state persistence and review history beyond the current latest-snapshot baseline
+- Longer-term persistence backend decision beyond the current JSON snapshot store
 
 ## Project Vision and Scope
 
@@ -123,6 +124,7 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Support partial automation with explicit human review gates
 - Produce NWB outputs that are understandable to downstream researchers
 - Persist conversion configuration, decisions, assumptions, and provenance
+- Allow users to resume recent execution and review state without reconstructing it from artifact files alone
 
 ### Non-functional requirements
 - Modular codebase with stable internal contracts
@@ -237,6 +239,7 @@ Responsibilities:
 - Route sessions into supported, custom, or hybrid flows
 - Coordinate adapters, normalization, assembly, validation, and reporting
 - Persist intermediate state and decisions
+- Expose resumable session state through explicit persistence services
 
 Key rule:
 - Orchestration knows process state, but not format-specific parsing details
@@ -335,6 +338,7 @@ Rationale:
 - `normalization/` prevents direct source-to-NWB coupling
 - `mapping/` handles assembly and merge planning
 - `validation/` and `provenance/` remain explicit first-class concerns
+- `persistence/` now provides a dedicated place for resumable session-state backends
 - `updates/` and `release/` reserve explicit space for installer and updater logic when that work begins
 
 ## UI and Workflow Design
@@ -388,6 +392,7 @@ Validation requirements:
 - Separate blocking errors from advisory warnings
 - Derive an explicit workflow-facing review outcome from validation results
 - Persist validation outputs in session artifacts
+- Persist resumable execution/review state separately from generated report artifacts
 
 Recommended report sections:
 - Inputs
@@ -575,12 +580,13 @@ Current status:
 - The pipeline now emits a machine-readable JSON validation report artifact alongside generated outputs
 - The pipeline now derives an explicit validation review outcome so UI and workflow layers do not need to infer blocking versus advisory behavior from raw issue lists
 - Post-execution review decisions can now be persisted as explicit approval/rejection artifacts with acknowledgement and blocked-override rules
+- Execution and review state can now be resumed from JSON session snapshots through a dedicated persistence store and app service
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
 - The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus generic acquisitions, but richer modality-specific and multimodal content remain out of scope
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
-- Review persistence is currently artifact-based and does not yet provide resumable session history or concurrent review handling
+- Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -629,6 +635,7 @@ Implementation references:
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
 - Review workflow note: [docs/architecture/review-workflow.md](docs/architecture/review-workflow.md)
+- Session persistence note: [docs/architecture/session-persistence.md](docs/architecture/session-persistence.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
 - Assembly note: [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md)

@@ -49,7 +49,7 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Add richer session persistence so preview and execution state can be resumed.
+1. Persist preview-stage state so the full workflow can resume before execution.
 2. Add higher-level workflow services for UI-driven review and approval checkpoints.
-3. Integrate explicit review submissions into resumable session lifecycle state once persistence contracts are settled.
-4. Connect persisted review decisions to future UI approval and override workflows.
+3. Connect persisted review decisions to future UI approval and override workflows.
+4. Add revision history instead of only the latest snapshot state.

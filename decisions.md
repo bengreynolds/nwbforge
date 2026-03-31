@@ -305,3 +305,15 @@ Consequences:
 - Warning-only executions require explicit acknowledgement before approval
 - Blocked executions require an explicit override and rationale before approval can be persisted
 - Review history is still file-artifact based and remains a future persistence concern
+
+### DEC-026: Start resumable session persistence with JSON snapshots before choosing a richer local store
+Status: Accepted
+
+Reasoning:
+- The product now has enough execution and review state that reconstructing it from separate artifacts alone is too indirect for UI workflows.
+- A file-backed snapshot store provides resumability without prematurely locking the project into SQLite or service-backed persistence.
+
+Consequences:
+- Session persistence now has an explicit domain contract and app-layer service
+- The current persistence backend stores the latest session snapshot as JSON under a configurable base directory
+- Preview-stage state and full revision history remain future work rather than being improvised into the first snapshot format
