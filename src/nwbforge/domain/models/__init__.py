@@ -1,6 +1,7 @@
 """Exports for canonical domain models."""
 
 from nwbforge.domain.models.common import NormalizedValue, ReviewIssue
+from nwbforge.domain.models.extraction import ExtractedField, ExtractionResult
 from nwbforge.domain.models.mapping import MappingDecision, MappingPlan
 from nwbforge.domain.models.normalization import (
     AcquisitionStream,
@@ -16,6 +17,8 @@ from nwbforge.domain.models.validation import ValidationIssue, ValidationSummary
 __all__ = [
     "AcquisitionStream",
     "ConversionSession",
+    "ExtractedField",
+    "ExtractionResult",
     "MappingDecision",
     "MappingPlan",
     "NormalizedDevice",

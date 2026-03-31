@@ -22,6 +22,7 @@ Key files:
 - [planning.md](planning.md): living project plan and architecture document
 - [AGENTS.md](AGENTS.md): persistent repository operating manual for human and agent contributors
 - [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md): current canonical model baseline
+- [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md): adapter and service-interface baseline
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
 - [docs/decision-log.md](docs/decision-log.md): decision history
@@ -52,6 +53,6 @@ pytest
 ## Initial next steps
 
 1. Define adapter and registry contracts for supported and custom source systems.
-2. Define service interfaces for normalization, mapping planning, provenance emission, and validation.
+2. Implement concrete application services for source inspection, normalization, mapping planning, provenance, and validation.
 3. Choose an initial supported-path pilot format and implement one end-to-end thin slice.
 4. Add representative sample fixtures from a small number of lab archetypes.

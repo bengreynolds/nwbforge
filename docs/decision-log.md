@@ -60,3 +60,15 @@ Consequences:
 - Initial implementation lives in `src/nwbforge/domain/`
 - Early tests target immutable contract behavior rather than conversion logic
 - Later orchestration, adapter, and NWB-writing layers should depend on these models instead of inventing parallel payload shapes
+
+### DEC-006: Make adapters and orchestration services contract-first
+Status: Accepted
+
+Reasoning:
+- Supported, custom, and hybrid workflows need a shared boundary between raw source inspection and downstream normalization.
+- The registry and service interfaces should stabilize before concrete adapters or application services are added.
+
+Consequences:
+- Adapter output flows through `ExtractedField` and `ExtractionResult`
+- Adapter discovery is centralized in `AdapterRegistry`
+- Orchestration-facing services should implement explicit protocols rather than exchange untyped dictionaries

@@ -3,6 +3,8 @@
 from nwbforge.domain.models import (
     AcquisitionStream,
     ConversionSession,
+    ExtractedField,
+    ExtractionResult,
     MappingDecision,
     MappingPlan,
     NormalizedDevice,
@@ -21,6 +23,8 @@ from nwbforge.domain.models import (
 __all__ = [
     "AcquisitionStream",
     "ConversionSession",
+    "ExtractedField",
+    "ExtractionResult",
     "MappingDecision",
     "MappingPlan",
     "NormalizedDevice",
