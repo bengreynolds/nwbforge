@@ -45,18 +45,29 @@ Responsibilities:
 - compose multiple validation services into one validation pass
 - preserve the separation between artifact policy, schema validation, and future best-practice inspection
 
+### `JsonValidationReportService`
+
+Location: `src/nwbforge/validation/reports.py`
+
+Responsibilities:
+- serialize validation results and provenance context into a machine-readable JSON artifact
+- write the report as a separate generated artifact rather than folding it into validation logic
+- provide a stable artifact for UI review, automation, or future distribution workflows
+
 ## Current scope
 
 The validation layer now covers:
 - output artifact policy checks
 - PyNWB schema validation for generated NWB files
 - NWB Inspector best-practice validation for generated NWB files
+- machine-readable validation report emission
 
 That makes it useful now for:
 - catching obvious output failures
 - rejecting placeholder or unreadable `.nwb` files
 - exercising the validation-service boundary with a real schema-aware validator
 - surfacing best-practice-critical metadata gaps in generated files
+- persisting validation results as reviewable JSON artifacts
 - supporting future orchestration and release workflows
 
 ## Design constraints
@@ -66,9 +77,10 @@ That makes it useful now for:
 - schema validation is composed rather than embedded into the artifact-policy service
 - NWB Inspector remains separate from schema validation instead of being folded into it
 - writer execution can now fail on best-practice-critical findings even when schema validation passes
+- report generation remains separate from validation so reporting shape can evolve without changing validators
 
 ## Immediate follow-on work
 
 1. Decide how blocking versus advisory findings should be surfaced in UI review flows.
-2. Add machine-readable validation report artifacts alongside `ValidationSummary`.
-3. Expand the writer so minimal supported outputs can satisfy current NWB Inspector critical checks.
+2. Add richer report contents such as mapping summaries and explicit manual-review sections.
+3. Expand modality-specific writing so report artifacts describe more than the current generic stream baseline.

@@ -63,6 +63,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - PyNWB-backed assembly service for the initial supported-path subject/session metadata set
 - Initial manifest-backed device support across extraction, normalization, mapping, and assembly
 - Initial manifest-backed acquisition-stream support across extraction, normalization, mapping, and generic `TimeSeries` assembly
+- Machine-readable JSON validation report artifacts emitted by the execution pipeline
 - Composite validation made up of artifact-policy checks, PyNWB schema validation, and NWB Inspector best-practice checks
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 
@@ -70,7 +71,7 @@ The supported-path pilot adapter is intentionally a repo-native fixture source f
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
-The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and a generic inline acquisition-stream path needed for the manifest-backed pilot to pass the active validation stack when the source actually provides them.
+The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and a generic inline acquisition-stream path needed for the manifest-backed pilot to pass the active validation stack when the source actually provides them. The pipeline also emits a machine-readable JSON validation report artifact alongside the generated outputs.
 
 ## Local development
 
@@ -94,7 +95,7 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 ## Initial next steps
 
-1. Add machine-readable validation reports and a clearer UI-facing severity policy.
+1. Add a clearer UI-facing severity policy and review workflow on top of the current validation/reporting baseline.
 2. Expand assembly coverage beyond the current subject/session, device, and generic stream baseline into richer modality-specific and multimodal content.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.

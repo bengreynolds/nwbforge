@@ -268,3 +268,15 @@ Consequences:
 - Manifest acquisition stream records now normalize into `AcquisitionStream` objects and map into explicit `TimeSeries[...]` decisions
 - The current writer supports inline acquisition `data`, `unit`, and either `rate` or `timestamps`
 - Richer modality-specific container choices remain a follow-on design step rather than being guessed at in the pilot path
+
+### DEC-023: Emit machine-readable validation reports as separate pipeline artifacts
+Status: Accepted
+
+Reasoning:
+- The current validation stack is useful, but downstream UI and review workflows need a stable artifact rather than only in-memory summaries.
+- Report generation should remain separate from validators so validation and reporting can evolve independently.
+
+Consequences:
+- The pipeline now writes a JSON validation report artifact after validation completes
+- Validation report generation is modeled as a separate service instead of being embedded inside validation services
+- Generated outputs now include both primary conversion artifacts and a machine-readable review/report artifact

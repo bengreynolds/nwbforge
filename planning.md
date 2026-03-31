@@ -21,6 +21,7 @@ Completed:
 - Expanded subject and session metadata coverage for the initial writer pathway
 - Added initial device support across the manifest-backed supported conversion path
 - Added initial acquisition-stream support across the manifest-backed supported conversion path
+- Added machine-readable validation report artifacts to the execution pipeline
 - Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
@@ -31,7 +32,7 @@ Next:
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
-- Validation report artifacts and UI-facing severity policy
+- UI-facing severity policy and review workflow on top of the current validation/reporting baseline
 
 ## Project Vision and Scope
 
@@ -568,6 +569,7 @@ Current status:
 - The current writer now carries richer subject/session metadata including experiment description, subject description, and subject date-of-birth support
 - The manifest-backed supported path now carries normalized devices through mapping and into the PyNWB writer
 - The manifest-backed supported path now carries inline acquisition streams through mapping and into generic NWB `TimeSeries` acquisitions
+- The pipeline now emits a machine-readable JSON validation report artifact alongside generated outputs
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
