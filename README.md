@@ -60,7 +60,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Conversion pipeline service for preview and output evaluation
 - Rule-based normalization service
 - Rule-based mapping planner
-- PyNWB-backed assembly service for minimal NWB output
+- PyNWB-backed assembly service for the initial supported-path subject/session metadata set
 - Composite validation made up of artifact-policy checks, PyNWB schema validation, and NWB Inspector best-practice checks
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 
@@ -68,7 +68,7 @@ The supported-path pilot adapter is intentionally a repo-native fixture source f
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
-The current writer still only assembles a narrow metadata subset. NWB Inspector is now integrated specifically so those remaining best-practice-critical gaps are visible instead of being masked by schema-only success.
+The current writer is still intentionally narrow overall, but it now carries the core subject/session fields needed for the manifest-backed pilot to pass the active validation stack when the source actually provides them.
 
 ## Local development
 
@@ -93,6 +93,6 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 ## Initial next steps
 
 1. Add machine-readable validation reports and a clearer UI-facing severity policy.
-2. Expand assembly coverage beyond the current minimal metadata subset, starting with the subject/session fields needed to clear current NWB Inspector critical checks.
+2. Expand assembly coverage beyond the current subject/session baseline into devices, acquisition streams, and multimodal content.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.

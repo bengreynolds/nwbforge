@@ -22,8 +22,8 @@ Responsibilities:
 ## Rule scope
 
 The initial rule set is intentionally narrow. It currently covers:
-- subject id, species, sex, age, genotype, strain
-- session id, description, start time, experimenter, institution, lab, keywords
+- subject id, species, sex, age, date of birth, description, genotype, strain
+- session id, description, experiment description, start time, experimenter, institution, lab, keywords
 
 This is enough to exercise the normalization boundary without inventing broad ontology behavior too early.
 

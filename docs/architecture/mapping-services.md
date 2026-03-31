@@ -22,11 +22,12 @@ Responsibilities:
 
 The first planner handles a conservative core:
 - session description
+- experiment description
 - session start time
 - session id
 - NWB identifier seeding from session id
 - experimenter, institution, lab, keywords
-- subject id, species, sex, age, genotype, strain
+- subject id, species, sex, age, date of birth, description, genotype, strain
 - unmatched additional metadata as `DESCRIBE` decisions
 
 ## Design constraints

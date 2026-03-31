@@ -232,3 +232,15 @@ Consequences:
 - Validation now composes `ArtifactValidationService`, `PyNWBSchemaValidationService`, and `NWBInspectorValidationService`
 - `NWBInspectorValidationService` runs with `skip_validate=True` to avoid duplicating PyNWB schema checks
 - Writer-generated NWB files can now fail execution on NWB Inspector critical findings even when schema validation passes
+
+### DEC-020: Expand the initial writer path with richer subject and session metadata before devices or acquisitions
+Status: Accepted
+
+Reasoning:
+- The next concrete value after validation integration was to close best-practice-critical gaps in the existing writer path, not jump immediately into devices or multimodal assembly.
+- The manifest-backed supported pilot can now be exercised more honestly when source metadata includes experiment description and key subject fields.
+
+Consequences:
+- Canonical normalization now includes `session.experiment_description`, `subject.description`, and `subject.date_of_birth`
+- The mapping planner and PyNWB writer now carry those fields through to NWB objects
+- The next assembly expansion should move to devices, acquisition streams, and richer modality content rather than revisiting these core subject/session fields first

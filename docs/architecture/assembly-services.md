@@ -22,6 +22,7 @@ Responsibilities:
 
 The first writer intentionally covers a narrow, high-confidence subset:
 - session description
+- experiment description
 - identifier
 - session start time
 - session id
@@ -29,11 +30,11 @@ The first writer intentionally covers a narrow, high-confidence subset:
 - lab
 - institution
 - keywords
-- subject id, species, sex, age, genotype, strain
+- subject id, species, sex, age, date of birth, description, genotype, strain
 
 This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved.
 
-With NWB Inspector now integrated, this narrow scope is also clearly insufficient for some best-practice-critical cases. In particular, subject metadata such as age or date of birth and sex still need richer assembly coverage if writer-generated files are expected to clear the current validation stack.
+This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved. It also brings the manifest-backed supported-path pilot to the point where writer-generated files can satisfy the current validation stack when the source provides the needed subject metadata.
 
 ## Design constraints
 
@@ -44,5 +45,5 @@ With NWB Inspector now integrated, this narrow scope is also clearly insufficien
 ## Immediate follow-on work
 
 1. Expand assembly coverage to devices, acquisitions, and richer metadata.
-2. Expand subject and session metadata coverage so writer-generated files can satisfy current NWB Inspector critical checks.
+2. Add device and acquisition assembly without collapsing raw-source concerns into the writer.
 3. Refine identifier and metadata policy as real supported formats are integrated.
