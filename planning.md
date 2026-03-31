@@ -10,6 +10,7 @@ Completed:
 - Initial Phase 2 domain contract baseline under `src/nwbforge/domain/`
 - Initial extraction, adapter, registry, and service-interface contracts
 - First concrete application services for source inspection and provenance
+- First concrete normalization-layer implementation
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -17,7 +18,7 @@ In progress:
 
 Next:
 - Concrete application services built on the new contracts
-- Normalization and mapping-planner implementations
+- Mapping-planner implementations
 - Validation-service implementations
 - First supported-path pilot adapter
 - Persistence contract decisions
@@ -422,7 +423,8 @@ Current status:
 - Canonical session, normalization, mapping, provenance, and validation models are in place
 - Adapter registry and service protocols are in place
 - Initial source-inspection and provenance services are in place
-- Normalization, mapping, validation, and pilot adapters remain to be implemented
+- Initial rule-based normalization is in place
+- Mapping, validation, and pilot adapters remain to be implemented
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -469,6 +471,7 @@ Implementation references:
 - Core contract note: [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md)
 - Adapter contract note: [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md)
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
+- Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 
 ## Research References
 

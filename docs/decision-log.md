@@ -84,3 +84,15 @@ Consequences:
 - `RegistrySourceInspectionService` becomes the default path for adapter-backed source inspection
 - `SessionProvenanceService` becomes the first concrete provenance builder
 - Later services should follow the same narrow, contract-driven pattern
+
+### DEC-008: Start normalization with a conservative alias-driven rule set
+Status: Accepted
+
+Reasoning:
+- The project needs a concrete normalization layer, but broad ontology inference would be premature at this stage.
+- A small declarative alias set gives us useful behavior while keeping assumptions reviewable and easy to change.
+
+Consequences:
+- `RuleBasedNormalizationService` is the current normalization baseline
+- Unknown or conflicting fields are preserved and marked for review
+- Lab-profile overrides and broader device/stream normalization remain future work
