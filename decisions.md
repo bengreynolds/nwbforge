@@ -158,3 +158,15 @@ Consequences:
 - `SessionManifestAdapter` is the first supported-path pilot adapter
 - Integration tests can now cover inspection through mapping with a deterministic source fixture
 - A real NeuroConv-backed format remains the next supported-path milestone
+
+### DEC-014: Represent preview and execution as separate orchestration stages
+Status: Accepted
+
+Reasoning:
+- The product must preserve transparency around what can be reviewed before writing outputs and what happens after outputs exist.
+- A single opaque run call would hide important checkpoints needed for UI-driven workflows and future approval gates.
+
+Consequences:
+- `ConversionPipelineService` exposes `build_preview` and `evaluate_outputs` separately
+- Preview and execution results are explicit application-layer models
+- Future writer integration should fit between preview generation and output evaluation

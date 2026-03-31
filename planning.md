@@ -14,17 +14,18 @@ Completed:
 - First concrete mapping-layer implementation
 - First concrete validation-layer implementation
 - First concrete supported-path pilot adapter and integration test flow
+- First high-level orchestration service for preview and execution evaluation
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
 - Core backend contracts
 
 Next:
-- Concrete application services built on the new contracts
 - PyNWB and NWB Inspector validation integrations
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - NWB assembly-layer design and implementation
+- Writer integration into the execution pipeline
 
 ## Project Vision and Scope
 
@@ -516,6 +517,7 @@ Current status:
 - Initial rule-based mapping planner is in place
 - Initial artifact validation is in place
 - A repo-native supported-path pilot adapter is in place for architecture validation
+- A high-level preview/execution orchestration service is in place
 - PyNWB/NWB Inspector integration, real format adapters, and assembly remain to be implemented
 
 ### Phase 3: Supported-path MVP
@@ -563,6 +565,7 @@ Implementation references:
 - Core contract note: [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md)
 - Adapter contract note: [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md)
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
+- Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
 - Validation note: [docs/architecture/validation-services.md](docs/architecture/validation-services.md)

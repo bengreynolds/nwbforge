@@ -26,6 +26,7 @@ Key files:
 - [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md): current canonical model baseline
 - [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md): adapter and service-interface baseline
 - [docs/architecture/application-services.md](docs/architecture/application-services.md): first concrete orchestration services
+- [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md): preview and execution orchestration flow
 - [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md): first normalization implementation
 - [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md): first mapping-planner implementation
 - [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
@@ -53,6 +54,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Canonical domain models for sessions, sources, normalized metadata, mapping plans, provenance, and validation summaries
 - Adapter contracts and registry
 - Concrete source-inspection and provenance services
+- Conversion pipeline service for preview and output evaluation
 - Rule-based normalization service
 - Rule-based mapping planner
 - Artifact validation service
@@ -73,7 +75,7 @@ pytest
 
 ## Initial next steps
 
-1. Integrate PyNWB and NWB Inspector into the validation layer.
-2. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
-3. Define the first NWB assembly slice that consumes the mapping plan and validation outputs.
+1. Define the first NWB assembly/writer slice and insert it into the execution pipeline.
+2. Integrate PyNWB and NWB Inspector into the validation layer.
+3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Continue release-packaging design toward installer and updater implementation once the desktop application direction is finalized.
