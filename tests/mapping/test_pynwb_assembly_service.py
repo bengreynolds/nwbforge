@@ -4,6 +4,7 @@ from pynwb import NWBHDF5IO
 
 from nwbforge.domain.enums import ConversionPathway, ValueOrigin
 from nwbforge.domain.models import (
+    AcquisitionStream,
     ConversionSession,
     MappingDecision,
     MappingPlan,
@@ -36,6 +37,20 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
                 name=NormalizedValue("Camera One", origin=ValueOrigin.ADAPTER_EXTRACTED),
                 description=NormalizedValue("Behavior camera", origin=ValueOrigin.ADAPTER_EXTRACTED),
                 manufacturer=NormalizedValue("Acme Imaging", origin=ValueOrigin.ADAPTER_EXTRACTED),
+            ),
+        ),
+        acquisition_streams=(
+            AcquisitionStream(
+                stream_id="lick-trace",
+                name=NormalizedValue("Lick Trace", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="behavior",
+                source_ids=("source-1",),
+                description=NormalizedValue("Example lick signal", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                metadata={
+                    "data": NormalizedValue([0.1, 0.2, 0.3], origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "unit": NormalizedValue("a.u.", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "rate": NormalizedValue(10.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
             ),
         ),
         session=NormalizedSessionMetadata(
@@ -84,4 +99,6 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
         assert nwbfile.subject.description == "Test subject"
         assert "Camera One" in nwbfile.devices
         assert nwbfile.devices["Camera One"].description == "Behavior camera"
+        assert "Lick Trace" in nwbfile.acquisition
+        assert list(nwbfile.acquisition["Lick Trace"].data[:]) == [0.1, 0.2, 0.3]
         assert "vision" in nwbfile.keywords

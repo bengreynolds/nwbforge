@@ -6,6 +6,7 @@ from nwbforge.domain.enums import (
     ValueOrigin,
 )
 from nwbforge.domain.models import (
+    AcquisitionStream,
     ConversionSession,
     NormalizedDevice,
     NormalizedMetadataBundle,
@@ -54,6 +55,20 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
                 manufacturer=NormalizedValue("Acme Imaging", origin=ValueOrigin.ADAPTER_EXTRACTED),
             ),
         ),
+        acquisition_streams=(
+            AcquisitionStream(
+                stream_id="lick-trace",
+                name=NormalizedValue("Lick Trace", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="behavior",
+                source_ids=("source-1",),
+                description=NormalizedValue("Example lick signal", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                metadata={
+                    "data": NormalizedValue([0.1, 0.2, 0.3], origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "unit": NormalizedValue("a.u.", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "rate": NormalizedValue(10.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
+        ),
     )
 
     plan = RuleBasedMappingPlanner().plan(make_session(), metadata)
@@ -68,6 +83,8 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
     assert "Subject.age" in target_paths
     assert "Subject.description" in target_paths
     assert "Device[camera-1].name" in target_paths
+    assert "TimeSeries[lick-trace].data" in target_paths
+    assert "TimeSeries[lick-trace].unit" in target_paths
     assert any(decision.action == MappingAction.MERGE for decision in plan.decisions)
 
 

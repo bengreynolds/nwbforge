@@ -8,6 +8,7 @@ from dataclasses import replace
 from nwbforge.domain.contracts import NormalizationService
 from nwbforge.domain.enums import ReviewStatus, ValueOrigin
 from nwbforge.domain.models import (
+    AcquisitionStream,
     ConversionSession,
     ExtractedField,
     ExtractionResult,
@@ -24,6 +25,9 @@ class RuleBasedNormalizationService(NormalizationService):
     """Normalize extracted fields with a conservative alias-driven rule set."""
 
     _DEVICE_FIELD_PATTERN = re.compile(r"^devices\.(?P<device_key>[^.]+)\.(?P<field_name>[^.]+)$")
+    _STREAM_FIELD_PATTERN = re.compile(
+        r"^acquisition_streams\.(?P<stream_key>[^.]+)\.(?P<field_name>[^.]+)$"
+    )
 
     def __init__(self, rules: NormalizationRuleSet | None = None) -> None:
         self._rules = rules or NormalizationRuleSet(field_aliases=DEFAULT_FIELD_ALIASES)
@@ -36,6 +40,7 @@ class RuleBasedNormalizationService(NormalizationService):
         subject = NormalizedSubject()
         session_metadata = NormalizedSessionMetadata()
         devices: dict[str, NormalizedDevice] = {}
+        acquisition_streams: dict[str, AcquisitionStream] = {}
         additional_metadata: dict[str, NormalizedValue[object]] = {}
 
         for result in extraction_results:
@@ -47,6 +52,18 @@ class RuleBasedNormalizationService(NormalizationService):
                     devices[device_key] = self._assign_device(
                         devices.get(device_key),
                         device_key=device_key,
+                        field_name=field_name,
+                        extracted_field=extracted_field,
+                    )
+                    continue
+
+                stream_match = self._STREAM_FIELD_PATTERN.match(extracted_field.key)
+                if stream_match is not None:
+                    stream_key = stream_match.group("stream_key")
+                    field_name = stream_match.group("field_name")
+                    acquisition_streams[stream_key] = self._assign_acquisition_stream(
+                        acquisition_streams.get(stream_key),
+                        stream_key=stream_key,
                         field_name=field_name,
                         extracted_field=extracted_field,
                     )
@@ -85,6 +102,9 @@ class RuleBasedNormalizationService(NormalizationService):
             subject=subject,
             session=session_metadata,
             devices=tuple(devices[key] for key in sorted(devices)),
+            acquisition_streams=tuple(
+                acquisition_streams[key] for key in sorted(acquisition_streams)
+            ),
             additional_metadata=additional_metadata,
         )
 
@@ -149,6 +169,44 @@ class RuleBasedNormalizationService(NormalizationService):
             notes=("No device normalization rule matched this field.",),
         )
         return replace(device, additional_fields=additional_fields)
+
+    def _assign_acquisition_stream(
+        self,
+        stream: AcquisitionStream | None,
+        *,
+        stream_key: str,
+        field_name: str,
+        extracted_field: ExtractedField,
+    ) -> AcquisitionStream:
+        normalized_field_name = field_name.strip().lower().replace("-", "_")
+        stream = stream or AcquisitionStream(
+            stream_id=stream_key,
+            name=NormalizedValue(
+                value=stream_key,
+                origin=ValueOrigin.COMPUTED,
+                source_ids=(extracted_field.source_id,),
+                notes=("Filled from manifest stream key until a stream name is provided.",),
+            ),
+            modality=None,
+            source_ids=(extracted_field.source_id,),
+        )
+        merged_source_ids = tuple(dict.fromkeys(stream.source_ids + (extracted_field.source_id,)))
+
+        if normalized_field_name == "stream_id":
+            return replace(stream, stream_id=str(extracted_field.value), source_ids=merged_source_ids)
+        if normalized_field_name == "name":
+            normalized_value = self._merge_value(stream.name, extracted_field)
+            return replace(stream, name=normalized_value, source_ids=merged_source_ids)
+        if normalized_field_name == "modality":
+            return replace(stream, modality=str(extracted_field.value), source_ids=merged_source_ids)
+        if normalized_field_name in {"description", "start_time", "end_time"}:
+            current_value = getattr(stream, normalized_field_name)
+            normalized_value = self._merge_value(current_value, extracted_field)
+            return replace(stream, **{normalized_field_name: normalized_value}, source_ids=merged_source_ids)
+
+        metadata = dict(stream.metadata)
+        metadata[normalized_field_name] = self._to_value(extracted_field)
+        return replace(stream, metadata=metadata, source_ids=merged_source_ids)
 
     def _merge_value(
         self,

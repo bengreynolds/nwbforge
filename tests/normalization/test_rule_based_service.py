@@ -48,6 +48,41 @@ def test_rule_based_normalizer_maps_subject_and_session_fields() -> None:
                 "Acme Imaging",
                 "source-1",
             ),
+            "acquisition_streams.0.stream_id": ExtractedField(
+                "acquisition_streams.0.stream_id",
+                "lick-trace",
+                "source-1",
+            ),
+            "acquisition_streams.0.name": ExtractedField(
+                "acquisition_streams.0.name",
+                "Lick Trace",
+                "source-1",
+            ),
+            "acquisition_streams.0.modality": ExtractedField(
+                "acquisition_streams.0.modality",
+                "behavior",
+                "source-1",
+            ),
+            "acquisition_streams.0.description": ExtractedField(
+                "acquisition_streams.0.description",
+                "Example lick signal",
+                "source-1",
+            ),
+            "acquisition_streams.0.data": ExtractedField(
+                "acquisition_streams.0.data",
+                [0.1, 0.2, 0.3],
+                "source-1",
+            ),
+            "acquisition_streams.0.unit": ExtractedField(
+                "acquisition_streams.0.unit",
+                "a.u.",
+                "source-1",
+            ),
+            "acquisition_streams.0.rate": ExtractedField(
+                "acquisition_streams.0.rate",
+                10.0,
+                "source-1",
+            ),
             "keywords": ExtractedField("keywords", "vision, behavior", "source-1"),
         },
     )
@@ -69,6 +104,10 @@ def test_rule_based_normalizer_maps_subject_and_session_fields() -> None:
     assert len(bundle.devices) == 1
     assert bundle.devices[0].device_id == "camera-1"
     assert bundle.devices[0].name.value == "Camera One"
+    assert len(bundle.acquisition_streams) == 1
+    assert bundle.acquisition_streams[0].stream_id == "lick-trace"
+    assert bundle.acquisition_streams[0].name.value == "Lick Trace"
+    assert bundle.acquisition_streams[0].metadata["unit"].value == "a.u."
     assert tuple(keyword.value for keyword in bundle.session.keywords) == ("vision", "behavior")
 
 

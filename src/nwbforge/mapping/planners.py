@@ -29,6 +29,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
         self._map_session(metadata, decisions, issues)
         self._map_subject(metadata, decisions)
         self._map_devices(metadata, decisions)
+        self._map_acquisition_streams(metadata, decisions, issues)
         self._map_additional_metadata(metadata, decisions, issues, extension_recommendations)
 
         summary_notes = (
@@ -226,6 +227,135 @@ class RuleBasedMappingPlanner(MappingPlanner):
                 "Direct mapping for normalized device manufacturer.",
                 decisions,
             )
+
+    def _map_acquisition_streams(
+        self,
+        metadata: NormalizedMetadataBundle,
+        decisions: list[MappingDecision],
+        issues: list[ReviewIssue],
+    ) -> None:
+        for stream in metadata.acquisition_streams:
+            stream_prefix = f"acquisition_streams.{stream.stream_id}"
+            decisions.append(
+                self._decision(
+                    source_key=f"{stream_prefix}.name",
+                    value=stream.name,
+                    target_path=f"TimeSeries[{stream.stream_id}].name",
+                    action=MappingAction.DIRECT,
+                    rationale="Direct mapping for normalized acquisition stream name.",
+                )
+            )
+            if stream.description is not None:
+                decisions.append(
+                    self._decision(
+                        source_key=f"{stream_prefix}.description",
+                        value=stream.description,
+                        target_path=f"TimeSeries[{stream.stream_id}].description",
+                        action=MappingAction.DIRECT,
+                        rationale="Direct mapping for normalized acquisition stream description.",
+                    )
+                )
+            if stream.modality:
+                decisions.append(
+                    MappingDecision(
+                        source_key=f"{stream_prefix}.modality",
+                        target_path=f"TimeSeries[{stream.stream_id}].modality",
+                        action=MappingAction.DESCRIBE,
+                        rationale="Preserve stream modality as reviewable acquisition context.",
+                        source_ids=stream.source_ids,
+                    )
+                )
+            else:
+                issues.append(
+                    ReviewIssue(
+                        code="missing-stream-modality",
+                        message=f"Acquisition stream '{stream.stream_id}' is missing modality context.",
+                        severity=IssueSeverity.WARNING,
+                        field=f"{stream_prefix}.modality",
+                        source_ids=stream.source_ids,
+                    )
+                )
+
+            self._require_stream_metadata(
+                stream=stream,
+                metadata_key="data",
+                target_path=f"TimeSeries[{stream.stream_id}].data",
+                message="Acquisition streams require inline data for the current pilot writer.",
+                decisions=decisions,
+                issues=issues,
+            )
+            self._require_stream_metadata(
+                stream=stream,
+                metadata_key="unit",
+                target_path=f"TimeSeries[{stream.stream_id}].unit",
+                message="Acquisition streams require a unit for the current pilot writer.",
+                decisions=decisions,
+                issues=issues,
+            )
+
+            has_rate = "rate" in stream.metadata
+            has_timestamps = "timestamps" in stream.metadata
+            if has_rate:
+                self._optional_map(
+                    f"{stream_prefix}.rate",
+                    stream.metadata["rate"],
+                    f"TimeSeries[{stream.stream_id}].rate",
+                    "Direct mapping for acquisition stream sample rate.",
+                    decisions,
+                )
+            if has_timestamps:
+                self._optional_map(
+                    f"{stream_prefix}.timestamps",
+                    stream.metadata["timestamps"],
+                    f"TimeSeries[{stream.stream_id}].timestamps",
+                    "Direct mapping for acquisition stream timestamps.",
+                    decisions,
+                )
+            if not has_rate and not has_timestamps:
+                issues.append(
+                    ReviewIssue(
+                        code="missing-stream-timing",
+                        message=(
+                            f"Acquisition stream '{stream.stream_id}' requires either rate or timestamps "
+                            "for the current pilot writer."
+                        ),
+                        severity=IssueSeverity.ERROR,
+                        field=f"{stream_prefix}.rate",
+                        source_ids=stream.source_ids,
+                    )
+                )
+
+    def _require_stream_metadata(
+        self,
+        *,
+        stream,
+        metadata_key: str,
+        target_path: str,
+        message: str,
+        decisions: list[MappingDecision],
+        issues: list[ReviewIssue],
+    ) -> None:
+        value = stream.metadata.get(metadata_key)
+        if value is None:
+            issues.append(
+                ReviewIssue(
+                    code=f"missing-stream-{metadata_key}",
+                    message=f"Acquisition stream '{stream.stream_id}' {message}",
+                    severity=IssueSeverity.ERROR,
+                    field=f"acquisition_streams.{stream.stream_id}.{metadata_key}",
+                    source_ids=stream.source_ids,
+                )
+            )
+            return
+        decisions.append(
+            self._decision(
+                source_key=f"acquisition_streams.{stream.stream_id}.{metadata_key}",
+                value=value,
+                target_path=target_path,
+                action=MappingAction.DIRECT,
+                rationale=f"Direct mapping for acquisition stream {metadata_key}.",
+            )
+        )
 
     def _require_and_map(
         self,

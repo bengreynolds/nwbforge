@@ -80,7 +80,7 @@ class NormalizedDevice:
 class AcquisitionStream:
     stream_id: str
     name: NormalizedValue[str]
-    modality: str
+    modality: str | None
     source_ids: tuple[str, ...]
     description: NormalizedValue[str] | None = None
     start_time: NormalizedValue[str] | None = None

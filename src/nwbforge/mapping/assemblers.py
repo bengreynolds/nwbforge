@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from pynwb import NWBHDF5IO, NWBFile
+from pynwb import NWBHDF5IO, NWBFile, TimeSeries
 from pynwb.file import Subject
 
 from nwbforge.domain.contracts import AssemblyService
@@ -45,6 +45,8 @@ class PyNWBAssemblyService(AssemblyService):
                 description=self._optional_text(device.description),
                 manufacturer=self._optional_text(device.manufacturer),
             )
+        for stream in metadata.acquisition_streams:
+            nwbfile.add_acquisition(self._timeseries(stream))
 
         with NWBHDF5IO(path=str(output_file), mode="w") as io:
             io.write(nwbfile)
@@ -124,3 +126,49 @@ class PyNWBAssemblyService(AssemblyService):
         if not any(values.values()):
             return None
         return Subject(**{key: value for key, value in values.items() if value is not None})
+
+    @classmethod
+    def _timeseries(cls, stream) -> TimeSeries:
+        data = cls._required_stream_metadata(stream, "data")
+        unit = str(cls._required_stream_metadata(stream, "unit"))
+        kwargs = {
+            "name": str(stream.name.value),
+            "data": data,
+            "unit": unit,
+            "description": cls._optional_text(stream.description) or "no description",
+        }
+        continuity = cls._optional_stream_metadata(stream, "continuity")
+        if continuity is not None:
+            kwargs["continuity"] = str(continuity)
+
+        timestamps = cls._optional_stream_metadata(stream, "timestamps")
+        rate = cls._optional_stream_metadata(stream, "rate")
+        if timestamps is not None:
+            kwargs["timestamps"] = timestamps
+        elif rate is not None:
+            kwargs["rate"] = float(rate)
+            starting_time = cls._optional_stream_metadata(stream, "starting_time")
+            if starting_time is not None:
+                kwargs["starting_time"] = float(starting_time)
+        else:
+            raise ValueError(
+                f"Acquisition stream '{stream.stream_id}' requires either timestamps or rate for writing."
+            )
+
+        return TimeSeries(**kwargs)
+
+    @staticmethod
+    def _required_stream_metadata(stream, key: str):
+        value = stream.metadata.get(key)
+        if value is None or value.value in (None, ""):
+            raise ValueError(
+                f"Acquisition stream '{stream.stream_id}' is missing required metadata '{key}'."
+            )
+        return value.value
+
+    @staticmethod
+    def _optional_stream_metadata(stream, key: str):
+        value = stream.metadata.get(key)
+        if value is None or value.value in (None, ""):
+            return None
+        return value.value

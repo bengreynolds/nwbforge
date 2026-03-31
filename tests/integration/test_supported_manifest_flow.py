@@ -37,6 +37,17 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
                         "manufacturer": "Acme Imaging",
                     }
                 ],
+                "acquisition_streams": [
+                    {
+                        "stream_id": "lick-trace",
+                        "name": "Lick Trace",
+                        "modality": "behavior",
+                        "description": "Example lick signal",
+                        "data": [0.1, 0.2, 0.3],
+                        "unit": "a.u.",
+                        "rate": 10.0,
+                    }
+                ],
                 "keywords": ["vision", "behavior"],
                 "operator_note": "check sync alignment",
             }
@@ -69,7 +80,10 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
     assert normalized.subject.sex is not None
     assert len(normalized.devices) == 1
     assert normalized.devices[0].name.value == "Camera One"
+    assert len(normalized.acquisition_streams) == 1
+    assert normalized.acquisition_streams[0].name.value == "Lick Trace"
     assert any(decision.target_path == "NWBFile.session_description" for decision in plan.decisions)
     assert any(decision.target_path == "NWBFile.experiment_description" for decision in plan.decisions)
     assert any(decision.target_path == "Device[camera-1].name" for decision in plan.decisions)
+    assert any(decision.target_path == "TimeSeries[lick-trace].data" for decision in plan.decisions)
     assert any(decision.source_key == "operator_note" for decision in plan.decisions)
