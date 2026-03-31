@@ -30,8 +30,10 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 ## Planning-First Rule
 
 - Read [planning.md](planning.md) before starting implementation work
+- Keep [AGENTS.md](AGENTS.md), [planning.md](planning.md), and [decisions.md](decisions.md) current as core repository documents
 - If scope, architecture, or sequencing changes, update [planning.md](planning.md) in the same branch
 - Do not begin substantial implementation until the affected plan sections exist and are current
+- Do not implement release, installer, updater, or distribution logic before the relevant plan sections are updated
 
 ## Change-Size Rule
 
@@ -63,9 +65,10 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 ## Documentation Rules
 
 - Update [planning.md](planning.md) when architecture, scope, pathway definitions, or risks change
-- Record material decisions in [docs/decision-log.md](docs/decision-log.md)
+- Record material decisions in [decisions.md](decisions.md)
 - Add deeper research or design notes under `docs/` instead of bloating top-level files
-- Keep README concise and accurate
+- Update [README.md](README.md) once at the end of each working session to reflect current state, major changes, usage, and next steps
+- Do not update [README.md](README.md) on every commit
 
 ## Safety Rule
 

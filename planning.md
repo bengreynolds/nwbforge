@@ -36,6 +36,7 @@ In scope for the product:
 - NWB assembly using the appropriate level of abstraction
 - Validation, provenance capture, and human-readable conversion summaries
 - User review steps for ambiguous mappings
+- Formal cross-platform packaging, installation, update, and distribution support
 
 Out of scope for the first phases:
 - Fully automated interpretation of arbitrary proprietary formats without adapter work
@@ -117,6 +118,7 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Safe handling of unsupported or ambiguous mappings
 - Extensible plugin model for new labs and formats
 - Testable backend components independent of UI
+- Production-grade packaging and update story for Windows, macOS, and Linux
 
 ### Organizational constraints
 - Lab conventions will differ in naming, metadata completeness, and file layout
@@ -263,6 +265,16 @@ Responsibilities:
 Key rule:
 - Validation outcomes should inform UI review and export readiness, not just logs
 
+### Cross-cutting release and update architecture
+Responsibilities:
+- Package the application into platform-native installers
+- Provide in-app update checks and update-launch flows
+- Preserve user settings and local state across upgrades
+- Publish release artifacts and metadata consumable by the updater
+
+Key rule:
+- Release engineering is an architecture concern, not post hoc packaging glue
+
 ## Backend Module Layout
 
 Recommended Python package layout for implementation:
@@ -294,6 +306,8 @@ src/nwbforge/
     schema/
     inspector/
     reports/
+  updates/
+  release/
   provenance/
     models/
     emitters/
@@ -308,6 +322,7 @@ Rationale:
 - `normalization/` prevents direct source-to-NWB coupling
 - `mapping/` handles assembly and merge planning
 - `validation/` and `provenance/` remain explicit first-class concerns
+- `updates/` and `release/` reserve explicit space for installer and updater logic when that work begins
 
 ## UI and Workflow Design
 
@@ -368,6 +383,77 @@ Recommended report sections:
 - Validation results
 - Manual review notes
 - Known limitations and assumptions
+
+## Cross-Platform Build, Packaging, and Distribution Strategy
+
+The product must ship as a production-grade desktop application with formal releases on Windows, macOS, and Linux. This requirement does not change the current implementation sequence, but it does constrain architecture and tool choices now.
+
+### Release requirements
+- Single installer or installable package per platform release
+- Bundled runtime and dependencies
+- Support for fresh installation and updating an existing installation
+- Built-in UI updater backed by GitHub releases
+- Preservation of user settings and local configuration where feasible
+
+### Installer and packaging evaluation
+
+#### Option A: Python desktop app plus PySide6 and PyInstaller or Nuitka
+Pros:
+- Best alignment with the Python-centric codebase
+- Simplest path while backend contracts are still evolving
+- Lower coordination cost than a split frontend and backend stack
+
+Cons:
+- Native installer polish and updater behavior require additional tooling
+- macOS signing/notarization and Linux packaging still need platform-specific work
+
+#### Option B: Electron frontend plus Python sidecar
+Pros:
+- Mature updater and installer ecosystem
+- Flexible UI stack
+
+Cons:
+- Heavier distribution footprint
+- More operational complexity
+- Introduces a multi-runtime app shape earlier than needed
+
+#### Option C: Tauri frontend plus Python sidecar
+Pros:
+- Smaller footprint than Electron
+- Attractive native update capabilities
+
+Cons:
+- Still introduces sidecar packaging complexity
+- Adds Rust and web-build concerns early
+
+### Current planning bias
+- Prefer a desktop-first, Python-centric application initially
+- Evaluate PySide6 with PyInstaller or Nuitka plus platform-specific installers first
+- Defer a split frontend/backend desktop packaging model unless UX or updater constraints justify it
+
+### Update mechanism design
+- Built-in updater should query GitHub releases for the current platform
+- Updater should present release notes and version availability in the UI
+- Update flow should download the correct installer/package and launch the update process
+- User settings, lab profiles, templates, and local session state should live outside the installed app directory when possible
+
+### Versioning strategy
+- Use semantic versioning for public releases
+- Use pre-releases for departmental pilots
+- Track compatibility notes for config, plugin, and local-state changes
+
+### Release pipeline
+1. Build platform-specific application artifact
+2. Bundle runtime and dependencies
+3. Wrap artifact in platform-native installer or installable package
+4. Publish GitHub release assets and notes
+5. Updater consumes release metadata and launches update flow
+
+### Rollback and failure considerations
+- Failed updates must not corrupt user settings or session data
+- Installers should support repair or reinstall paths
+- Release metadata should support rollback to the last known-good version
+- Config and state migrations must be versioned and reversible where feasible
 
 ## Plugin and Adapter Strategy for Lab-Specific Formats
 
@@ -461,7 +547,7 @@ Current status:
 
 ## Decisions Log
 
-This file is the high-level planning document. Decision details and reversals should be recorded in [docs/decision-log.md](docs/decision-log.md).
+This file is the high-level planning document. Decision details and reversals should be recorded in [decisions.md](decisions.md).
 
 Initial decisions:
 - Use a layered architecture with explicit normalization and provenance layers.
@@ -475,6 +561,7 @@ Implementation references:
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
+- Release note: [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md)
 
 ## Research References
 
