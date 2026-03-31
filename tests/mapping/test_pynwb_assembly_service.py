@@ -52,6 +52,26 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
                     "rate": NormalizedValue(10.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
                 },
             ),
+            AcquisitionStream(
+                stream_id="animal-position",
+                name=NormalizedValue("Animal Position", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="behavior",
+                source_ids=("source-1",),
+                description=NormalizedValue("Tracked animal position", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                metadata={
+                    "behavior_type": NormalizedValue("position", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "data": NormalizedValue(
+                        [[0.0, 1.0], [1.5, 2.5], [3.0, 4.0]],
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    ),
+                    "unit": NormalizedValue("meters", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "reference_frame": NormalizedValue(
+                        "origin at top-left corner of arena",
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    ),
+                    "rate": NormalizedValue(20.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
         ),
         session=NormalizedSessionMetadata(
             session_id=NormalizedValue("session-01", origin=ValueOrigin.ADAPTER_EXTRACTED),
@@ -103,4 +123,12 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
         behavior = nwbfile.acquisition["behavior"]
         assert "Lick Trace" in behavior.time_series
         assert list(behavior.time_series["Lick Trace"].data[:]) == [0.1, 0.2, 0.3]
+        assert "position" in nwbfile.acquisition
+        position = nwbfile.acquisition["position"]
+        assert "Animal Position" in position.spatial_series
+        assert position.spatial_series["Animal Position"].data[:].tolist() == [
+            [0.0, 1.0],
+            [1.5, 2.5],
+            [3.0, 4.0],
+        ]
         assert "vision" in nwbfile.keywords

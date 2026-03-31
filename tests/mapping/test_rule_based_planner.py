@@ -68,6 +68,26 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
                     "rate": NormalizedValue(10.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
                 },
             ),
+            AcquisitionStream(
+                stream_id="animal-position",
+                name=NormalizedValue("Animal Position", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="behavior",
+                source_ids=("source-1",),
+                description=NormalizedValue("Tracked animal position", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                metadata={
+                    "behavior_type": NormalizedValue("position", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "data": NormalizedValue(
+                        [[0.0, 1.0], [1.5, 2.5], [3.0, 4.0]],
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    ),
+                    "unit": NormalizedValue("meters", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "reference_frame": NormalizedValue(
+                        "origin at top-left corner of arena",
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    ),
+                    "rate": NormalizedValue(20.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
         ),
     )
 
@@ -85,6 +105,8 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
     assert "Device[camera-1].name" in target_paths
     assert "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data" in target_paths
     assert "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].unit" in target_paths
+    assert "Position[position].SpatialSeries[animal-position].data" in target_paths
+    assert "Position[position].SpatialSeries[animal-position].reference_frame" in target_paths
     assert any(decision.action == MappingAction.MERGE for decision in plan.decisions)
 
 

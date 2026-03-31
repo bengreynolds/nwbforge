@@ -277,6 +277,18 @@ class RuleBasedMappingPlanner(MappingPlanner):
                     )
                 )
 
+            behavior_type = self._optional_stream_metadata(stream, "behavior_type")
+            if behavior_type is not None:
+                decisions.append(
+                    self._decision(
+                        source_key=f"{stream_prefix}.behavior_type",
+                        value=stream.metadata["behavior_type"],
+                        target_path=f"{target_prefix}.behavior_type",
+                        action=MappingAction.DIRECT,
+                        rationale="Preserve behavior-stream subtype in the acquisition mapping context.",
+                    )
+                )
+
             self._require_stream_metadata(
                 stream=stream,
                 metadata_key="data",
@@ -323,15 +335,45 @@ class RuleBasedMappingPlanner(MappingPlanner):
                         severity=IssueSeverity.ERROR,
                         field=f"{stream_prefix}.rate",
                         source_ids=stream.source_ids,
+                    )
                 )
-            )
+
+            if self._stream_behavior_type(stream) == "position":
+                self._require_stream_metadata(
+                    stream=stream,
+                    metadata_key="reference_frame",
+                    target_path=f"{target_prefix}.reference_frame",
+                    message=(
+                        "position behavior streams require a reference frame for "
+                        "the current spatial writer."
+                    ),
+                    decisions=decisions,
+                    issues=issues,
+                )
 
     @staticmethod
     def _stream_target_prefix(stream) -> str:
         modality = (stream.modality or "").strip().lower()
+        behavior_type = RuleBasedMappingPlanner._stream_behavior_type(stream)
+        if modality == "behavior" and behavior_type == "position":
+            return f"Position[position].SpatialSeries[{stream.stream_id}]"
         if modality == "behavior":
             return f"BehavioralTimeSeries[behavior].TimeSeries[{stream.stream_id}]"
         return f"TimeSeries[{stream.stream_id}]"
+
+    @staticmethod
+    def _stream_behavior_type(stream) -> str:
+        value = RuleBasedMappingPlanner._optional_stream_metadata(stream, "behavior_type")
+        if value is None:
+            return ""
+        return str(value).strip().lower()
+
+    @staticmethod
+    def _optional_stream_metadata(stream, key: str):
+        value = stream.metadata.get(key)
+        if value is None or value.value in (None, ""):
+            return None
+        return value.value
 
     def _require_stream_metadata(
         self,

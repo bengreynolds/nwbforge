@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from pynwb import NWBHDF5IO, NWBFile, TimeSeries
-from pynwb.behavior import BehavioralTimeSeries
+from pynwb.behavior import BehavioralTimeSeries, Position, SpatialSeries
 from pynwb.file import Subject
 
 from nwbforge.domain.contracts import AssemblyService
@@ -130,8 +130,17 @@ class PyNWBAssemblyService(AssemblyService):
     @classmethod
     def _write_acquisition_streams(cls, nwbfile: NWBFile, metadata: NormalizedMetadataBundle) -> None:
         behavior_container: BehavioralTimeSeries | None = None
+        position_container: Position | None = None
         for stream in metadata.acquisition_streams:
             modality = cls._stream_modality(stream)
+            behavior_type = cls._stream_behavior_type(stream)
+            if modality == "behavior" and behavior_type == "position":
+                if position_container is None:
+                    position_container = Position(name="position")
+                    nwbfile.add_acquisition(position_container)
+                position_container.add_spatial_series(cls._spatial_series(stream))
+                continue
+
             timeseries = cls._timeseries(stream)
             if modality == "behavior":
                 if behavior_container is None:
@@ -171,11 +180,47 @@ class PyNWBAssemblyService(AssemblyService):
 
         return TimeSeries(**kwargs)
 
+    @classmethod
+    def _spatial_series(cls, stream) -> SpatialSeries:
+        data = cls._required_stream_metadata(stream, "data")
+        reference_frame = str(cls._required_stream_metadata(stream, "reference_frame"))
+        unit = str(cls._required_stream_metadata(stream, "unit"))
+        kwargs = {
+            "name": str(stream.name.value),
+            "data": data,
+            "reference_frame": reference_frame,
+            "unit": unit,
+            "description": cls._optional_text(stream.description) or "no description",
+        }
+
+        timestamps = cls._optional_stream_metadata(stream, "timestamps")
+        rate = cls._optional_stream_metadata(stream, "rate")
+        if timestamps is not None:
+            kwargs["timestamps"] = timestamps
+        elif rate is not None:
+            kwargs["rate"] = float(rate)
+            starting_time = cls._optional_stream_metadata(stream, "starting_time")
+            if starting_time is not None:
+                kwargs["starting_time"] = float(starting_time)
+        else:
+            raise ValueError(
+                f"Acquisition stream '{stream.stream_id}' requires either timestamps or rate for writing."
+            )
+
+        return SpatialSeries(**kwargs)
+
     @staticmethod
     def _stream_modality(stream) -> str:
         if stream.modality is None:
             return ""
         return str(stream.modality).strip().lower()
+
+    @classmethod
+    def _stream_behavior_type(cls, stream) -> str:
+        value = cls._optional_stream_metadata(stream, "behavior_type")
+        if value is None:
+            return ""
+        return str(value).strip().lower()
 
     @staticmethod
     def _required_stream_metadata(stream, key: str):

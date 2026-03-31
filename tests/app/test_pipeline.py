@@ -58,6 +58,17 @@ def make_manifest_session(tmp_path: Path) -> ConversionSession:
                         "data": [0.1, 0.2, 0.3],
                         "unit": "a.u.",
                         "rate": 10.0,
+                    },
+                    {
+                        "stream_id": "animal-position",
+                        "name": "Animal Position",
+                        "modality": "behavior",
+                        "behavior_type": "position",
+                        "description": "Tracked animal position",
+                        "data": [[0.0, 1.0], [1.5, 2.5], [3.0, 4.0]],
+                        "unit": "meters",
+                        "reference_frame": "origin at top-left corner of arena",
+                        "rate": 20.0,
                     }
                 ],
                 "keywords": ["vision", "behavior"],
@@ -129,12 +140,16 @@ def test_pipeline_build_preview_chains_existing_services(tmp_path: Path) -> None
     assert preview.normalized_metadata.subject.subject_id is not None
     assert preview.normalized_metadata.subject.age is not None
     assert len(preview.normalized_metadata.devices) == 1
-    assert len(preview.normalized_metadata.acquisition_streams) == 1
+    assert len(preview.normalized_metadata.acquisition_streams) == 2
     assert preview.provenance_record.adapter_ids == ("session_manifest",)
     assert any(decision.target_path == "NWBFile.session_description" for decision in preview.mapping_plan.decisions)
     assert any(decision.target_path == "Device[camera-1].name" for decision in preview.mapping_plan.decisions)
     assert any(
         decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data"
+        for decision in preview.mapping_plan.decisions
+    )
+    assert any(
+        decision.target_path == "Position[position].SpatialSeries[animal-position].data"
         for decision in preview.mapping_plan.decisions
     )
 
@@ -192,6 +207,8 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
         nwbfile = io.read()
         assert "behavior" in nwbfile.acquisition
         assert "Lick Trace" in nwbfile.acquisition["behavior"].time_series
+        assert "position" in nwbfile.acquisition
+        assert "Animal Position" in nwbfile.acquisition["position"].spatial_series
     report_path = execution.output_artifacts[1].location
     assert report_path.exists() is True
     report_payload = json.loads(report_path.read_text(encoding="utf-8"))

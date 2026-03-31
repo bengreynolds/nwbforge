@@ -46,6 +46,17 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
                         "data": [0.1, 0.2, 0.3],
                         "unit": "a.u.",
                         "rate": 10.0,
+                    },
+                    {
+                        "stream_id": "animal-position",
+                        "name": "Animal Position",
+                        "modality": "behavior",
+                        "behavior_type": "position",
+                        "description": "Tracked animal position",
+                        "data": [[0.0, 1.0], [1.5, 2.5], [3.0, 4.0]],
+                        "unit": "meters",
+                        "reference_frame": "origin at top-left corner of arena",
+                        "rate": 20.0,
                     }
                 ],
                 "keywords": ["vision", "behavior"],
@@ -80,13 +91,21 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
     assert normalized.subject.sex is not None
     assert len(normalized.devices) == 1
     assert normalized.devices[0].name.value == "Camera One"
-    assert len(normalized.acquisition_streams) == 1
-    assert normalized.acquisition_streams[0].name.value == "Lick Trace"
+    assert len(normalized.acquisition_streams) == 2
+    stream_names = {stream.stream_id: stream.name.value for stream in normalized.acquisition_streams}
+    assert stream_names == {
+        "lick-trace": "Lick Trace",
+        "animal-position": "Animal Position",
+    }
     assert any(decision.target_path == "NWBFile.session_description" for decision in plan.decisions)
     assert any(decision.target_path == "NWBFile.experiment_description" for decision in plan.decisions)
     assert any(decision.target_path == "Device[camera-1].name" for decision in plan.decisions)
     assert any(
         decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data"
+        for decision in plan.decisions
+    )
+    assert any(
+        decision.target_path == "Position[position].SpatialSeries[animal-position].data"
         for decision in plan.decisions
     )
     assert any(decision.source_key == "operator_note" for decision in plan.decisions)
