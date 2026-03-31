@@ -24,11 +24,17 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
         subject=NormalizedSubject(
             subject_id=NormalizedValue("mouse-01", origin=ValueOrigin.ADAPTER_EXTRACTED),
             species=NormalizedValue("Mus musculus", origin=ValueOrigin.ADAPTER_EXTRACTED),
+            sex=NormalizedValue("U", origin=ValueOrigin.ADAPTER_EXTRACTED),
+            age=NormalizedValue("P90D", origin=ValueOrigin.ADAPTER_EXTRACTED),
+            description=NormalizedValue("Test subject", origin=ValueOrigin.ADAPTER_EXTRACTED),
         ),
         session=NormalizedSessionMetadata(
             session_id=NormalizedValue("session-01", origin=ValueOrigin.ADAPTER_EXTRACTED),
             session_description=NormalizedValue(
                 "Visual task recording", origin=ValueOrigin.USER_SUPPLIED
+            ),
+            experiment_description=NormalizedValue(
+                "Visual stimulation task", origin=ValueOrigin.USER_SUPPLIED
             ),
             start_time=NormalizedValue(
                 "2026-03-31T10:15:00-06:00", origin=ValueOrigin.ADAPTER_EXTRACTED
@@ -45,9 +51,13 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
 
     target_paths = set(plan.target_paths())
     assert "NWBFile.session_description" in target_paths
+    assert "NWBFile.experiment_description" in target_paths
     assert "NWBFile.session_start_time" in target_paths
     assert "NWBFile.identifier" in target_paths
     assert "Subject.subject_id" in target_paths
+    assert "Subject.sex" in target_paths
+    assert "Subject.age" in target_paths
+    assert "Subject.description" in target_paths
     assert any(decision.action == MappingAction.MERGE for decision in plan.decisions)
 
 

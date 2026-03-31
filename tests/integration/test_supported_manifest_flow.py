@@ -17,12 +17,17 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
                 "session": {
                     "session_id": "session-01",
                     "description": "Visual task recording",
+                    "experiment_description": "Visual stimulation task",
                     "start_time": "2026-03-31T10:15:00-06:00",
-                    "experimenter": "Researcher A",
+                    "experimenter": "Researcher, Alice",
+                    "institution": "Test University",
                 },
                 "subject": {
                     "subject_id": "mouse-01",
                     "species": "Mus musculus",
+                    "sex": "U",
+                    "age": "P90D",
+                    "description": "Test subject",
                 },
                 "keywords": ["vision", "behavior"],
                 "operator_note": "check sync alignment",
@@ -51,6 +56,9 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
 
     assert extraction.record_type == "session_manifest"
     assert normalized.session.session_description is not None
+    assert normalized.session.experiment_description is not None
     assert normalized.subject.subject_id is not None
+    assert normalized.subject.sex is not None
     assert any(decision.target_path == "NWBFile.session_description" for decision in plan.decisions)
+    assert any(decision.target_path == "NWBFile.experiment_description" for decision in plan.decisions)
     assert any(decision.source_key == "operator_note" for decision in plan.decisions)

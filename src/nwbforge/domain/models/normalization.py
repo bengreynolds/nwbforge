@@ -13,6 +13,8 @@ class NormalizedSubject:
     species: NormalizedValue[str] | None = None
     sex: NormalizedValue[str] | None = None
     age: NormalizedValue[str] | None = None
+    date_of_birth: NormalizedValue[str] | None = None
+    description: NormalizedValue[str] | None = None
     genotype: NormalizedValue[str] | None = None
     strain: NormalizedValue[str] | None = None
     additional_fields: dict[str, NormalizedValue[object]] = field(default_factory=dict)
@@ -23,6 +25,8 @@ class NormalizedSubject:
             self.species,
             self.sex,
             self.age,
+            self.date_of_birth,
+            self.description,
             self.genotype,
             self.strain,
         ]
@@ -34,6 +38,7 @@ class NormalizedSubject:
 class NormalizedSessionMetadata:
     session_id: NormalizedValue[str] | None = None
     session_description: NormalizedValue[str] | None = None
+    experiment_description: NormalizedValue[str] | None = None
     start_time: NormalizedValue[str] | None = None
     experimenter: NormalizedValue[str] | None = None
     institution: NormalizedValue[str] | None = None
@@ -45,6 +50,7 @@ class NormalizedSessionMetadata:
         values = [
             self.session_id,
             self.session_description,
+            self.experiment_description,
             self.start_time,
             self.experimenter,
             self.institution,

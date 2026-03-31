@@ -27,7 +27,15 @@ def test_rule_based_normalizer_maps_subject_and_session_fields() -> None:
         record_type="session",
         fields={
             "subject_id": ExtractedField("subject_id", "mouse-01", "source-1"),
+            "subject.sex": ExtractedField("subject.sex", "U", "source-1"),
+            "subject.age": ExtractedField("subject.age", "P90D", "source-1"),
+            "subject.description": ExtractedField("subject.description", "Test subject", "source-1"),
             "description": ExtractedField("description", "Visual task", "source-1"),
+            "experiment_description": ExtractedField(
+                "experiment_description",
+                "Visual stimulation task",
+                "source-1",
+            ),
             "keywords": ExtractedField("keywords", "vision, behavior", "source-1"),
         },
     )
@@ -36,8 +44,16 @@ def test_rule_based_normalizer_maps_subject_and_session_fields() -> None:
 
     assert bundle.subject.subject_id is not None
     assert bundle.subject.subject_id.value == "mouse-01"
+    assert bundle.subject.sex is not None
+    assert bundle.subject.sex.value == "U"
+    assert bundle.subject.age is not None
+    assert bundle.subject.age.value == "P90D"
+    assert bundle.subject.description is not None
+    assert bundle.subject.description.value == "Test subject"
     assert bundle.session.session_description is not None
     assert bundle.session.session_description.value == "Visual task"
+    assert bundle.session.experiment_description is not None
+    assert bundle.session.experiment_description.value == "Visual stimulation task"
     assert tuple(keyword.value for keyword in bundle.session.keywords) == ("vision", "behavior")
 
 

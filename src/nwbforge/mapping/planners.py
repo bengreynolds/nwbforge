@@ -102,6 +102,13 @@ class RuleBasedMappingPlanner(MappingPlanner):
             )
 
         self._optional_map(
+            "session.experiment_description",
+            session.experiment_description,
+            "NWBFile.experiment_description",
+            "Direct mapping for experiment description metadata.",
+            decisions,
+        )
+        self._optional_map(
             "session.experimenter",
             session.experimenter,
             "NWBFile.experimenter",
@@ -146,6 +153,8 @@ class RuleBasedMappingPlanner(MappingPlanner):
             ("subject.species", subject.species, "Subject.species"),
             ("subject.sex", subject.sex, "Subject.sex"),
             ("subject.age", subject.age, "Subject.age"),
+            ("subject.date_of_birth", subject.date_of_birth, "Subject.date_of_birth"),
+            ("subject.description", subject.description, "Subject.description"),
             ("subject.genotype", subject.genotype, "Subject.genotype"),
             ("subject.strain", subject.strain, "Subject.strain"),
         )

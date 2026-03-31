@@ -29,6 +29,7 @@ class PyNWBAssemblyService(AssemblyService):
             session_description=self._required_text(metadata.session.session_description, "session_description"),
             identifier=self._identifier(metadata, session),
             session_start_time=self._required_datetime(metadata.session.start_time, "session_start_time"),
+            experiment_description=self._optional_text(metadata.session.experiment_description),
             experimenter=self._optional_list(metadata.session.experimenter),
             lab=self._optional_text(metadata.session.lab),
             institution=self._optional_text(metadata.session.institution),
@@ -76,6 +77,16 @@ class PyNWBAssemblyService(AssemblyService):
         return [text]
 
     @staticmethod
+    def _optional_datetime(value) -> datetime | None:
+        if value is None or value.value in (None, ""):
+            return None
+        raw = value.value
+        if isinstance(raw, datetime):
+            return raw if raw.tzinfo is not None else raw.replace(tzinfo=UTC)
+        parsed = datetime.fromisoformat(str(raw))
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+    @staticmethod
     def _required_datetime(value, field_name: str) -> datetime:
         if value is None or value.value in (None, ""):
             raise ValueError(f"Missing required NWB field '{field_name}'.")
@@ -99,6 +110,8 @@ class PyNWBAssemblyService(AssemblyService):
             "species": PyNWBAssemblyService._optional_text(subject.species),
             "sex": PyNWBAssemblyService._optional_text(subject.sex),
             "age": PyNWBAssemblyService._optional_text(subject.age),
+            "date_of_birth": PyNWBAssemblyService._optional_datetime(subject.date_of_birth),
+            "description": PyNWBAssemblyService._optional_text(subject.description),
             "genotype": PyNWBAssemblyService._optional_text(subject.genotype),
             "strain": PyNWBAssemblyService._optional_text(subject.strain),
         }

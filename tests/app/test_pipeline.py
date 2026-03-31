@@ -27,12 +27,17 @@ def make_manifest_session(tmp_path: Path) -> ConversionSession:
                 "session": {
                     "session_id": "session-01",
                     "description": "Visual task recording",
+                    "experiment_description": "Visual stimulation task",
                     "start_time": "2026-03-31T10:15:00-06:00",
-                    "experimenter": "Researcher A",
+                    "experimenter": "Researcher, Alice",
+                    "institution": "Test University",
                 },
                 "subject": {
                     "subject_id": "mouse-01",
                     "species": "Mus musculus",
+                    "sex": "U",
+                    "age": "P90D",
+                    "description": "Test subject",
                 },
                 "keywords": ["vision", "behavior"],
                 "operator_note": "check sync alignment",
@@ -99,6 +104,7 @@ def test_pipeline_build_preview_chains_existing_services(tmp_path: Path) -> None
     assert preview.session.status == SessionStatus.REVIEW
     assert preview.extraction_results[0].adapter_id == "session_manifest"
     assert preview.normalized_metadata.subject.subject_id is not None
+    assert preview.normalized_metadata.subject.age is not None
     assert preview.provenance_record.adapter_ids == ("session_manifest",)
     assert any(decision.target_path == "NWBFile.session_description" for decision in preview.mapping_plan.decisions)
 
@@ -143,7 +149,8 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
 
     execution = pipeline.execute(preview, output_path)
 
-    assert execution.session.status == SessionStatus.FAILED
+    assert execution.session.status == SessionStatus.COMPLETED
     assert output_path.exists() is True
     assert execution.output_artifacts[0].artifact_type == "nwb"
-    assert any(issue.tool == "nwbinspector" for issue in execution.validation_summary.errors())
+    assert execution.validation_summary.is_passing() is True
+    assert not execution.validation_summary.errors()
