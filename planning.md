@@ -17,6 +17,7 @@ Completed:
 - First high-level orchestration service for preview and execution evaluation
 - First concrete PyNWB-backed NWB assembly/writer service
 - First PyNWB schema-validation integration layered onto output validation
+- First NWB Inspector integration layered onto output validation
 - Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
@@ -24,10 +25,10 @@ In progress:
 - Core backend contracts
 
 Next:
-- NWB Inspector validation integration
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - Richer NWB assembly coverage for devices and acquisitions
+- Validation report artifacts and UI-facing severity policy
 
 ## Project Vision and Scope
 
@@ -560,10 +561,11 @@ Current status:
 - Initial rule-based mapping planner is in place
 - Initial artifact validation is in place
 - PyNWB schema validation is now integrated through the validation layer
+- NWB Inspector validation is now integrated through the validation layer
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
-- NWB Inspector integration and richer assembly remain to be implemented
+- The current writer still fails NWB Inspector critical checks for some minimal subject metadata cases, which now defines part of the richer assembly roadmap
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters

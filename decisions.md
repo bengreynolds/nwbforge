@@ -220,3 +220,15 @@ Consequences:
 - Windows, macOS, and Linux distributions must wrap the PyInstaller build in native installers or installable packages
 - The in-app updater should resolve and download release assets from GitHub Releases
 - Release engineering must account for scientific Python packaging risks such as compiled dependencies, larger bundles, and platform-specific signing behavior
+
+### DEC-019: Keep NWB Inspector best-practice checks separate from PyNWB schema validation
+Status: Accepted
+
+Reasoning:
+- PyNWB schema validation and NWB Inspector answer different questions and should remain independently composable.
+- The current writer needs visibility into best-practice-critical gaps without hiding them behind schema-only success.
+
+Consequences:
+- Validation now composes `ArtifactValidationService`, `PyNWBSchemaValidationService`, and `NWBInspectorValidationService`
+- `NWBInspectorValidationService` runs with `skip_validate=True` to avoid duplicating PyNWB schema checks
+- Writer-generated NWB files can now fail execution on NWB Inspector critical findings even when schema validation passes

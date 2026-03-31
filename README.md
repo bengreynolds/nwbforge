@@ -31,7 +31,7 @@ Key files:
 - [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md): first normalization implementation
 - [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md): first mapping-planner implementation
 - [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md): first PyNWB-backed NWB writer
-- [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
+- [docs/architecture/validation-services.md](docs/architecture/validation-services.md): artifact, schema, and NWB Inspector validation baseline
 - [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md): first supported-path pilot adapter
 - [docs/architecture/development-environment.md](docs/architecture/development-environment.md): current Conda-based dev/test policy
 - [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): PyInstaller-first release, installer, and updater planning
@@ -61,12 +61,14 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Rule-based normalization service
 - Rule-based mapping planner
 - PyNWB-backed assembly service for minimal NWB output
-- Composite validation made up of artifact-policy checks plus PyNWB schema validation
+- Composite validation made up of artifact-policy checks, PyNWB schema validation, and NWB Inspector best-practice checks
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 
 The supported-path pilot adapter is intentionally a repo-native fixture source for architecture validation. It is not yet a claim of real acquisition-format support.
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
+
+The current writer still only assembles a narrow metadata subset. NWB Inspector is now integrated specifically so those remaining best-practice-critical gaps are visible instead of being masked by schema-only success.
 
 ## Local development
 
@@ -90,7 +92,7 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 ## Initial next steps
 
-1. Add NWB Inspector integration and richer validation reporting.
-2. Expand assembly coverage beyond the current minimal metadata subset.
+1. Add machine-readable validation reports and a clearer UI-facing severity policy.
+2. Expand assembly coverage beyond the current minimal metadata subset, starting with the subject/session fields needed to clear current NWB Inspector critical checks.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.

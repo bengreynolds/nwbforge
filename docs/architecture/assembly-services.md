@@ -33,6 +33,8 @@ The first writer intentionally covers a narrow, high-confidence subset:
 
 This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved.
 
+With NWB Inspector now integrated, this narrow scope is also clearly insufficient for some best-practice-critical cases. In particular, subject metadata such as age or date of birth and sex still need richer assembly coverage if writer-generated files are expected to clear the current validation stack.
+
 ## Design constraints
 
 - writer logic consumes normalized metadata and mapping intent, not raw source fields
@@ -42,5 +44,5 @@ This is enough to prove a real NWB file can be written from the current preview 
 ## Immediate follow-on work
 
 1. Expand assembly coverage to devices, acquisitions, and richer metadata.
-2. Connect schema and inspector validation after writing.
+2. Expand subject and session metadata coverage so writer-generated files can satisfy current NWB Inspector critical checks.
 3. Refine identifier and metadata policy as real supported formats are integrated.

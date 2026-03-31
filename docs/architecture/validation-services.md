@@ -27,6 +27,16 @@ Responsibilities:
 - convert PyNWB-reported schema problems into repository-level `ValidationIssue` records
 - convert unreadable or malformed `.nwb` files into stable validation errors rather than raw exceptions
 
+### `NWBInspectorValidationService`
+
+Location: `src/nwbforge/validation/services.py`
+
+Responsibilities:
+- run NWB Inspector best-practice checks against readable `.nwb` artifacts
+- convert `InspectorMessage` output into repository-level `ValidationIssue` records
+- preserve PyNWB/schema separation by calling NWB Inspector with `skip_validate=True`
+- map NWB Inspector critical findings to blocking validation errors and lower-importance findings to warnings
+
 ### `CompositeValidationService`
 
 Location: `src/nwbforge/validation/services.py`
@@ -40,11 +50,13 @@ Responsibilities:
 The validation layer now covers:
 - output artifact policy checks
 - PyNWB schema validation for generated NWB files
+- NWB Inspector best-practice validation for generated NWB files
 
 That makes it useful now for:
 - catching obvious output failures
 - rejecting placeholder or unreadable `.nwb` files
 - exercising the validation-service boundary with a real schema-aware validator
+- surfacing best-practice-critical metadata gaps in generated files
 - supporting future orchestration and release workflows
 
 ## Design constraints
@@ -52,10 +64,11 @@ That makes it useful now for:
 - artifact policy checks are separate from schema or best-practice validation
 - the service returns `ValidationSummary`, not exceptions for routine validation failures
 - schema validation is composed rather than embedded into the artifact-policy service
-- NWB Inspector remains future work
+- NWB Inspector remains separate from schema validation instead of being folded into it
+- writer execution can now fail on best-practice-critical findings even when schema validation passes
 
 ## Immediate follow-on work
 
-1. Add NWB Inspector integration.
-2. Decide how blocking versus advisory findings should be surfaced in UI review flows.
-3. Add machine-readable validation report artifacts alongside `ValidationSummary`.
+1. Decide how blocking versus advisory findings should be surfaced in UI review flows.
+2. Add machine-readable validation report artifacts alongside `ValidationSummary`.
+3. Expand the writer so minimal supported outputs can satisfy current NWB Inspector critical checks.
