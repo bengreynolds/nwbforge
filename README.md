@@ -25,6 +25,7 @@ Key files:
 - [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md): adapter and service-interface baseline
 - [docs/architecture/application-services.md](docs/architecture/application-services.md): first concrete orchestration services
 - [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md): first normalization implementation
+- [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md): first mapping-planner implementation
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
 - [docs/decision-log.md](docs/decision-log.md): decision history
@@ -55,6 +56,6 @@ pytest
 ## Initial next steps
 
 1. Define adapter and registry contracts for supported and custom source systems.
-2. Implement a mapping planner on top of the normalized bundle.
-3. Implement validation services that wrap schema and best-practice checks.
-4. Choose an initial supported-path pilot format and implement one end-to-end thin slice.
+2. Implement validation services that wrap schema and best-practice checks.
+3. Choose an initial supported-path pilot format and implement one end-to-end thin slice.
+4. Define the first NWB assembly slice that consumes the mapping plan.

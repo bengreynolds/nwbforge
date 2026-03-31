@@ -96,3 +96,15 @@ Consequences:
 - `RuleBasedNormalizationService` is the current normalization baseline
 - Unknown or conflicting fields are preserved and marked for review
 - Lab-profile overrides and broader device/stream normalization remain future work
+
+### DEC-009: Start mapping with an explicit reviewable plan, not direct NWB construction
+Status: Accepted
+
+Reasoning:
+- The architecture depends on separating mapping intent from NWB assembly.
+- Early mapping logic should make assumptions visible before any writer layer exists.
+
+Consequences:
+- `RuleBasedMappingPlanner` emits `MappingDecision` and `ReviewIssue` records only
+- Required-field gaps surface as blocking issues in the plan
+- Identifier generation remains an explicit reviewable transform until assembly policy is settled

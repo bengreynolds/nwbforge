@@ -11,6 +11,7 @@ Completed:
 - Initial extraction, adapter, registry, and service-interface contracts
 - First concrete application services for source inspection and provenance
 - First concrete normalization-layer implementation
+- First concrete mapping-layer implementation
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -18,10 +19,10 @@ In progress:
 
 Next:
 - Concrete application services built on the new contracts
-- Mapping-planner implementations
 - Validation-service implementations
 - First supported-path pilot adapter
 - Persistence contract decisions
+- NWB assembly-layer design and implementation
 
 ## Project Vision and Scope
 
@@ -424,7 +425,8 @@ Current status:
 - Adapter registry and service protocols are in place
 - Initial source-inspection and provenance services are in place
 - Initial rule-based normalization is in place
-- Mapping, validation, and pilot adapters remain to be implemented
+- Initial rule-based mapping planner is in place
+- Validation, pilot adapters, and assembly remain to be implemented
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -472,6 +474,7 @@ Implementation references:
 - Adapter contract note: [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md)
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
+- Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
 
 ## Research References
 
