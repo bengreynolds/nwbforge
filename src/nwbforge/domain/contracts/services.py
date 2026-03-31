@@ -12,6 +12,7 @@ from nwbforge.domain.models import (
     NormalizedMetadataBundle,
     ProvenanceArtifact,
     ProvenanceRecord,
+    SessionSnapshot,
     ValidationReviewOutcome,
     ValidationSummary,
 )
@@ -100,3 +101,11 @@ class ReviewArtifactService(Protocol):
         review_record: ExecutionReviewRecord,
     ) -> ProvenanceArtifact:
         """Persist a workflow review decision and return its artifact metadata."""
+
+
+class SessionSnapshotStore(Protocol):
+    def save(self, snapshot: SessionSnapshot) -> ProvenanceArtifact:
+        """Persist a session snapshot and return its artifact metadata."""
+
+    def load(self, session_id: str) -> SessionSnapshot | None:
+        """Load a previously persisted session snapshot if one exists."""

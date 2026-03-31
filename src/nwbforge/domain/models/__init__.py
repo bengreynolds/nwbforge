@@ -10,6 +10,7 @@ from nwbforge.domain.models.normalization import (
     NormalizedSessionMetadata,
     NormalizedSubject,
 )
+from nwbforge.domain.models.persistence import SessionSnapshot
 from nwbforge.domain.models.provenance import ProvenanceArtifact, ProvenanceRecord
 from nwbforge.domain.models.review import ExecutionReviewRecord
 from nwbforge.domain.models.session import ConversionSession, SourceReference
@@ -31,6 +32,7 @@ __all__ = [
     "ProvenanceArtifact",
     "ProvenanceRecord",
     "ReviewIssue",
+    "SessionSnapshot",
     "SourceReference",
     "ValidationIssue",
     "ValidationReviewOutcome",
