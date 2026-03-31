@@ -29,6 +29,7 @@ Key files:
 - [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md): first normalization implementation
 - [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md): first mapping-planner implementation
 - [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
+- [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md): first supported-path pilot adapter
 - [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): release, installer, and updater planning
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
@@ -55,6 +56,9 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Rule-based normalization service
 - Rule-based mapping planner
 - Artifact validation service
+- Supported-path pilot adapter for structured `session_manifest.json` sources
+
+The supported-path pilot adapter is intentionally a repo-native fixture source for architecture validation. It is not yet a claim of real acquisition-format support.
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
@@ -70,6 +74,6 @@ pytest
 ## Initial next steps
 
 1. Integrate PyNWB and NWB Inspector into the validation layer.
-2. Choose an initial supported-path pilot format and implement the first real adapter thin slice.
+2. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 3. Define the first NWB assembly slice that consumes the mapping plan and validation outputs.
 4. Continue release-packaging design toward installer and updater implementation once the desktop application direction is finalized.

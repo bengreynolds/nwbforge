@@ -13,6 +13,7 @@ Completed:
 - First concrete normalization-layer implementation
 - First concrete mapping-layer implementation
 - First concrete validation-layer implementation
+- First concrete supported-path pilot adapter and integration test flow
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -21,7 +22,7 @@ In progress:
 Next:
 - Concrete application services built on the new contracts
 - PyNWB and NWB Inspector validation integrations
-- First supported-path pilot adapter
+- First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - NWB assembly-layer design and implementation
 
@@ -514,7 +515,8 @@ Current status:
 - Initial rule-based normalization is in place
 - Initial rule-based mapping planner is in place
 - Initial artifact validation is in place
-- PyNWB/NWB Inspector integration, pilot adapters, and assembly remain to be implemented
+- A repo-native supported-path pilot adapter is in place for architecture validation
+- PyNWB/NWB Inspector integration, real format adapters, and assembly remain to be implemented
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -564,6 +566,7 @@ Implementation references:
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
 - Validation note: [docs/architecture/validation-services.md](docs/architecture/validation-services.md)
+- Pilot adapter note: [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md)
 - Release note: [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md)
 
 ## Research References

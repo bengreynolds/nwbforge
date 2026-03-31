@@ -146,3 +146,15 @@ Consequences:
 - `ArtifactValidationService` is the current validation baseline
 - Missing, empty, or ambiguous output artifacts can be surfaced before schema validation is integrated
 - PyNWB and NWB Inspector remain the next validation-expansion steps
+
+### DEC-013: Use a repo-native manifest adapter as the first supported-path pilot
+Status: Accepted
+
+Reasoning:
+- The project needs an end-to-end supported-path slice now, but no real departmental source format has been selected and scoped yet.
+- A small structured manifest source lets the architecture be exercised honestly without pretending a real acquisition format is already supported.
+
+Consequences:
+- `SessionManifestAdapter` is the first supported-path pilot adapter
+- Integration tests can now cover inspection through mapping with a deterministic source fixture
+- A real NeuroConv-backed format remains the next supported-path milestone
