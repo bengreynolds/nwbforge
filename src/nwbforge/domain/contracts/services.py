@@ -11,6 +11,7 @@ from nwbforge.domain.models import (
     NormalizedMetadataBundle,
     ProvenanceArtifact,
     ProvenanceRecord,
+    ValidationReviewOutcome,
     ValidationSummary,
 )
 
@@ -58,6 +59,15 @@ class ValidationService(Protocol):
         """Validate generated conversion artifacts."""
 
 
+class ValidationPolicyService(Protocol):
+    def assess(
+        self,
+        session: ConversionSession,
+        validation_summary: ValidationSummary,
+    ) -> ValidationReviewOutcome:
+        """Assess validation results into an explicit review outcome for workflow consumers."""
+
+
 class ProvenanceService(Protocol):
     def build_record(
         self,
@@ -74,5 +84,6 @@ class ValidationReportService(Protocol):
         session: ConversionSession,
         provenance_record: ProvenanceRecord,
         validation_summary: ValidationSummary,
+        review_outcome: ValidationReviewOutcome,
     ) -> ProvenanceArtifact:
         """Write a machine-readable validation report and return its artifact metadata."""

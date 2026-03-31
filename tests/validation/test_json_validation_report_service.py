@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
 
-from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus
+from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus, ValidationReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
     ProvenanceArtifact,
     ProvenanceRecord,
     ValidationIssue,
+    ValidationReviewOutcome,
     ValidationSummary,
 )
 from nwbforge.validation import JsonValidationReportService
@@ -40,11 +41,20 @@ def test_json_validation_report_service_writes_machine_readable_report(tmp_path:
         session,
         provenance_record,
         validation_summary,
+        ValidationReviewOutcome(
+            status=ValidationReviewStatus.REVIEW,
+            blocks_completion=False,
+            requires_manual_review=True,
+            error_count=0,
+            warning_count=1,
+        ),
     )
 
     payload = json.loads(artifact.location.read_text(encoding="utf-8"))
     assert artifact.artifact_type == "validation_report"
     assert payload["session_id"] == "sess-001"
     assert payload["is_passing"] is True
+    assert payload["review_outcome"]["status"] == "review"
+    assert payload["review_outcome"]["requires_manual_review"] is True
     assert payload["summary"]["warning_count"] == 1
     assert payload["generated_artifacts"][0]["artifact_type"] == "nwb"

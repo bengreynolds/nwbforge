@@ -12,7 +12,7 @@ from nwbforge.domain.models.normalization import (
 )
 from nwbforge.domain.models.provenance import ProvenanceArtifact, ProvenanceRecord
 from nwbforge.domain.models.session import ConversionSession, SourceReference
-from nwbforge.domain.models.validation import ValidationIssue, ValidationSummary
+from nwbforge.domain.models.validation import ValidationIssue, ValidationReviewOutcome, ValidationSummary
 
 __all__ = [
     "AcquisitionStream",
@@ -31,5 +31,6 @@ __all__ = [
     "ReviewIssue",
     "SourceReference",
     "ValidationIssue",
+    "ValidationReviewOutcome",
     "ValidationSummary",
 ]

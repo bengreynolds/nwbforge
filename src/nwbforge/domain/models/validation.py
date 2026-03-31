@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nwbforge.domain.enums import IssueSeverity
+from nwbforge.domain.enums import IssueSeverity, ValidationReviewStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,3 +28,12 @@ class ValidationSummary:
 
     def is_passing(self) -> bool:
         return not self.errors()
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationReviewOutcome:
+    status: ValidationReviewStatus
+    blocks_completion: bool
+    requires_manual_review: bool
+    error_count: int
+    warning_count: int

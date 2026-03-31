@@ -11,6 +11,7 @@ from nwbforge.domain.models import (
     NormalizedMetadataBundle,
     ProvenanceArtifact,
     ProvenanceRecord,
+    ValidationReviewOutcome,
     ValidationSummary,
 )
 
@@ -31,3 +32,4 @@ class ConversionExecution:
     output_artifacts: tuple[ProvenanceArtifact, ...]
     provenance_record: ProvenanceRecord
     validation_summary: ValidationSummary
+    review_outcome: ValidationReviewOutcome

@@ -11,11 +11,19 @@ from nwbforge.domain.contracts import (
     NormalizationService,
     ProvenanceService,
     SourceInspectionService,
+    ValidationPolicyService,
     ValidationReportService,
     ValidationService,
 )
 from nwbforge.domain.enums import SessionStatus
-from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, ProvenanceRecord, ValidationSummary
+from nwbforge.domain.models import (
+    ConversionSession,
+    ProvenanceArtifact,
+    ProvenanceRecord,
+    ValidationReviewOutcome,
+    ValidationSummary,
+)
+from nwbforge.validation import DefaultValidationReviewPolicyService
 
 from nwbforge.app.services.errors import AssemblyConfigurationError
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
@@ -31,6 +39,7 @@ class ConversionPipelineService:
         mapping_planner: MappingPlanner,
         provenance_service: ProvenanceService,
         validation_service: ValidationService,
+        validation_policy_service: ValidationPolicyService | None = None,
         validation_report_service: ValidationReportService | None = None,
         assembly_service: AssemblyService | None = None,
     ) -> None:
@@ -39,6 +48,7 @@ class ConversionPipelineService:
         self._mapping_planner = mapping_planner
         self._provenance_service = provenance_service
         self._validation_service = validation_service
+        self._validation_policy_service = validation_policy_service or DefaultValidationReviewPolicyService()
         self._validation_report_service = validation_report_service
         self._assembly_service = assembly_service
 
@@ -92,7 +102,8 @@ class ConversionPipelineService:
     ) -> ConversionExecution:
         validating_session = preview.session.transition(SessionStatus.VALIDATING)
         validation_summary = self._validation_service.validate(validating_session, output_artifacts)
-        final_status = SessionStatus.COMPLETED if validation_summary.is_passing() else SessionStatus.FAILED
+        review_outcome = self._validation_policy_service.assess(validating_session, validation_summary)
+        final_status = SessionStatus.FAILED if review_outcome.blocks_completion else SessionStatus.COMPLETED
         final_session = validating_session.transition(final_status)
         provisional_provenance = self._provenance_service.build_record(
             final_session,
@@ -108,6 +119,7 @@ class ConversionPipelineService:
             final_session,
             provisional_provenance,
             validation_summary,
+            review_outcome,
         )
         final_artifacts = output_artifacts if report_artifact is None else output_artifacts + (report_artifact,)
         provenance_record = self._provenance_service.build_record(
@@ -127,6 +139,7 @@ class ConversionPipelineService:
             output_artifacts=final_artifacts,
             provenance_record=provenance_record,
             validation_summary=validation_summary,
+            review_outcome=review_outcome,
         )
 
     def execute(self, preview: ConversionPreview, output_path: Path) -> ConversionExecution:
@@ -148,6 +161,7 @@ class ConversionPipelineService:
         session: ConversionSession,
         provenance_record: ProvenanceRecord,
         validation_summary: ValidationSummary,
+        review_outcome: ValidationReviewOutcome,
     ) -> ProvenanceArtifact | None:
         if self._validation_report_service is None:
             return None
@@ -155,4 +169,5 @@ class ConversionPipelineService:
             session,
             provenance_record,
             validation_summary,
+            review_outcome,
         )

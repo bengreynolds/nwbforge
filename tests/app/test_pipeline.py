@@ -13,6 +13,7 @@ from pynwb import NWBHDF5IO, NWBFile
 from nwbforge.validation import (
     ArtifactValidationService,
     CompositeValidationService,
+    DefaultValidationReviewPolicyService,
     JsonValidationReportService,
     NWBInspectorValidationService,
     PyNWBSchemaValidationService,
@@ -93,6 +94,7 @@ def make_pipeline() -> ConversionPipelineService:
                 NWBInspectorValidationService(),
             )
         ),
+        validation_policy_service=DefaultValidationReviewPolicyService(),
         validation_report_service=JsonValidationReportService(),
         assembly_service=PyNWBAssemblyService(),
     )
@@ -149,6 +151,7 @@ def test_pipeline_evaluate_outputs_marks_completed_for_valid_artifacts(tmp_path:
 
     assert execution.session.status == SessionStatus.COMPLETED
     assert execution.validation_summary.is_passing() is True
+    assert execution.review_outcome.status == "pass"
     assert execution.provenance_record.generated_artifacts[0].location == nwb_file
 
 
@@ -165,6 +168,7 @@ def test_pipeline_evaluate_outputs_marks_failed_for_invalid_artifacts(tmp_path: 
 
     assert execution.session.status == SessionStatus.FAILED
     assert execution.validation_summary.is_passing() is False
+    assert execution.review_outcome.blocks_completion is True
 
 
 def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> None:
@@ -180,6 +184,7 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
     assert execution.output_artifacts[1].artifact_type == "validation_report"
     assert execution.validation_summary.is_passing() is True
     assert not execution.validation_summary.errors()
+    assert execution.review_outcome.status == "pass"
     with NWBHDF5IO(str(output_path), "r") as io:
         nwbfile = io.read()
         assert "Lick Trace" in nwbfile.acquisition
@@ -187,4 +192,5 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
     assert report_path.exists() is True
     report_payload = json.loads(report_path.read_text(encoding="utf-8"))
     assert report_payload["session_id"] == "sess-001"
+    assert report_payload["review_outcome"]["status"] == "pass"
     assert report_payload["generated_artifacts"][0]["artifact_type"] == "nwb"

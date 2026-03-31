@@ -6,7 +6,13 @@ import json
 from pathlib import Path
 
 from nwbforge.domain.contracts import ValidationReportService
-from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, ProvenanceRecord, ValidationSummary
+from nwbforge.domain.models import (
+    ConversionSession,
+    ProvenanceArtifact,
+    ProvenanceRecord,
+    ValidationReviewOutcome,
+    ValidationSummary,
+)
 
 
 class JsonValidationReportService(ValidationReportService):
@@ -20,12 +26,13 @@ class JsonValidationReportService(ValidationReportService):
         session: ConversionSession,
         provenance_record: ProvenanceRecord,
         validation_summary: ValidationSummary,
+        review_outcome: ValidationReviewOutcome,
     ) -> ProvenanceArtifact:
         report_path = self._report_path(session, provenance_record)
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(
             json.dumps(
-                self._report_payload(session, provenance_record, validation_summary),
+                self._report_payload(session, provenance_record, validation_summary, review_outcome),
                 indent=2,
                 sort_keys=True,
             ),
@@ -51,12 +58,20 @@ class JsonValidationReportService(ValidationReportService):
         session: ConversionSession,
         provenance_record: ProvenanceRecord,
         validation_summary: ValidationSummary,
+        review_outcome: ValidationReviewOutcome,
     ) -> dict[str, object]:
         return {
             "session_id": session.session_id,
             "pathway": str(session.pathway),
             "status": str(session.status),
             "is_passing": validation_summary.is_passing(),
+            "review_outcome": {
+                "status": str(review_outcome.status),
+                "blocks_completion": review_outcome.blocks_completion,
+                "requires_manual_review": review_outcome.requires_manual_review,
+                "error_count": review_outcome.error_count,
+                "warning_count": review_outcome.warning_count,
+            },
             "adapter_ids": list(provenance_record.adapter_ids),
             "input_artifacts": [
                 JsonValidationReportService._artifact_payload(artifact)

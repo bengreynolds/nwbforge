@@ -65,3 +65,9 @@ class IssueSeverity(StrEnum):
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
+
+
+class ValidationReviewStatus(StrEnum):
+    PASS = "pass"
+    REVIEW = "review"
+    BLOCKED = "blocked"
