@@ -72,3 +72,15 @@ Consequences:
 - Adapter output flows through `ExtractedField` and `ExtractionResult`
 - Adapter discovery is centralized in `AdapterRegistry`
 - Orchestration-facing services should implement explicit protocols rather than exchange untyped dictionaries
+
+### DEC-007: Start concrete application services with inspection dispatch and provenance assembly
+Status: Accepted
+
+Reasoning:
+- These services are deterministic and low-risk, but they exercise the new adapter and domain boundaries in a real way.
+- They provide immediate orchestration value without forcing premature normalization or NWB-mapping logic.
+
+Consequences:
+- `RegistrySourceInspectionService` becomes the default path for adapter-backed source inspection
+- `SessionProvenanceService` becomes the first concrete provenance builder
+- Later services should follow the same narrow, contract-driven pattern
