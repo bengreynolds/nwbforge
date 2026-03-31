@@ -80,6 +80,7 @@ That makes it useful now for:
 - surfacing best-practice-critical metadata gaps in generated files
 - exposing a stable workflow-facing validation outcome without re-implementing policy in the UI
 - persisting validation results as reviewable JSON artifacts
+- supporting persisted approval/rejection artifacts layered on top of the validation outcome
 - supporting future orchestration and release workflows
 
 ## Design constraints

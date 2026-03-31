@@ -21,6 +21,7 @@ Responsibilities:
 - derive an explicit validation review outcome for workflow consumers
 - emit a machine-readable validation report artifact during execution evaluation
 - expose explicit preview and execution result models
+- provide an execution result that downstream review workflows can persist explicitly
 
 ## Current flow
 
@@ -50,4 +51,5 @@ Responsibilities:
 
 1. Add richer session persistence so preview and execution state can be resumed.
 2. Add higher-level workflow services for UI-driven review and approval checkpoints.
-3. Persist review acknowledgements and override decisions alongside the current derived validation outcome.
+3. Integrate explicit review submissions into resumable session lifecycle state once persistence contracts are settled.
+4. Connect persisted review decisions to future UI approval and override workflows.

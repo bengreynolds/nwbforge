@@ -23,6 +23,7 @@ Completed:
 - Added initial acquisition-stream support across the manifest-backed supported conversion path
 - Added machine-readable validation report artifacts to the execution pipeline
 - Added an explicit validation review-outcome policy for UI and workflow consumers
+- Added persisted post-execution review decisions and override records as machine-readable artifacts
 - Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
@@ -33,7 +34,7 @@ Next:
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
-- Review-state persistence and approval workflow on top of the new validation review-outcome baseline
+- Review history and resumable session persistence beyond the current artifact-based approval baseline
 
 ## Project Vision and Scope
 
@@ -573,11 +574,13 @@ Current status:
 - The manifest-backed supported path now carries inline acquisition streams through mapping and into generic NWB `TimeSeries` acquisitions
 - The pipeline now emits a machine-readable JSON validation report artifact alongside generated outputs
 - The pipeline now derives an explicit validation review outcome so UI and workflow layers do not need to infer blocking versus advisory behavior from raw issue lists
+- Post-execution review decisions can now be persisted as explicit approval/rejection artifacts with acknowledgement and blocked-override rules
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
 - The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus generic acquisitions, but richer modality-specific and multimodal content remain out of scope
-- Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, but review acknowledgement and approval persistence are not implemented yet
+- Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
+- Review persistence is currently artifact-based and does not yet provide resumable session history or concurrent review handling
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -625,6 +628,7 @@ Implementation references:
 - Adapter contract note: [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md)
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
+- Review workflow note: [docs/architecture/review-workflow.md](docs/architecture/review-workflow.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
 - Assembly note: [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md)

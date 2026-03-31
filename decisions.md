@@ -292,3 +292,16 @@ Consequences:
 - Validation policy is now modeled as a separate service from validators and report generation
 - Pipeline execution now carries a review outcome in addition to the raw `ValidationSummary`
 - Machine-readable validation reports now include explicit review-outcome fields for downstream UI and automation use
+
+### DEC-025: Persist post-execution review decisions as separate artifacts before broader session persistence exists
+Status: Accepted
+
+Reasoning:
+- The project needs an auditable approval workflow now, but full resumable session persistence is still undecided.
+- Persisting review decisions as explicit artifacts provides traceability without forcing a storage-engine decision too early.
+
+Consequences:
+- Review approval and rejection now flow through a dedicated application service and artifact writer
+- Warning-only executions require explicit acknowledgement before approval
+- Blocked executions require an explicit override and rationale before approval can be persisted
+- Review history is still file-artifact based and remains a future persistence concern
