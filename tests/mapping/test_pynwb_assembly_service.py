@@ -99,6 +99,8 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
         assert nwbfile.subject.description == "Test subject"
         assert "Camera One" in nwbfile.devices
         assert nwbfile.devices["Camera One"].description == "Behavior camera"
-        assert "Lick Trace" in nwbfile.acquisition
-        assert list(nwbfile.acquisition["Lick Trace"].data[:]) == [0.1, 0.2, 0.3]
+        assert "behavior" in nwbfile.acquisition
+        behavior = nwbfile.acquisition["behavior"]
+        assert "Lick Trace" in behavior.time_series
+        assert list(behavior.time_series["Lick Trace"].data[:]) == [0.1, 0.2, 0.3]
         assert "vision" in nwbfile.keywords

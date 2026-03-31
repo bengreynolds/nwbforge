@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from pynwb import NWBHDF5IO, NWBFile, TimeSeries
+from pynwb.behavior import BehavioralTimeSeries
 from pynwb.file import Subject
 
 from nwbforge.domain.contracts import AssemblyService
@@ -45,8 +46,7 @@ class PyNWBAssemblyService(AssemblyService):
                 description=self._optional_text(device.description),
                 manufacturer=self._optional_text(device.manufacturer),
             )
-        for stream in metadata.acquisition_streams:
-            nwbfile.add_acquisition(self._timeseries(stream))
+        self._write_acquisition_streams(nwbfile, metadata)
 
         with NWBHDF5IO(path=str(output_file), mode="w") as io:
             io.write(nwbfile)
@@ -128,6 +128,20 @@ class PyNWBAssemblyService(AssemblyService):
         return Subject(**{key: value for key, value in values.items() if value is not None})
 
     @classmethod
+    def _write_acquisition_streams(cls, nwbfile: NWBFile, metadata: NormalizedMetadataBundle) -> None:
+        behavior_container: BehavioralTimeSeries | None = None
+        for stream in metadata.acquisition_streams:
+            modality = cls._stream_modality(stream)
+            timeseries = cls._timeseries(stream)
+            if modality == "behavior":
+                if behavior_container is None:
+                    behavior_container = BehavioralTimeSeries(name="behavior")
+                    nwbfile.add_acquisition(behavior_container)
+                behavior_container.add_timeseries(timeseries)
+                continue
+            nwbfile.add_acquisition(timeseries)
+
+    @classmethod
     def _timeseries(cls, stream) -> TimeSeries:
         data = cls._required_stream_metadata(stream, "data")
         unit = str(cls._required_stream_metadata(stream, "unit"))
@@ -156,6 +170,12 @@ class PyNWBAssemblyService(AssemblyService):
             )
 
         return TimeSeries(**kwargs)
+
+    @staticmethod
+    def _stream_modality(stream) -> str:
+        if stream.modality is None:
+            return ""
+        return str(stream.modality).strip().lower()
 
     @staticmethod
     def _required_stream_metadata(stream, key: str):

@@ -236,11 +236,12 @@ class RuleBasedMappingPlanner(MappingPlanner):
     ) -> None:
         for stream in metadata.acquisition_streams:
             stream_prefix = f"acquisition_streams.{stream.stream_id}"
+            target_prefix = self._stream_target_prefix(stream)
             decisions.append(
                 self._decision(
                     source_key=f"{stream_prefix}.name",
                     value=stream.name,
-                    target_path=f"TimeSeries[{stream.stream_id}].name",
+                    target_path=f"{target_prefix}.name",
                     action=MappingAction.DIRECT,
                     rationale="Direct mapping for normalized acquisition stream name.",
                 )
@@ -250,7 +251,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
                     self._decision(
                         source_key=f"{stream_prefix}.description",
                         value=stream.description,
-                        target_path=f"TimeSeries[{stream.stream_id}].description",
+                        target_path=f"{target_prefix}.description",
                         action=MappingAction.DIRECT,
                         rationale="Direct mapping for normalized acquisition stream description.",
                     )
@@ -259,9 +260,9 @@ class RuleBasedMappingPlanner(MappingPlanner):
                 decisions.append(
                     MappingDecision(
                         source_key=f"{stream_prefix}.modality",
-                        target_path=f"TimeSeries[{stream.stream_id}].modality",
-                        action=MappingAction.DESCRIBE,
-                        rationale="Preserve stream modality as reviewable acquisition context.",
+                        target_path=f"{target_prefix}.modality",
+                        action=MappingAction.DIRECT,
+                        rationale="Preserve normalized stream modality in the acquisition mapping context.",
                         source_ids=stream.source_ids,
                     )
                 )
@@ -279,7 +280,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
             self._require_stream_metadata(
                 stream=stream,
                 metadata_key="data",
-                target_path=f"TimeSeries[{stream.stream_id}].data",
+                target_path=f"{target_prefix}.data",
                 message="Acquisition streams require inline data for the current pilot writer.",
                 decisions=decisions,
                 issues=issues,
@@ -287,7 +288,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
             self._require_stream_metadata(
                 stream=stream,
                 metadata_key="unit",
-                target_path=f"TimeSeries[{stream.stream_id}].unit",
+                target_path=f"{target_prefix}.unit",
                 message="Acquisition streams require a unit for the current pilot writer.",
                 decisions=decisions,
                 issues=issues,
@@ -299,7 +300,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
                 self._optional_map(
                     f"{stream_prefix}.rate",
                     stream.metadata["rate"],
-                    f"TimeSeries[{stream.stream_id}].rate",
+                    f"{target_prefix}.rate",
                     "Direct mapping for acquisition stream sample rate.",
                     decisions,
                 )
@@ -307,7 +308,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
                 self._optional_map(
                     f"{stream_prefix}.timestamps",
                     stream.metadata["timestamps"],
-                    f"TimeSeries[{stream.stream_id}].timestamps",
+                    f"{target_prefix}.timestamps",
                     "Direct mapping for acquisition stream timestamps.",
                     decisions,
                 )
@@ -322,8 +323,15 @@ class RuleBasedMappingPlanner(MappingPlanner):
                         severity=IssueSeverity.ERROR,
                         field=f"{stream_prefix}.rate",
                         source_ids=stream.source_ids,
-                    )
                 )
+            )
+
+    @staticmethod
+    def _stream_target_prefix(stream) -> str:
+        modality = (stream.modality or "").strip().lower()
+        if modality == "behavior":
+            return f"BehavioralTimeSeries[behavior].TimeSeries[{stream.stream_id}]"
+        return f"TimeSeries[{stream.stream_id}]"
 
     def _require_stream_metadata(
         self,

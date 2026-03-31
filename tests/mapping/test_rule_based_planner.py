@@ -83,8 +83,8 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
     assert "Subject.age" in target_paths
     assert "Subject.description" in target_paths
     assert "Device[camera-1].name" in target_paths
-    assert "TimeSeries[lick-trace].data" in target_paths
-    assert "TimeSeries[lick-trace].unit" in target_paths
+    assert "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data" in target_paths
+    assert "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].unit" in target_paths
     assert any(decision.action == MappingAction.MERGE for decision in plan.decisions)
 
 

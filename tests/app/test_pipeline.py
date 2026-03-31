@@ -133,7 +133,10 @@ def test_pipeline_build_preview_chains_existing_services(tmp_path: Path) -> None
     assert preview.provenance_record.adapter_ids == ("session_manifest",)
     assert any(decision.target_path == "NWBFile.session_description" for decision in preview.mapping_plan.decisions)
     assert any(decision.target_path == "Device[camera-1].name" for decision in preview.mapping_plan.decisions)
-    assert any(decision.target_path == "TimeSeries[lick-trace].data" for decision in preview.mapping_plan.decisions)
+    assert any(
+        decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data"
+        for decision in preview.mapping_plan.decisions
+    )
 
 
 def test_pipeline_evaluate_outputs_marks_completed_for_valid_artifacts(tmp_path: Path) -> None:
@@ -187,7 +190,8 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
     assert execution.review_outcome.status == "pass"
     with NWBHDF5IO(str(output_path), "r") as io:
         nwbfile = io.read()
-        assert "Lick Trace" in nwbfile.acquisition
+        assert "behavior" in nwbfile.acquisition
+        assert "Lick Trace" in nwbfile.acquisition["behavior"].time_series
     report_path = execution.output_artifacts[1].location
     assert report_path.exists() is True
     report_payload = json.loads(report_path.read_text(encoding="utf-8"))

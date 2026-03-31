@@ -85,5 +85,8 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
     assert any(decision.target_path == "NWBFile.session_description" for decision in plan.decisions)
     assert any(decision.target_path == "NWBFile.experiment_description" for decision in plan.decisions)
     assert any(decision.target_path == "Device[camera-1].name" for decision in plan.decisions)
-    assert any(decision.target_path == "TimeSeries[lick-trace].data" for decision in plan.decisions)
+    assert any(
+        decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data"
+        for decision in plan.decisions
+    )
     assert any(decision.source_key == "operator_note" for decision in plan.decisions)
