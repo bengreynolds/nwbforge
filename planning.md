@@ -16,13 +16,15 @@ Completed:
 - First concrete supported-path pilot adapter and integration test flow
 - First high-level orchestration service for preview and execution evaluation
 - First concrete PyNWB-backed NWB assembly/writer service
+- First PyNWB schema-validation integration layered onto output validation
+- Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
 - Core backend contracts
 
 Next:
-- PyNWB schema and NWB Inspector validation integrations
+- NWB Inspector validation integration
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - Richer NWB assembly coverage for devices and acquisitions
@@ -122,6 +124,7 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Extensible plugin model for new labs and formats
 - Testable backend components independent of UI
 - Production-grade packaging and update story for Windows, macOS, and Linux
+- Isolated local development environment that does not interfere with unrelated Python installations
 
 ### Organizational constraints
 - Lab conventions will differ in naming, metadata completeness, and file layout
@@ -397,6 +400,13 @@ The product must ship as a production-grade desktop application with formal rele
 - Support for fresh installation and updating an existing installation
 - Built-in UI updater backed by GitHub releases
 - Preservation of user settings and local configuration where feasible
+- No end-user requirement for Conda or a virtual environment
+
+### Current development environment policy
+- During active development, installs and tests should run in the dedicated `nwbforge-dev` Conda environment
+- The Conda environment is a developer convenience and isolation layer only
+- Development environment setup must not interfere with existing project or user environments on the machine
+- Current helper entry points are `scripts/setup-conda-dev.ps1` and `scripts/test-conda-dev.ps1`
 
 ### Installer and packaging evaluation
 
@@ -433,6 +443,7 @@ Cons:
 - Prefer a desktop-first, Python-centric application initially
 - Evaluate PySide6 with PyInstaller or Nuitka plus platform-specific installers first
 - Defer a split frontend/backend desktop packaging model unless UX or updater constraints justify it
+- Treat Conda as a development-time isolation tool, not a release-time dependency
 
 ### Update mechanism design
 - Built-in updater should query GitHub releases for the current platform
@@ -516,10 +527,11 @@ Current status:
 - Initial rule-based normalization is in place
 - Initial rule-based mapping planner is in place
 - Initial artifact validation is in place
+- PyNWB schema validation is now integrated through the validation layer
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
-- PyNWB/NWB Inspector validation integration and richer assembly remain to be implemented
+- NWB Inspector integration and richer assembly remain to be implemented
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -572,6 +584,7 @@ Implementation references:
 - Assembly note: [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md)
 - Validation note: [docs/architecture/validation-services.md](docs/architecture/validation-services.md)
 - Pilot adapter note: [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md)
+- Development environment note: [docs/architecture/development-environment.md](docs/architecture/development-environment.md)
 - Release note: [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md)
 
 ## Research References

@@ -35,6 +35,13 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Do not begin substantial implementation until the affected plan sections exist and are current
 - Do not implement release, installer, updater, or distribution logic before the relevant plan sections are updated
 
+## Environment Rule
+
+- For the current development phase, perform project installs and test runs in the dedicated Conda environment defined by [environment.yml](environment.yml)
+- Use new isolated environments rather than repurposing unrelated existing environments
+- Do not rely on user-site Python packages for development or test success
+- Release artifacts must remain self-contained and must not require Conda or a virtual environment on user machines
+
 ## Change-Size Rule
 
 - Prefer small, reviewable changes with clear intent

@@ -23,6 +23,7 @@ Key files:
 - [planning.md](planning.md): living project plan and architecture document
 - [AGENTS.md](AGENTS.md): persistent repository operating manual for human and agent contributors
 - [decisions.md](decisions.md): canonical architectural and process decision history
+- [environment.yml](environment.yml): dedicated Conda environment spec for current development and testing
 - [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md): current canonical model baseline
 - [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md): adapter and service-interface baseline
 - [docs/architecture/application-services.md](docs/architecture/application-services.md): first concrete orchestration services
@@ -32,6 +33,7 @@ Key files:
 - [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md): first PyNWB-backed NWB writer
 - [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
 - [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md): first supported-path pilot adapter
+- [docs/architecture/development-environment.md](docs/architecture/development-environment.md): current Conda-based dev/test policy
 - [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): release, installer, and updater planning
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
@@ -59,7 +61,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Rule-based normalization service
 - Rule-based mapping planner
 - PyNWB-backed assembly service for minimal NWB output
-- Artifact validation service
+- Composite validation made up of artifact-policy checks plus PyNWB schema validation
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 
 The supported-path pilot adapter is intentionally a repo-native fixture source for architecture validation. It is not yet a claim of real acquisition-format support.
@@ -68,18 +70,18 @@ All current implementation slices are backed by tests and documented under `docs
 
 ## Local development
 
-Install the package in editable mode before running ad hoc Python imports:
+Current development and testing should use the dedicated `nwbforge-dev` Conda environment:
 
 ```text
-python -m pip install -e .
-pytest
+powershell -ExecutionPolicy Bypass -File scripts/setup-conda-dev.ps1
+powershell -ExecutionPolicy Bypass -File scripts/test-conda-dev.ps1
 ```
 
-The project now depends on `pynwb` for the first real NWB writer slice.
+This environment is intended only for development. Release artifacts should package everything needed so that Conda or virtual environments are not required for end users.
 
 ## Initial next steps
 
-1. Integrate PyNWB schema validation and NWB Inspector into the validation layer.
+1. Add NWB Inspector integration and richer validation reporting.
 2. Expand assembly coverage beyond the current minimal metadata subset.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Continue release-packaging design toward installer and updater implementation once the desktop application direction is finalized.

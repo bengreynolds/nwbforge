@@ -182,3 +182,27 @@ Consequences:
 - `pynwb` is now a declared project dependency
 - `PyNWBAssemblyService` becomes the current writer baseline
 - Assembly remains intentionally narrow until richer supported formats and validation integrations are added
+
+### DEC-016: Use a dedicated Conda environment for development, but never require it at release time
+Status: Accepted
+
+Reasoning:
+- The project needs an isolated local runtime now without interfering with existing Python installations.
+- End users of the released product should not be asked to manage Conda or virtual environments.
+
+Consequences:
+- Current installs and tests should use the dedicated `nwbforge-dev` Conda environment
+- Development helpers should disable user-site package leakage
+- Release packaging must remain fully self-contained
+
+### DEC-017: Layer PyNWB schema validation on top of artifact-policy checks
+Status: Accepted
+
+Reasoning:
+- A generated `.nwb` file should be checked for schema validity before the project adds broader best-practice inspection.
+- Artifact existence checks and schema validation solve different problems and should remain composable.
+
+Consequences:
+- Validation now combines `ArtifactValidationService` with `PyNWBSchemaValidationService`
+- Placeholder or unreadable `.nwb` files now fail validation even if they exist on disk
+- NWB Inspector remains a separate follow-on integration rather than being folded into schema validation
