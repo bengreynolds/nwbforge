@@ -20,6 +20,7 @@ Completed:
 - First NWB Inspector integration layered onto output validation
 - Expanded subject and session metadata coverage for the initial writer pathway
 - Added initial device support across the manifest-backed supported conversion path
+- Added initial acquisition-stream support across the manifest-backed supported conversion path
 - Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
@@ -29,7 +30,7 @@ In progress:
 Next:
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
-- Acquisition-stream and multimodal assembly coverage beyond the current device baseline
+- Richer multimodal assembly beyond the current generic acquisition-stream baseline
 - Validation report artifacts and UI-facing severity policy
 
 ## Project Vision and Scope
@@ -566,10 +567,11 @@ Current status:
 - NWB Inspector validation is now integrated through the validation layer
 - The current writer now carries richer subject/session metadata including experiment description, subject description, and subject date-of-birth support
 - The manifest-backed supported path now carries normalized devices through mapping and into the PyNWB writer
+- The manifest-backed supported path now carries inline acquisition streams through mapping and into generic NWB `TimeSeries` acquisitions
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
-- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices, but acquisitions and multimodal content remain out of scope
+- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus generic acquisitions, but richer modality-specific and multimodal content remain out of scope
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters

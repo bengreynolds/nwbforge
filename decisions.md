@@ -256,3 +256,15 @@ Consequences:
 - `SessionManifestAdapter` now flattens list-of-dict device records into stable extracted fields
 - Rule-based normalization, mapping, and assembly now carry device metadata through to `NWBFile.create_device`
 - Device manufacturer is currently written through PyNWB's deprecated `manufacturer` argument as a temporary bridge pending a fuller `DeviceModel` design
+
+### DEC-022: Add a generic inline TimeSeries acquisition path before modality-specific stream types
+Status: Accepted
+
+Reasoning:
+- The next narrow assembly slice after devices was to prove acquisition content can move end to end through the architecture without yet committing to modality-specific NWB containers.
+- A generic `TimeSeries` writer path is sufficient for the repo-native manifest pilot and keeps the scope reviewable.
+
+Consequences:
+- Manifest acquisition stream records now normalize into `AcquisitionStream` objects and map into explicit `TimeSeries[...]` decisions
+- The current writer supports inline acquisition `data`, `unit`, and either `rate` or `timestamps`
+- Richer modality-specific container choices remain a follow-on design step rather than being guessed at in the pilot path
