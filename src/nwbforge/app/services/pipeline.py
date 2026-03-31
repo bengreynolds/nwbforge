@@ -11,10 +11,11 @@ from nwbforge.domain.contracts import (
     NormalizationService,
     ProvenanceService,
     SourceInspectionService,
+    ValidationReportService,
     ValidationService,
 )
 from nwbforge.domain.enums import SessionStatus
-from nwbforge.domain.models import ConversionSession, ProvenanceArtifact
+from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, ProvenanceRecord, ValidationSummary
 
 from nwbforge.app.services.errors import AssemblyConfigurationError
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
@@ -30,6 +31,7 @@ class ConversionPipelineService:
         mapping_planner: MappingPlanner,
         provenance_service: ProvenanceService,
         validation_service: ValidationService,
+        validation_report_service: ValidationReportService | None = None,
         assembly_service: AssemblyService | None = None,
     ) -> None:
         self._inspection_service = inspection_service
@@ -37,6 +39,7 @@ class ConversionPipelineService:
         self._mapping_planner = mapping_planner
         self._provenance_service = provenance_service
         self._validation_service = validation_service
+        self._validation_report_service = validation_report_service
         self._assembly_service = assembly_service
 
     def build_preview(self, session: ConversionSession) -> ConversionPreview:
@@ -91,10 +94,26 @@ class ConversionPipelineService:
         validation_summary = self._validation_service.validate(validating_session, output_artifacts)
         final_status = SessionStatus.COMPLETED if validation_summary.is_passing() else SessionStatus.FAILED
         final_session = validating_session.transition(final_status)
-        provenance_record = self._provenance_service.build_record(
+        provisional_provenance = self._provenance_service.build_record(
             final_session,
             input_artifacts=preview.provenance_record.input_artifacts,
             generated_artifacts=output_artifacts,
+        )
+        if preview.provenance_record.adapter_ids and provisional_provenance.adapter_ids != preview.provenance_record.adapter_ids:
+            provisional_provenance = replace(
+                provisional_provenance,
+                adapter_ids=preview.provenance_record.adapter_ids,
+            )
+        report_artifact = self._write_validation_report(
+            final_session,
+            provisional_provenance,
+            validation_summary,
+        )
+        final_artifacts = output_artifacts if report_artifact is None else output_artifacts + (report_artifact,)
+        provenance_record = self._provenance_service.build_record(
+            final_session,
+            input_artifacts=preview.provenance_record.input_artifacts,
+            generated_artifacts=final_artifacts,
         )
         if preview.provenance_record.adapter_ids and provenance_record.adapter_ids != preview.provenance_record.adapter_ids:
             provenance_record = replace(
@@ -105,7 +124,7 @@ class ConversionPipelineService:
         return ConversionExecution(
             preview=preview,
             session=final_session,
-            output_artifacts=output_artifacts,
+            output_artifacts=final_artifacts,
             provenance_record=provenance_record,
             validation_summary=validation_summary,
         )
@@ -123,3 +142,17 @@ class ConversionPipelineService:
             str(output_path),
         )
         return self.evaluate_outputs(preview, output_artifacts)
+
+    def _write_validation_report(
+        self,
+        session: ConversionSession,
+        provenance_record: ProvenanceRecord,
+        validation_summary: ValidationSummary,
+    ) -> ProvenanceArtifact | None:
+        if self._validation_report_service is None:
+            return None
+        return self._validation_report_service.write_report(
+            session,
+            provenance_record,
+            validation_summary,
+        )

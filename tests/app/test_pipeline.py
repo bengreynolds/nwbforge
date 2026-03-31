@@ -13,6 +13,7 @@ from pynwb import NWBHDF5IO, NWBFile
 from nwbforge.validation import (
     ArtifactValidationService,
     CompositeValidationService,
+    JsonValidationReportService,
     NWBInspectorValidationService,
     PyNWBSchemaValidationService,
 )
@@ -92,6 +93,7 @@ def make_pipeline() -> ConversionPipelineService:
                 NWBInspectorValidationService(),
             )
         ),
+        validation_report_service=JsonValidationReportService(),
         assembly_service=PyNWBAssemblyService(),
     )
 
@@ -175,8 +177,14 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
     assert execution.session.status == SessionStatus.COMPLETED
     assert output_path.exists() is True
     assert execution.output_artifacts[0].artifact_type == "nwb"
+    assert execution.output_artifacts[1].artifact_type == "validation_report"
     assert execution.validation_summary.is_passing() is True
     assert not execution.validation_summary.errors()
     with NWBHDF5IO(str(output_path), "r") as io:
         nwbfile = io.read()
         assert "Lick Trace" in nwbfile.acquisition
+    report_path = execution.output_artifacts[1].location
+    assert report_path.exists() is True
+    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report_payload["session_id"] == "sess-001"
+    assert report_payload["generated_artifacts"][0]["artifact_type"] == "nwb"

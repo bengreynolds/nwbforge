@@ -6,6 +6,7 @@ from nwbforge.domain.contracts.services import (
     NormalizationService,
     ProvenanceService,
     SourceInspectionService,
+    ValidationReportService,
     ValidationService,
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     "NormalizationService",
     "ProvenanceService",
     "SourceInspectionService",
+    "ValidationReportService",
     "ValidationService",
 ]

@@ -66,3 +66,13 @@ class ProvenanceService(Protocol):
         generated_artifacts: tuple[ProvenanceArtifact, ...],
     ) -> ProvenanceRecord:
         """Build a provenance record for a conversion session."""
+
+
+class ValidationReportService(Protocol):
+    def write_report(
+        self,
+        session: ConversionSession,
+        provenance_record: ProvenanceRecord,
+        validation_summary: ValidationSummary,
+    ) -> ProvenanceArtifact:
+        """Write a machine-readable validation report and return its artifact metadata."""
