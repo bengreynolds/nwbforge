@@ -36,6 +36,18 @@ def test_rule_based_normalizer_maps_subject_and_session_fields() -> None:
                 "Visual stimulation task",
                 "source-1",
             ),
+            "devices.0.device_id": ExtractedField("devices.0.device_id", "camera-1", "source-1"),
+            "devices.0.name": ExtractedField("devices.0.name", "Camera One", "source-1"),
+            "devices.0.description": ExtractedField(
+                "devices.0.description",
+                "Behavior camera",
+                "source-1",
+            ),
+            "devices.0.manufacturer": ExtractedField(
+                "devices.0.manufacturer",
+                "Acme Imaging",
+                "source-1",
+            ),
             "keywords": ExtractedField("keywords", "vision, behavior", "source-1"),
         },
     )
@@ -54,6 +66,9 @@ def test_rule_based_normalizer_maps_subject_and_session_fields() -> None:
     assert bundle.session.session_description.value == "Visual task"
     assert bundle.session.experiment_description is not None
     assert bundle.session.experiment_description.value == "Visual stimulation task"
+    assert len(bundle.devices) == 1
+    assert bundle.devices[0].device_id == "camera-1"
+    assert bundle.devices[0].name.value == "Camera One"
     assert tuple(keyword.value for keyword in bundle.session.keywords) == ("vision", "behavior")
 
 

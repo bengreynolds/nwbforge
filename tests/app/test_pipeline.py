@@ -39,6 +39,14 @@ def make_manifest_session(tmp_path: Path) -> ConversionSession:
                     "age": "P90D",
                     "description": "Test subject",
                 },
+                "devices": [
+                    {
+                        "device_id": "camera-1",
+                        "name": "Camera One",
+                        "description": "Behavior camera",
+                        "manufacturer": "Acme Imaging",
+                    }
+                ],
                 "keywords": ["vision", "behavior"],
                 "operator_note": "check sync alignment",
             }
@@ -105,8 +113,10 @@ def test_pipeline_build_preview_chains_existing_services(tmp_path: Path) -> None
     assert preview.extraction_results[0].adapter_id == "session_manifest"
     assert preview.normalized_metadata.subject.subject_id is not None
     assert preview.normalized_metadata.subject.age is not None
+    assert len(preview.normalized_metadata.devices) == 1
     assert preview.provenance_record.adapter_ids == ("session_manifest",)
     assert any(decision.target_path == "NWBFile.session_description" for decision in preview.mapping_plan.decisions)
+    assert any(decision.target_path == "Device[camera-1].name" for decision in preview.mapping_plan.decisions)
 
 
 def test_pipeline_evaluate_outputs_marks_completed_for_valid_artifacts(tmp_path: Path) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 
 from nwbforge.domain.contracts import NormalizationService
@@ -11,6 +12,7 @@ from nwbforge.domain.models import (
     ExtractedField,
     ExtractionResult,
     NormalizedMetadataBundle,
+    NormalizedDevice,
     NormalizedSessionMetadata,
     NormalizedSubject,
     NormalizedValue,
@@ -20,6 +22,8 @@ from nwbforge.normalization.rules import DEFAULT_FIELD_ALIASES, NormalizationRul
 
 class RuleBasedNormalizationService(NormalizationService):
     """Normalize extracted fields with a conservative alias-driven rule set."""
+
+    _DEVICE_FIELD_PATTERN = re.compile(r"^devices\.(?P<device_key>[^.]+)\.(?P<field_name>[^.]+)$")
 
     def __init__(self, rules: NormalizationRuleSet | None = None) -> None:
         self._rules = rules or NormalizationRuleSet(field_aliases=DEFAULT_FIELD_ALIASES)
@@ -31,10 +35,23 @@ class RuleBasedNormalizationService(NormalizationService):
     ) -> NormalizedMetadataBundle:
         subject = NormalizedSubject()
         session_metadata = NormalizedSessionMetadata()
+        devices: dict[str, NormalizedDevice] = {}
         additional_metadata: dict[str, NormalizedValue[object]] = {}
 
         for result in extraction_results:
             for extracted_field in result.fields.values():
+                device_match = self._DEVICE_FIELD_PATTERN.match(extracted_field.key)
+                if device_match is not None:
+                    device_key = device_match.group("device_key")
+                    field_name = device_match.group("field_name")
+                    devices[device_key] = self._assign_device(
+                        devices.get(device_key),
+                        device_key=device_key,
+                        field_name=field_name,
+                        extracted_field=extracted_field,
+                    )
+                    continue
+
                 canonical_key = self._rules.canonical_key_for(extracted_field.key)
                 if canonical_key is None:
                     additional_metadata[extracted_field.key] = self._to_value(
@@ -67,6 +84,7 @@ class RuleBasedNormalizationService(NormalizationService):
         return NormalizedMetadataBundle(
             subject=subject,
             session=session_metadata,
+            devices=tuple(devices[key] for key in sorted(devices)),
             additional_metadata=additional_metadata,
         )
 
@@ -94,6 +112,43 @@ class RuleBasedNormalizationService(NormalizationService):
         current_value = getattr(session_metadata, field_name)
         normalized_value = self._merge_value(current_value, extracted_field)
         return replace(session_metadata, **{field_name: normalized_value})
+
+    def _assign_device(
+        self,
+        device: NormalizedDevice | None,
+        *,
+        device_key: str,
+        field_name: str,
+        extracted_field: ExtractedField,
+    ) -> NormalizedDevice:
+        normalized_field_name = field_name.strip().lower().replace("-", "_")
+        device = device or NormalizedDevice(
+            device_id=device_key,
+            name=NormalizedValue(
+                value=device_key,
+                origin=ValueOrigin.COMPUTED,
+                source_ids=(extracted_field.source_id,),
+                notes=("Filled from manifest device key until a device name is provided.",),
+            ),
+        )
+
+        if normalized_field_name == "device_id":
+            return replace(device, device_id=str(extracted_field.value))
+        if normalized_field_name in {"name", "description", "manufacturer"}:
+            current_value = getattr(device, normalized_field_name)
+            normalized_value = self._merge_value(current_value, extracted_field)
+            return replace(device, **{normalized_field_name: normalized_value})
+        if normalized_field_name == "modality":
+            modality = str(extracted_field.value)
+            return replace(device, modality=modality)
+
+        additional_fields = dict(device.additional_fields)
+        additional_fields[normalized_field_name] = self._to_value(
+            extracted_field,
+            review_status=ReviewStatus.NEEDS_REVIEW,
+            notes=("No device normalization rule matched this field.",),
+        )
+        return replace(device, additional_fields=additional_fields)
 
     def _merge_value(
         self,

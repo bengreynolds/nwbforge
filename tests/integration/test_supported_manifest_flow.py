@@ -29,6 +29,14 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
                     "age": "P90D",
                     "description": "Test subject",
                 },
+                "devices": [
+                    {
+                        "device_id": "camera-1",
+                        "name": "Camera One",
+                        "description": "Behavior camera",
+                        "manufacturer": "Acme Imaging",
+                    }
+                ],
                 "keywords": ["vision", "behavior"],
                 "operator_note": "check sync alignment",
             }
@@ -59,6 +67,9 @@ def test_supported_manifest_flow_produces_reviewable_mapping_plan(tmp_path: Path
     assert normalized.session.experiment_description is not None
     assert normalized.subject.subject_id is not None
     assert normalized.subject.sex is not None
+    assert len(normalized.devices) == 1
+    assert normalized.devices[0].name.value == "Camera One"
     assert any(decision.target_path == "NWBFile.session_description" for decision in plan.decisions)
     assert any(decision.target_path == "NWBFile.experiment_description" for decision in plan.decisions)
+    assert any(decision.target_path == "Device[camera-1].name" for decision in plan.decisions)
     assert any(decision.source_key == "operator_note" for decision in plan.decisions)

@@ -39,6 +39,12 @@ class PyNWBAssemblyService(AssemblyService):
         subject = self._subject(metadata)
         if subject is not None:
             nwbfile.subject = subject
+        for device in metadata.devices:
+            nwbfile.create_device(
+                name=str(device.name.value),
+                description=self._optional_text(device.description),
+                manufacturer=self._optional_text(device.manufacturer),
+            )
 
         with NWBHDF5IO(path=str(output_file), mode="w") as io:
             io.write(nwbfile)

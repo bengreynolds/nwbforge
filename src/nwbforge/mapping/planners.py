@@ -28,6 +28,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
 
         self._map_session(metadata, decisions, issues)
         self._map_subject(metadata, decisions)
+        self._map_devices(metadata, decisions)
         self._map_additional_metadata(metadata, decisions, issues, extension_recommendations)
 
         summary_notes = (
@@ -196,6 +197,34 @@ class RuleBasedMappingPlanner(MappingPlanner):
             )
             extension_recommendations.append(
                 f"Review whether '{key}' belongs in existing NWB fields, lab metadata, or an extension."
+            )
+
+    def _map_devices(
+        self,
+        metadata: NormalizedMetadataBundle,
+        decisions: list[MappingDecision],
+    ) -> None:
+        for device in metadata.devices:
+            self._optional_map(
+                f"devices.{device.device_id}.name",
+                device.name,
+                f"Device[{device.device_id}].name",
+                "Direct mapping for normalized device name.",
+                decisions,
+            )
+            self._optional_map(
+                f"devices.{device.device_id}.description",
+                device.description,
+                f"Device[{device.device_id}].description",
+                "Direct mapping for normalized device description.",
+                decisions,
+            )
+            self._optional_map(
+                f"devices.{device.device_id}.manufacturer",
+                device.manufacturer,
+                f"Device[{device.device_id}].manufacturer",
+                "Direct mapping for normalized device manufacturer.",
+                decisions,
             )
 
     def _require_and_map(

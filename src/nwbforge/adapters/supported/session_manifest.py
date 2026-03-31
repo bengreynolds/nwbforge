@@ -35,23 +35,13 @@ class SessionManifestAdapter:
         fields: dict[str, ExtractedField] = {}
         issues: list[ReviewIssue] = []
 
-        for key, value in payload.items():
-            if isinstance(value, dict):
-                for nested_key, nested_value in value.items():
-                    field_key = f"{key}.{nested_key}"
-                    fields[field_key] = ExtractedField(
-                        key=field_key,
-                        value=nested_value,
-                        source_id=source.source_id,
-                        path=field_key,
-                    )
-            else:
-                fields[key] = ExtractedField(
-                    key=key,
-                    value=value,
-                    source_id=source.source_id,
-                    path=key,
-                )
+        for field_key, value in self._flatten_payload(payload).items():
+            fields[field_key] = ExtractedField(
+                key=field_key,
+                value=value,
+                source_id=source.source_id,
+                path=field_key,
+            )
 
         if "session" not in payload:
             issues.append(
@@ -78,3 +68,24 @@ class SessionManifestAdapter:
         if source.source_type == SourceType.FILE:
             return source.location
         return source.location / "session_manifest.json"
+
+    @classmethod
+    def _flatten_payload(cls, payload: dict[str, object]) -> dict[str, object]:
+        fields: dict[str, object] = {}
+        for key, value in payload.items():
+            cls._collect_fields(fields, prefix=key, value=value)
+        return fields
+
+    @classmethod
+    def _collect_fields(cls, fields: dict[str, object], prefix: str, value: object) -> None:
+        if isinstance(value, dict):
+            for nested_key, nested_value in value.items():
+                cls._collect_fields(fields, prefix=f"{prefix}.{nested_key}", value=nested_value)
+            return
+
+        if isinstance(value, list) and value and all(isinstance(item, dict) for item in value):
+            for index, nested_value in enumerate(value):
+                cls._collect_fields(fields, prefix=f"{prefix}.{index}", value=nested_value)
+            return
+
+        fields[prefix] = value

@@ -17,6 +17,14 @@ def test_session_manifest_adapter_handles_manifest_file(tmp_path: Path) -> None:
                     "start_time": "2026-03-31T10:15:00-06:00",
                 },
                 "subject": {"subject_id": "mouse-01", "species": "Mus musculus"},
+                "devices": [
+                    {
+                        "device_id": "camera-1",
+                        "name": "Camera One",
+                        "description": "Behavior camera",
+                        "manufacturer": "Acme Imaging",
+                    }
+                ],
                 "keywords": ["vision", "behavior"],
             }
         ),
@@ -36,6 +44,7 @@ def test_session_manifest_adapter_handles_manifest_file(tmp_path: Path) -> None:
     assert result.adapter_id == "session_manifest"
     assert result.fields["session.session_id"].value == "session-01"
     assert result.fields["subject.subject_id"].value == "mouse-01"
+    assert result.fields["devices.0.name"].value == "Camera One"
     assert result.fields["keywords"].value == ["vision", "behavior"]
 
 

@@ -7,6 +7,7 @@ from nwbforge.domain.models import (
     ConversionSession,
     MappingDecision,
     MappingPlan,
+    NormalizedDevice,
     NormalizedMetadataBundle,
     NormalizedSessionMetadata,
     NormalizedSubject,
@@ -27,6 +28,14 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
             date_of_birth=NormalizedValue(
                 "2025-12-31T08:00:00-07:00",
                 origin=ValueOrigin.ADAPTER_EXTRACTED,
+            ),
+        ),
+        devices=(
+            NormalizedDevice(
+                device_id="camera-1",
+                name=NormalizedValue("Camera One", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                description=NormalizedValue("Behavior camera", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                manufacturer=NormalizedValue("Acme Imaging", origin=ValueOrigin.ADAPTER_EXTRACTED),
             ),
         ),
         session=NormalizedSessionMetadata(
@@ -73,4 +82,6 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
         assert nwbfile.subject.sex == "U"
         assert nwbfile.subject.age == "P90D"
         assert nwbfile.subject.description == "Test subject"
+        assert "Camera One" in nwbfile.devices
+        assert nwbfile.devices["Camera One"].description == "Behavior camera"
         assert "vision" in nwbfile.keywords

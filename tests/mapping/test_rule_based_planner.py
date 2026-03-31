@@ -7,6 +7,7 @@ from nwbforge.domain.enums import (
 )
 from nwbforge.domain.models import (
     ConversionSession,
+    NormalizedDevice,
     NormalizedMetadataBundle,
     NormalizedSessionMetadata,
     NormalizedSubject,
@@ -45,6 +46,14 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
                 NormalizedValue("behavior", origin=ValueOrigin.ADAPTER_EXTRACTED),
             ),
         ),
+        devices=(
+            NormalizedDevice(
+                device_id="camera-1",
+                name=NormalizedValue("Camera One", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                description=NormalizedValue("Behavior camera", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                manufacturer=NormalizedValue("Acme Imaging", origin=ValueOrigin.ADAPTER_EXTRACTED),
+            ),
+        ),
     )
 
     plan = RuleBasedMappingPlanner().plan(make_session(), metadata)
@@ -58,6 +67,7 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
     assert "Subject.sex" in target_paths
     assert "Subject.age" in target_paths
     assert "Subject.description" in target_paths
+    assert "Device[camera-1].name" in target_paths
     assert any(decision.action == MappingAction.MERGE for decision in plan.decisions)
 
 
