@@ -12,6 +12,7 @@ authors = [
   { name = "Ben Reynolds" }
 ]
 dependencies = [
+  "nwbinspector>=0.7,<0.8",
   "pynwb>=3.1,<4",
 ]
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from pathlib import Path
 
+from nwbinspector import Importance, inspect_nwbfile
 from pynwb import validate as pynwb_validate
 
 from nwbforge.domain.contracts import ValidationService
@@ -158,6 +159,96 @@ class PyNWBSchemaValidationService(ValidationService):
             )
             for error in schema_errors
         ]
+
+
+class NWBInspectorValidationService(ValidationService):
+    """Validate NWB artifacts against NWB best-practice checks."""
+
+    def __init__(
+        self,
+        *,
+        importance_threshold: str | Importance = Importance.BEST_PRACTICE_SUGGESTION,
+        ignore: list[str] | None = None,
+        select: list[str] | None = None,
+    ) -> None:
+        self._importance_threshold = importance_threshold
+        self._ignore = ignore
+        self._select = select
+
+    def validate(
+        self,
+        session: ConversionSession,
+        output_artifacts: tuple[ProvenanceArtifact, ...],
+    ) -> ValidationSummary:
+        del session
+        issues: list[ValidationIssue] = []
+
+        for artifact in output_artifacts:
+            if not ArtifactValidationService._is_nwb_artifact(artifact):
+                continue
+            if not artifact.location.exists() or not artifact.location.is_file():
+                continue
+            if artifact.location.stat().st_size == 0:
+                continue
+
+            issues.extend(self._validate_artifact(artifact))
+
+        return ValidationSummary(issues=tuple(issues))
+
+    def _validate_artifact(self, artifact: ProvenanceArtifact) -> list[ValidationIssue]:
+        try:
+            messages = list(
+                inspect_nwbfile(
+                    artifact.location,
+                    skip_validate=True,
+                    ignore=self._ignore,
+                    select=self._select,
+                    importance_threshold=self._importance_threshold,
+                )
+            )
+        except Exception as exc:  # pragma: no cover - third-party error types vary
+            return [
+                ValidationIssue(
+                    code="nwbinspector-exception",
+                    message=f"NWB Inspector could not inspect '{artifact.location.name}': {exc}",
+                    severity=IssueSeverity.ERROR,
+                    location=str(artifact.location),
+                    tool="nwbinspector",
+                )
+            ]
+
+        issues: list[ValidationIssue] = []
+        for message in messages:
+            if message is None:
+                continue
+            issues.append(
+                ValidationIssue(
+                    code=self._message_code(message.check_function_name),
+                    message=message.message,
+                    severity=self._map_importance(message.importance),
+                    location=self._message_location(artifact.location, message.location),
+                    tool="nwbinspector",
+                )
+            )
+        return issues
+
+    @staticmethod
+    def _message_code(check_function_name: str | None) -> str:
+        if check_function_name:
+            return f"nwbinspector-{check_function_name}"
+        return "nwbinspector-message"
+
+    @staticmethod
+    def _message_location(artifact_path: Path, object_location: str | None) -> str:
+        if object_location:
+            return f"{artifact_path}::{object_location}"
+        return str(artifact_path)
+
+    @staticmethod
+    def _map_importance(importance: Importance) -> IssueSeverity:
+        if importance in {Importance.ERROR, Importance.PYNWB_VALIDATION, Importance.CRITICAL}:
+            return IssueSeverity.ERROR
+        return IssueSeverity.WARNING
 
 
 class CompositeValidationService(ValidationService):

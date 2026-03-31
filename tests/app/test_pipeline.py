@@ -13,8 +13,10 @@ from pynwb import NWBHDF5IO, NWBFile
 from nwbforge.validation import (
     ArtifactValidationService,
     CompositeValidationService,
+    NWBInspectorValidationService,
     PyNWBSchemaValidationService,
 )
+from pynwb.file import Subject
 
 
 def make_manifest_session(tmp_path: Path) -> ConversionSession:
@@ -60,7 +62,11 @@ def make_pipeline() -> ConversionPipelineService:
         mapping_planner=RuleBasedMappingPlanner(),
         provenance_service=SessionProvenanceService(),
         validation_service=CompositeValidationService(
-            (ArtifactValidationService(), PyNWBSchemaValidationService())
+            (
+                ArtifactValidationService(),
+                PyNWBSchemaValidationService(),
+                NWBInspectorValidationService(),
+            )
         ),
         assembly_service=PyNWBAssemblyService(),
     )
@@ -71,6 +77,17 @@ def write_valid_nwb(path: Path) -> None:
         session_description="Validation test session",
         identifier="validation-test",
         session_start_time=datetime.now(tzlocal()),
+        experimenter=["Researcher, Alice"],
+        experiment_description="Test experiment",
+        institution="Test University",
+        keywords=["validation"],
+    )
+    nwbfile.subject = Subject(
+        subject_id="mouse-01",
+        species="Mus musculus",
+        sex="U",
+        age="P90D",
+        description="Test subject",
     )
     with NWBHDF5IO(path=str(path), mode="w") as io:
         io.write(nwbfile)
@@ -126,6 +143,7 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
 
     execution = pipeline.execute(preview, output_path)
 
-    assert execution.session.status == SessionStatus.COMPLETED
+    assert execution.session.status == SessionStatus.FAILED
     assert output_path.exists() is True
     assert execution.output_artifacts[0].artifact_type == "nwb"
+    assert any(issue.tool == "nwbinspector" for issue in execution.validation_summary.errors())
