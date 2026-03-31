@@ -38,6 +38,17 @@ class MappingPlanner(Protocol):
         """Build an NWB-oriented mapping plan from canonical metadata."""
 
 
+class AssemblyService(Protocol):
+    def write(
+        self,
+        session: ConversionSession,
+        metadata: NormalizedMetadataBundle,
+        mapping_plan: MappingPlan,
+        output_path: str,
+    ) -> tuple[ProvenanceArtifact, ...]:
+        """Write conversion outputs for the supplied mapping plan."""
+
+
 class ValidationService(Protocol):
     def validate(
         self,

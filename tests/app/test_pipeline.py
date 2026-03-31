@@ -5,7 +5,7 @@ from nwbforge.adapters import AdapterRegistry, SessionManifestAdapter
 from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService
 from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType
 from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, SourceReference
-from nwbforge.mapping import RuleBasedMappingPlanner
+from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
 from nwbforge.normalization import RuleBasedNormalizationService
 from nwbforge.validation import ArtifactValidationService
 
@@ -53,6 +53,7 @@ def make_pipeline() -> ConversionPipelineService:
         mapping_planner=RuleBasedMappingPlanner(),
         provenance_service=SessionProvenanceService(),
         validation_service=ArtifactValidationService(),
+        assembly_service=PyNWBAssemblyService(),
     )
 
 
@@ -97,3 +98,15 @@ def test_pipeline_evaluate_outputs_marks_failed_for_invalid_artifacts(tmp_path: 
 
     assert execution.session.status == SessionStatus.FAILED
     assert execution.validation_summary.is_passing() is False
+
+
+def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> None:
+    pipeline = make_pipeline()
+    preview = pipeline.build_preview(make_manifest_session(tmp_path))
+    output_path = tmp_path / "generated" / "session.nwb"
+
+    execution = pipeline.execute(preview, output_path)
+
+    assert execution.session.status == SessionStatus.COMPLETED
+    assert output_path.exists() is True
+    assert execution.output_artifacts[0].artifact_type == "nwb"

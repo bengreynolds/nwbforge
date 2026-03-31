@@ -11,6 +11,9 @@ requires-python = ">=3.11"
 authors = [
   { name = "Ben Reynolds" }
 ]
+dependencies = [
+  "pynwb>=3.1,<4",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

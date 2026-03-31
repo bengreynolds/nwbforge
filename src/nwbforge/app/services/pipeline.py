@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 from nwbforge.domain.contracts import (
+    AssemblyService,
     MappingPlanner,
     NormalizationService,
     ProvenanceService,
@@ -14,6 +16,7 @@ from nwbforge.domain.contracts import (
 from nwbforge.domain.enums import SessionStatus
 from nwbforge.domain.models import ConversionSession, ProvenanceArtifact
 
+from nwbforge.app.services.errors import AssemblyConfigurationError
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 
 
@@ -27,12 +30,14 @@ class ConversionPipelineService:
         mapping_planner: MappingPlanner,
         provenance_service: ProvenanceService,
         validation_service: ValidationService,
+        assembly_service: AssemblyService | None = None,
     ) -> None:
         self._inspection_service = inspection_service
         self._normalization_service = normalization_service
         self._mapping_planner = mapping_planner
         self._provenance_service = provenance_service
         self._validation_service = validation_service
+        self._assembly_service = assembly_service
 
     def build_preview(self, session: ConversionSession) -> ConversionPreview:
         working_session = session.transition(SessionStatus.INSPECTING)
@@ -104,3 +109,17 @@ class ConversionPipelineService:
             provenance_record=provenance_record,
             validation_summary=validation_summary,
         )
+
+    def execute(self, preview: ConversionPreview, output_path: Path) -> ConversionExecution:
+        if self._assembly_service is None:
+            raise AssemblyConfigurationError(
+                "ConversionPipelineService.execute requires a configured assembly service."
+            )
+
+        output_artifacts = self._assembly_service.write(
+            preview.session,
+            preview.normalized_metadata,
+            preview.mapping_plan,
+            str(output_path),
+        )
+        return self.evaluate_outputs(preview, output_artifacts)

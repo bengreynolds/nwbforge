@@ -7,3 +7,7 @@ class SourceNotFoundError(LookupError):
 
 class AdapterSelectionError(LookupError):
     """Raised when adapter selection is missing, invalid, or ambiguous."""
+
+
+class AssemblyConfigurationError(RuntimeError):
+    """Raised when execution is requested without a configured assembly service."""
