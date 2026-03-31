@@ -6,7 +6,13 @@ from dataclasses import dataclass
 
 
 DEFAULT_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
-    "subject.subject_id": ("subject_id", "subject.id", "animal_id", "animal.id"),
+    "subject.subject_id": (
+        "subject_id",
+        "subject.subject_id",
+        "subject.id",
+        "animal_id",
+        "animal.id",
+    ),
     "subject.species": ("species", "subject.species"),
     "subject.sex": ("sex", "subject.sex"),
     "subject.age": ("age", "subject.age"),
