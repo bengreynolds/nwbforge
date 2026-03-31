@@ -32,7 +32,8 @@ The first writer intentionally covers a narrow, high-confidence subset:
 - keywords
 - subject id, species, sex, age, date of birth, description, genotype, strain
 - devices with name, description, and manufacturer
-- generic acquisition `TimeSeries` objects from inline stream data, units, and timing metadata
+- behavior acquisition streams written into `BehavioralTimeSeries`
+- generic acquisition `TimeSeries` fallback for non-behavior inline stream data, units, and timing metadata
 
 This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved. It also brings the manifest-backed supported-path pilot to the point where writer-generated files can satisfy the current validation stack when the source provides the needed subject metadata, device records, and inline stream data.
 
@@ -40,12 +41,12 @@ This is enough to prove a real NWB file can be written from the current preview 
 
 - writer logic consumes normalized metadata and mapping intent, not raw source fields
 - identifier policy is currently conservative and derived from normalized session id or the conversion session id
-- the writer emits a minimal file and only supports generic inline acquisition streams, not richer modality-specific containers
+- the writer emits a minimal file and only supports behavior-specific containers plus generic inline fallback, not broader modality coverage yet
 - device manufacturer is currently written through PyNWB's deprecated `manufacturer` argument as a temporary bridge pending a fuller `DeviceModel` design
 - acquisition streams currently require inline `data`, `unit`, and either `rate` or `timestamps`
 
 ## Immediate follow-on work
 
-1. Expand assembly coverage from generic inline `TimeSeries` to richer modality-specific acquisition content.
+1. Expand assembly coverage from the current behavior baseline to additional modality-specific acquisition content.
 2. Replace temporary device manufacturer bridging with a deliberate `DeviceModel` strategy.
 3. Refine identifier and metadata policy as real supported formats are integrated.

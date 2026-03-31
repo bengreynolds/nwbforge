@@ -38,4 +38,4 @@ Its purpose is to:
 
 1. Select the first real supported acquisition format for a NeuroConv-backed adapter spike.
 2. Add a higher-level orchestration service that chains inspection, normalization, mapping, and validation explicitly.
-3. Begin the first NWB assembly slice on top of the mapping plan.
+3. Expand beyond the current behavior-specific assembly slice into additional modality-aware mappings.

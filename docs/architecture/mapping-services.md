@@ -29,7 +29,8 @@ The first planner handles a conservative core:
 - experimenter, institution, lab, keywords
 - subject id, species, sex, age, date of birth, description, genotype, strain
 - device name, description, and manufacturer
-- generic acquisition stream name, description, data, unit, and timing metadata
+- acquisition stream name, description, data, unit, and timing metadata
+- behavior-stream targets through `BehavioralTimeSeries[behavior].TimeSeries[...]`
 - unmatched additional metadata as `DESCRIBE` decisions
 
 ## Design constraints
@@ -41,6 +42,6 @@ The first planner handles a conservative core:
 
 ## Immediate follow-on work
 
-1. Add modality-specific acquisition mapping beyond the current generic `TimeSeries` path.
+1. Add modality-specific acquisition mapping beyond the current behavior baseline.
 2. Introduce lab-profile-aware mapping templates.
 3. Add explicit device-model policy rather than relying on temporary manufacturer bridging.

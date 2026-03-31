@@ -21,6 +21,7 @@ Completed:
 - Expanded subject and session metadata coverage for the initial writer pathway
 - Added initial device support across the manifest-backed supported conversion path
 - Added initial acquisition-stream support across the manifest-backed supported conversion path
+- Added first modality-specific acquisition assembly for behavior streams
 - Added machine-readable validation report artifacts to the execution pipeline
 - Added an explicit validation review-outcome policy for UI and workflow consumers
 - Added persisted post-execution review decisions and override records as machine-readable artifacts
@@ -34,6 +35,7 @@ In progress:
 Next:
 - First real supported acquisition adapter selection and spike
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
+- Additional modality-specific NWB containers beyond the new behavior baseline
 - Preview-state persistence and review history beyond the current latest-snapshot baseline
 - Longer-term persistence backend decision beyond the current JSON snapshot store
 
@@ -576,7 +578,7 @@ Current status:
 - NWB Inspector validation is now integrated through the validation layer
 - The current writer now carries richer subject/session metadata including experiment description, subject description, and subject date-of-birth support
 - The manifest-backed supported path now carries normalized devices through mapping and into the PyNWB writer
-- The manifest-backed supported path now carries inline acquisition streams through mapping and into generic NWB `TimeSeries` acquisitions
+- The manifest-backed supported path now carries inline acquisition streams through mapping, with behavior streams targeting `BehavioralTimeSeries` and non-behavior streams retaining generic NWB `TimeSeries` fallback
 - The pipeline now emits a machine-readable JSON validation report artifact alongside generated outputs
 - The pipeline now derives an explicit validation review outcome so UI and workflow layers do not need to infer blocking versus advisory behavior from raw issue lists
 - Post-execution review decisions can now be persisted as explicit approval/rejection artifacts with acknowledgement and blocked-override rules
@@ -584,7 +586,7 @@ Current status:
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
-- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus generic acquisitions, but richer modality-specific and multimodal content remain out of scope
+- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus a first behavior-specific acquisition pathway, but broader modality-specific and multimodal content remain out of scope
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
 

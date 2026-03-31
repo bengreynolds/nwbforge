@@ -317,3 +317,15 @@ Consequences:
 - Session persistence now has an explicit domain contract and app-layer service
 - The current persistence backend stores the latest session snapshot as JSON under a configurable base directory
 - Preview-stage state and full revision history remain future work rather than being improvised into the first snapshot format
+
+### DEC-027: Add behavior-specific acquisition containers before broader modality coverage
+Status: Accepted
+
+Reasoning:
+- The manifest-backed pilot already includes behavior streams, so behavior is the narrowest truthful modality-specific step beyond flat `TimeSeries`.
+- `BehavioralTimeSeries` improves output semantics without forcing premature commitments on ecephys, ophys, or multimodal merge structure.
+
+Consequences:
+- Behavior streams now write into `BehavioralTimeSeries` acquisition containers
+- The mapping planner now emits behavior-specific acquisition target paths for those streams
+- Non-behavior streams still use the generic `TimeSeries` fallback until additional modality policies are introduced
