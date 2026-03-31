@@ -51,8 +51,18 @@ Location: `src/nwbforge/validation/reports.py`
 
 Responsibilities:
 - serialize validation results and provenance context into a machine-readable JSON artifact
+- include the explicit review outcome derived from repository validation policy
 - write the report as a separate generated artifact rather than folding it into validation logic
 - provide a stable artifact for UI review, automation, or future distribution workflows
+
+### `DefaultValidationReviewPolicyService`
+
+Location: `src/nwbforge/validation/policies.py`
+
+Responsibilities:
+- convert raw validation summaries into explicit workflow-facing review outcomes
+- distinguish between `pass`, `review`, and `blocked` states
+- keep blocking-versus-advisory policy separate from both validators and report serialization
 
 ## Current scope
 
@@ -60,6 +70,7 @@ The validation layer now covers:
 - output artifact policy checks
 - PyNWB schema validation for generated NWB files
 - NWB Inspector best-practice validation for generated NWB files
+- explicit review-outcome derivation for UI and workflow consumers
 - machine-readable validation report emission
 
 That makes it useful now for:
@@ -67,6 +78,7 @@ That makes it useful now for:
 - rejecting placeholder or unreadable `.nwb` files
 - exercising the validation-service boundary with a real schema-aware validator
 - surfacing best-practice-critical metadata gaps in generated files
+- exposing a stable workflow-facing validation outcome without re-implementing policy in the UI
 - persisting validation results as reviewable JSON artifacts
 - supporting future orchestration and release workflows
 
@@ -77,10 +89,11 @@ That makes it useful now for:
 - schema validation is composed rather than embedded into the artifact-policy service
 - NWB Inspector remains separate from schema validation instead of being folded into it
 - writer execution can now fail on best-practice-critical findings even when schema validation passes
+- review policy is separate from validators so severity thresholds and approval rules can evolve without changing validation implementations
 - report generation remains separate from validation so reporting shape can evolve without changing validators
 
 ## Immediate follow-on work
 
-1. Decide how blocking versus advisory findings should be surfaced in UI review flows.
+1. Persist review acknowledgements and approval decisions instead of only deriving them in-memory during execution.
 2. Add richer report contents such as mapping summaries and explicit manual-review sections.
 3. Expand modality-specific writing so report artifacts describe more than the current generic stream baseline.

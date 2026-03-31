@@ -18,6 +18,7 @@ Responsibilities:
 - build a mapping plan
 - assemble a provenance record for preview
 - evaluate generated artifacts with the validation service
+- derive an explicit validation review outcome for workflow consumers
 - emit a machine-readable validation report artifact during execution evaluation
 - expose explicit preview and execution result models
 
@@ -32,6 +33,7 @@ Responsibilities:
 
 ### Execution evaluation
 - validate generated artifacts
+- derive `pass`, `review`, or `blocked` outcome from the validation summary
 - write a validation report artifact
 - derive output-aware provenance
 - move the session into `completed` or `failed`
@@ -40,6 +42,7 @@ Responsibilities:
 
 - orchestration coordinates existing layers; it does not replace them
 - preview and execution are explicit stages rather than one opaque call
+- validation policy is integrated as a separate service rather than being embedded in validators or the UI
 - report generation is integrated as a separate service rather than being embedded in validation
 - session transitions remain visible and testable
 
@@ -47,4 +50,4 @@ Responsibilities:
 
 1. Add richer session persistence so preview and execution state can be resumed.
 2. Add higher-level workflow services for UI-driven review and approval checkpoints.
-3. Add explicit UI/report policy around blocking versus advisory validation findings.
+3. Persist review acknowledgements and override decisions alongside the current derived validation outcome.

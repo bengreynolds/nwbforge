@@ -22,6 +22,7 @@ Completed:
 - Added initial device support across the manifest-backed supported conversion path
 - Added initial acquisition-stream support across the manifest-backed supported conversion path
 - Added machine-readable validation report artifacts to the execution pipeline
+- Added an explicit validation review-outcome policy for UI and workflow consumers
 - Dedicated isolated Conda workflow for current development and testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
@@ -32,7 +33,7 @@ Next:
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
-- UI-facing severity policy and review workflow on top of the current validation/reporting baseline
+- Review-state persistence and approval workflow on top of the new validation review-outcome baseline
 
 ## Project Vision and Scope
 
@@ -384,6 +385,7 @@ Validation requirements:
 - Run schema validation with PyNWB before completion
 - Run NWB Inspector for best-practice review
 - Separate blocking errors from advisory warnings
+- Derive an explicit workflow-facing review outcome from validation results
 - Persist validation outputs in session artifacts
 
 Recommended report sections:
@@ -570,10 +572,12 @@ Current status:
 - The manifest-backed supported path now carries normalized devices through mapping and into the PyNWB writer
 - The manifest-backed supported path now carries inline acquisition streams through mapping and into generic NWB `TimeSeries` acquisitions
 - The pipeline now emits a machine-readable JSON validation report artifact alongside generated outputs
+- The pipeline now derives an explicit validation review outcome so UI and workflow layers do not need to infer blocking versus advisory behavior from raw issue lists
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
 - The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus generic acquisitions, but richer modality-specific and multimodal content remain out of scope
+- Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, but review acknowledgement and approval persistence are not implemented yet
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -604,7 +608,7 @@ Current status:
 - What minimum provenance record is required for auditability?
 - When should the system recommend descriptive metadata versus a formal NDX?
 - How should lab vocabularies be versioned and reviewed?
-- Which validation findings should block export by default?
+- Which validation findings should block export by default for each lab profile or deployment mode?
 
 ## Decisions Log
 

@@ -280,3 +280,15 @@ Consequences:
 - The pipeline now writes a JSON validation report artifact after validation completes
 - Validation report generation is modeled as a separate service instead of being embedded inside validation services
 - Generated outputs now include both primary conversion artifacts and a machine-readable review/report artifact
+
+### DEC-024: Derive an explicit validation review outcome from raw validation summaries
+Status: Accepted
+
+Reasoning:
+- UI and workflow layers should not have to reverse-engineer repository policy from raw error and warning lists.
+- The project needs a stable place to encode the distinction between passing, review-required, and blocked validation states before approval workflows are added.
+
+Consequences:
+- Validation policy is now modeled as a separate service from validators and report generation
+- Pipeline execution now carries a review outcome in addition to the raw `ValidationSummary`
+- Machine-readable validation reports now include explicit review-outcome fields for downstream UI and automation use
