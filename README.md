@@ -29,6 +29,7 @@ Key files:
 - [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md): preview and execution orchestration flow
 - [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md): first normalization implementation
 - [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md): first mapping-planner implementation
+- [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md): first PyNWB-backed NWB writer
 - [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
 - [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md): first supported-path pilot adapter
 - [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): release, installer, and updater planning
@@ -57,6 +58,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Conversion pipeline service for preview and output evaluation
 - Rule-based normalization service
 - Rule-based mapping planner
+- PyNWB-backed assembly service for minimal NWB output
 - Artifact validation service
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 
@@ -73,9 +75,11 @@ python -m pip install -e .
 pytest
 ```
 
+The project now depends on `pynwb` for the first real NWB writer slice.
+
 ## Initial next steps
 
-1. Define the first NWB assembly/writer slice and insert it into the execution pipeline.
-2. Integrate PyNWB and NWB Inspector into the validation layer.
+1. Integrate PyNWB schema validation and NWB Inspector into the validation layer.
+2. Expand assembly coverage beyond the current minimal metadata subset.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
 4. Continue release-packaging design toward installer and updater implementation once the desktop application direction is finalized.

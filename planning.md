@@ -15,17 +15,17 @@ Completed:
 - First concrete validation-layer implementation
 - First concrete supported-path pilot adapter and integration test flow
 - First high-level orchestration service for preview and execution evaluation
+- First concrete PyNWB-backed NWB assembly/writer service
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
 - Core backend contracts
 
 Next:
-- PyNWB and NWB Inspector validation integrations
+- PyNWB schema and NWB Inspector validation integrations
 - First real supported acquisition adapter selection and spike
 - Persistence contract decisions
-- NWB assembly-layer design and implementation
-- Writer integration into the execution pipeline
+- Richer NWB assembly coverage for devices and acquisitions
 
 ## Project Vision and Scope
 
@@ -518,7 +518,8 @@ Current status:
 - Initial artifact validation is in place
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
-- PyNWB/NWB Inspector integration, real format adapters, and assembly remain to be implemented
+- A thin PyNWB-backed writer is in place for minimal NWB output generation
+- PyNWB/NWB Inspector validation integration and richer assembly remain to be implemented
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -568,6 +569,7 @@ Implementation references:
 - Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
+- Assembly note: [docs/architecture/assembly-services.md](docs/architecture/assembly-services.md)
 - Validation note: [docs/architecture/validation-services.md](docs/architecture/validation-services.md)
 - Pilot adapter note: [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md)
 - Release note: [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md)

@@ -170,3 +170,15 @@ Consequences:
 - `ConversionPipelineService` exposes `build_preview` and `evaluate_outputs` separately
 - Preview and execution results are explicit application-layer models
 - Future writer integration should fit between preview generation and output evaluation
+
+### DEC-015: Introduce PyNWB as the first real NWB writer dependency
+Status: Accepted
+
+Reasoning:
+- The project needs a real NWB-writing path to validate the architecture end to end.
+- A thin PyNWB-backed writer provides a truthful implementation step without overcommitting on broader format support.
+
+Consequences:
+- `pynwb` is now a declared project dependency
+- `PyNWBAssemblyService` becomes the current writer baseline
+- Assembly remains intentionally narrow until richer supported formats and validation integrations are added
