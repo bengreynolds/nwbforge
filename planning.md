@@ -408,48 +408,78 @@ The product must ship as a production-grade desktop application with formal rele
 - Development environment setup must not interfere with existing project or user environments on the machine
 - Current helper entry points are `scripts/setup-conda-dev.ps1` and `scripts/test-conda-dev.ps1`
 
-### Installer and packaging evaluation
+### Required release packaging strategy
 
-#### Option A: Python desktop app plus PySide6 and PyInstaller or Nuitka
-Pros:
-- Best alignment with the Python-centric codebase
-- Simplest path while backend contracts are still evolving
-- Lower coordination cost than a split frontend and backend stack
+All final application releases must use this deployment model:
+1. Build the application in Python
+2. Package the application with PyInstaller
+3. Wrap the PyInstaller build in a native installer or installable package for each supported platform
+4. Provide an in-app updater that checks GitHub Releases and launches a user-friendly update flow
 
-Cons:
-- Native installer polish and updater behavior require additional tooling
-- macOS signing/notarization and Linux packaging still need platform-specific work
+This is the required release baseline, not an open packaging evaluation.
 
-#### Option B: Electron frontend plus Python sidecar
-Pros:
-- Mature updater and installer ecosystem
-- Flexible UI stack
+### PyInstaller as the primary packaging layer
 
-Cons:
-- Heavier distribution footprint
-- More operational complexity
-- Introduces a multi-runtime app shape earlier than needed
+PyInstaller is the required first-stage packaging tool because it aligns with the intended product shape:
+- Python-first application architecture
+- desktop deployment across Windows, macOS, and Linux
+- bundled scientific Python dependencies
+- no end-user Python, Conda, or virtual environment requirement
 
-#### Option C: Tauri frontend plus Python sidecar
-Pros:
-- Smaller footprint than Electron
-- Attractive native update capabilities
+Dependency bundling expectations:
+- bundle the Python interpreter with the application
+- bundle application code and required Python dependencies
+- bundle scientific-stack dependencies needed for supported runtime behavior
+- treat the PyInstaller output as the canonical application payload consumed by native installers
 
-Cons:
-- Still introduces sidecar packaging complexity
-- Adds Rust and web-build concerns early
+Scientific Python packaging tradeoffs and risks:
+- larger application size due to bundled interpreter and binary dependencies
+- platform-specific handling for compiled packages such as HDF5-backed libraries
+- more complex signing, notarization, and codesigning behavior on macOS and Windows
+- need for repeatable build inputs so PyInstaller output remains stable across release environments
+- possible hidden-import, data-file, and plugin-discovery issues that require explicit PyInstaller configuration
 
-### Current planning bias
-- Prefer a desktop-first, Python-centric application initially
-- Evaluate PySide6 with PyInstaller or Nuitka plus platform-specific installers first
-- Defer a split frontend/backend desktop packaging model unless UX or updater constraints justify it
-- Treat Conda as a development-time isolation tool, not a release-time dependency
+Mitigation direction:
+- keep the desktop stack Python-centric to avoid a sidecar runtime
+- add dedicated PyInstaller specs and packaging tests before release implementation
+- pin and validate release-build dependencies separately from day-to-day development tooling
+- test packaged builds with representative scientific dependencies on every supported platform
+
+### Native installer strategy
+
+The installer layer must wrap the PyInstaller build rather than replace the Python-first architecture.
+
+Windows:
+- package the PyInstaller-built application with a native installer such as Inno Setup, NSIS, or WiX
+- support install location selection, desktop shortcut creation, start menu entry creation, and standard uninstall/repair flows
+
+macOS:
+- package the PyInstaller-built application as a signed `.app` wrapped in a signed `.dmg` or `.pkg`
+- support standard drag-install or guided install behavior, depending on the selected installer form
+
+Linux:
+- package the PyInstaller-built application as at least one broadly distributable format such as AppImage
+- additionally evaluate one native package path such as `.deb` for managed lab environments if needed
+
+### Packaging constraints and assumptions
+
+- native installers should install the packaged app without asking the user to configure Python
+- installers must preserve user data and settings outside the installed application directory where practical
+- installers and updates must not interfere with existing Python or Conda installations on the user machine
+- Conda remains a development-time isolation tool only
 
 ### Update mechanism design
 - Built-in updater should query GitHub releases for the current platform
 - Updater should present release notes and version availability in the UI
-- Update flow should download the correct installer/package and launch the update process
+- Update flow should download the correct platform-native installer/package wrapping the PyInstaller payload and launch the update process
 - User settings, lab profiles, templates, and local session state should live outside the installed app directory when possible
+
+Updater architecture requirements:
+- use GitHub Releases as the authoritative release feed
+- resolve update assets by platform and application version
+- support explicit user-driven update checks in the UI first
+- preserve user settings and local state whenever the installer/update path allows it
+- fail safely by leaving the current installation usable if update download or handoff fails
 
 ### Versioning strategy
 - Use semantic versioning for public releases
@@ -457,17 +487,19 @@ Cons:
 - Track compatibility notes for config, plugin, and local-state changes
 
 ### Release pipeline
-1. Build platform-specific application artifact
-2. Bundle runtime and dependencies
-3. Wrap artifact in platform-native installer or installable package
-4. Publish GitHub release assets and notes
-5. Updater consumes release metadata and launches update flow
+1. Build the Python desktop application for the target platform
+2. Package the application with PyInstaller into a self-contained application payload
+3. Validate bundled runtime and scientific dependencies in the packaged output
+4. Wrap the PyInstaller payload in a platform-native installer or installable package
+5. Publish GitHub release assets and notes
+6. Application updater consumes published release metadata and launches the correct update artifact
 
 ### Rollback and failure considerations
 - Failed updates must not corrupt user settings or session data
 - Installers should support repair or reinstall paths
 - Release metadata should support rollback to the last known-good version
 - Config and state migrations must be versioned and reversible where feasible
+- Packaged scientific dependencies must be validated on every supported platform before release promotion
 
 ## Plugin and Adapter Strategy for Lab-Specific Formats
 

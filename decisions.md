@@ -206,3 +206,17 @@ Consequences:
 - Validation now combines `ArtifactValidationService` with `PyNWBSchemaValidationService`
 - Placeholder or unreadable `.nwb` files now fail validation even if they exist on disk
 - NWB Inspector remains a separate follow-on integration rather than being folded into schema validation
+
+### DEC-018: Use a PyInstaller-first release pipeline wrapped by native installers
+Status: Accepted
+
+Reasoning:
+- The product is a desktop-oriented Python application with a likely scientific Python stack.
+- End users in research labs should not be required to install Python, Conda, or manage environments manually.
+- A PyInstaller-first payload preserves a Python-centric architecture while still allowing native installer and updater workflows.
+
+Consequences:
+- Final releases must package the app with PyInstaller before any installer wrapping step
+- Windows, macOS, and Linux distributions must wrap the PyInstaller build in native installers or installable packages
+- The in-app updater should resolve and download release assets from GitHub Releases
+- Release engineering must account for scientific Python packaging risks such as compiled dependencies, larger bundles, and platform-specific signing behavior

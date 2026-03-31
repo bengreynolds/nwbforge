@@ -34,7 +34,7 @@ Key files:
 - [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
 - [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md): first supported-path pilot adapter
 - [docs/architecture/development-environment.md](docs/architecture/development-environment.md): current Conda-based dev/test policy
-- [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): release, installer, and updater planning
+- [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): PyInstaller-first release, installer, and updater planning
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
 
@@ -79,9 +79,18 @@ powershell -ExecutionPolicy Bypass -File scripts/test-conda-dev.ps1
 
 This environment is intended only for development. Release artifacts should package everything needed so that Conda or virtual environments are not required for end users.
 
+## Release direction
+
+Final application releases are planned around a Python-first desktop distribution model:
+- package the app with PyInstaller first
+- wrap the packaged build in native installers for Windows, macOS, and Linux
+- provide an in-app updater that checks GitHub Releases and downloads the correct platform artifact
+
+This keeps the runtime self-contained for lab users while preserving the Python/scientific-stack architecture.
+
 ## Initial next steps
 
 1. Add NWB Inspector integration and richer validation reporting.
 2. Expand assembly coverage beyond the current minimal metadata subset.
 3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
-4. Continue release-packaging design toward installer and updater implementation once the desktop application direction is finalized.
+4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.
