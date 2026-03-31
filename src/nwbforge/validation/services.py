@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
+
+from pynwb import validate as pynwb_validate
 
 from nwbforge.domain.contracts import ValidationService
 from nwbforge.domain.enums import IssueSeverity
@@ -106,3 +109,69 @@ class ArtifactValidationService(ValidationService):
     def _is_nwb_artifact(artifact: ProvenanceArtifact) -> bool:
         artifact_type = artifact.artifact_type.lower()
         return artifact_type == "nwb" or artifact.location.suffix.lower() == ".nwb"
+
+
+class PyNWBSchemaValidationService(ValidationService):
+    """Validate NWB artifacts against the NWB schema with PyNWB."""
+
+    def validate(
+        self,
+        session: ConversionSession,
+        output_artifacts: tuple[ProvenanceArtifact, ...],
+    ) -> ValidationSummary:
+        del session
+        issues: list[ValidationIssue] = []
+
+        for artifact in output_artifacts:
+            if not ArtifactValidationService._is_nwb_artifact(artifact):
+                continue
+            if not artifact.location.exists() or not artifact.location.is_file():
+                continue
+            if artifact.location.stat().st_size == 0:
+                continue
+
+            issues.extend(self._validate_artifact(artifact))
+
+        return ValidationSummary(issues=tuple(issues))
+
+    def _validate_artifact(self, artifact: ProvenanceArtifact) -> list[ValidationIssue]:
+        try:
+            schema_errors = pynwb_validate(path=artifact.location)
+        except Exception as exc:  # pragma: no cover - third-party error types vary
+            return [
+                ValidationIssue(
+                    code="pynwb-schema-exception",
+                    message=f"PyNWB validation could not inspect '{artifact.location.name}': {exc}",
+                    severity=IssueSeverity.ERROR,
+                    location=str(artifact.location),
+                    tool="pynwb",
+                )
+            ]
+
+        return [
+            ValidationIssue(
+                code="pynwb-schema-error",
+                message=str(error),
+                severity=IssueSeverity.ERROR,
+                location=str(artifact.location),
+                tool="pynwb",
+            )
+            for error in schema_errors
+        ]
+
+
+class CompositeValidationService(ValidationService):
+    """Aggregate multiple validation services into one validation pass."""
+
+    def __init__(self, services: Iterable[ValidationService]) -> None:
+        self._services = tuple(services)
+
+    def validate(
+        self,
+        session: ConversionSession,
+        output_artifacts: tuple[ProvenanceArtifact, ...],
+    ) -> ValidationSummary:
+        issues: list[ValidationIssue] = []
+        for service in self._services:
+            issues.extend(service.validate(session, output_artifacts).issues)
+        return ValidationSummary(issues=tuple(issues))

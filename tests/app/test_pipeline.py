@@ -1,13 +1,20 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
+from dateutil.tz import tzlocal
 from nwbforge.adapters import AdapterRegistry, SessionManifestAdapter
 from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService
 from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType
 from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, SourceReference
 from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
 from nwbforge.normalization import RuleBasedNormalizationService
-from nwbforge.validation import ArtifactValidationService
+from pynwb import NWBHDF5IO, NWBFile
+from nwbforge.validation import (
+    ArtifactValidationService,
+    CompositeValidationService,
+    PyNWBSchemaValidationService,
+)
 
 
 def make_manifest_session(tmp_path: Path) -> ConversionSession:
@@ -52,9 +59,21 @@ def make_pipeline() -> ConversionPipelineService:
         normalization_service=RuleBasedNormalizationService(),
         mapping_planner=RuleBasedMappingPlanner(),
         provenance_service=SessionProvenanceService(),
-        validation_service=ArtifactValidationService(),
+        validation_service=CompositeValidationService(
+            (ArtifactValidationService(), PyNWBSchemaValidationService())
+        ),
         assembly_service=PyNWBAssemblyService(),
     )
+
+
+def write_valid_nwb(path: Path) -> None:
+    nwbfile = NWBFile(
+        session_description="Validation test session",
+        identifier="validation-test",
+        session_start_time=datetime.now(tzlocal()),
+    )
+    with NWBHDF5IO(path=str(path), mode="w") as io:
+        io.write(nwbfile)
 
 
 def test_pipeline_build_preview_chains_existing_services(tmp_path: Path) -> None:
@@ -71,7 +90,7 @@ def test_pipeline_evaluate_outputs_marks_completed_for_valid_artifacts(tmp_path:
     pipeline = make_pipeline()
     preview = pipeline.build_preview(make_manifest_session(tmp_path))
     nwb_file = tmp_path / "output.nwb"
-    nwb_file.write_bytes(b"placeholder")
+    write_valid_nwb(nwb_file)
 
     execution = pipeline.evaluate_outputs(
         preview,
