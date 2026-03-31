@@ -48,3 +48,15 @@ Consequences:
 - `main` is the protected integration target
 - `dev` remains the active working branch
 - Documentation should not refer to `master`
+
+### DEC-005: Start implementation by codifying canonical domain contracts
+Status: Accepted
+
+Reasoning:
+- The architecture depends on stable boundaries between raw sources, normalized metadata, mapping plans, provenance, and validation.
+- Defining these contracts first reduces downstream coupling when adapters and services are added.
+
+Consequences:
+- Initial implementation lives in `src/nwbforge/domain/`
+- Early tests target immutable contract behavior rather than conversion logic
+- Later orchestration, adapter, and NWB-writing layers should depend on these models instead of inventing parallel payload shapes

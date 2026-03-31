@@ -1,7 +1,22 @@
 # NWB Forge Planning
 
 Last updated: 2026-03-31
-Status: Phase 1 planning
+Status: Phase 2 in progress
+
+## Current Execution Status
+
+Completed:
+- Phase 1 planning and repository scaffolding
+- Initial Phase 2 domain contract baseline under `src/nwbforge/domain/`
+- Focused tests for session, normalization, mapping, provenance, and validation models
+
+In progress:
+- Core backend contracts
+
+Next:
+- Adapter registry contracts
+- Service interfaces for normalization, mapping, and validation
+- Persistence contract decisions
 
 ## Project Vision and Scope
 
@@ -399,6 +414,10 @@ Important separation:
 - Define normalization and mapping contracts
 - Add validation and provenance service interfaces
 
+Current status:
+- Canonical session, normalization, mapping, provenance, and validation models are in place
+- Adapter and service contracts remain to be implemented
+
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
 - Provide minimal UI or CLI workflow to prove session orchestration
@@ -439,6 +458,9 @@ Initial decisions:
 - Treat supported, custom, and hybrid conversions as first-class pathways.
 - Prefer NeuroConv first for supported ingestion, PyNWB for custom assembly, and NWB GUIDE as a UX reference for straightforward conversions.
 - Avoid promising universal automatic conversion intelligence in early phases.
+
+Implementation references:
+- Core contract note: [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md)
 
 ## Research References
 

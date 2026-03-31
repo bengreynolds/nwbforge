@@ -21,6 +21,7 @@ This repository is in the planning and scaffolding phase. The first objective is
 Key files:
 - [planning.md](planning.md): living project plan and architecture document
 - [AGENTS.md](AGENTS.md): persistent repository operating manual for human and agent contributors
+- [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md): current canonical model baseline
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
 - [docs/decision-log.md](docs/decision-log.md): decision history
@@ -39,10 +40,18 @@ tests/
 
 Planned backend package layout is documented in [planning.md](planning.md).
 
+## Local development
+
+Install the package in editable mode before running ad hoc Python imports:
+
+```text
+python -m pip install -e .
+pytest
+```
+
 ## Initial next steps
 
-1. Define canonical domain models for sessions, inputs, normalized metadata, and mapping outcomes.
-2. Define adapter and registry contracts for supported and custom source systems.
-3. Define provenance and validation report models.
-4. Choose an initial supported-path pilot format and implement one end-to-end thin slice.
-5. Add representative sample fixtures from a small number of lab archetypes.
+1. Define adapter and registry contracts for supported and custom source systems.
+2. Define service interfaces for normalization, mapping planning, provenance emission, and validation.
+3. Choose an initial supported-path pilot format and implement one end-to-end thin slice.
+4. Add representative sample fixtures from a small number of lab archetypes.
