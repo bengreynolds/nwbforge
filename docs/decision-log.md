@@ -36,3 +36,15 @@ Reasoning:
 Consequences:
 - Supported-path adapters should evaluate NeuroConv before custom parsing is written
 - The architecture must accommodate both direct and lower-level assembly paths
+
+### DEC-004: Use `main` as the default integration branch and retire `master`
+Status: Accepted
+
+Reasoning:
+- Repository conventions should be explicit from the start.
+- The working branch model already centers development on `dev` with PR-based integration.
+
+Consequences:
+- `main` is the protected integration target
+- `dev` remains the active working branch
+- Documentation should not refer to `master`

@@ -12,7 +12,9 @@ Primary priorities:
 
 ## Branch Policy
 
+- `main` is the default integration branch for the repository
 - Work on `dev` or a short-lived feature branch created from `dev`
+- Do not use a `master` branch in this repository
 - Never commit directly to `main`
 - If the current branch is `main`, stop and switch before making changes
 
