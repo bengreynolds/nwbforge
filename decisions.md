@@ -329,3 +329,15 @@ Consequences:
 - Behavior streams now write into `BehavioralTimeSeries` acquisition containers
 - The mapping planner now emits behavior-specific acquisition target paths for those streams
 - Non-behavior streams still use the generic `TimeSeries` fallback until additional modality policies are introduced
+
+### DEC-028: Split behavior acquisition assembly into trace and position subtypes
+Status: Accepted
+
+Reasoning:
+- Behavior data is not a single container shape, and position data has a clearer NWB-native representation than a generic trace.
+- Adding `Position` and `SpatialSeries` is a natural extension of the current behavior baseline without forcing a larger modality refactor.
+
+Consequences:
+- Behavior streams with `behavior_type=position` now write into `Position` containers with `SpatialSeries`
+- Behavior streams without that subtype remain in `BehavioralTimeSeries`
+- The manifest-backed pilot now exercises two distinct behavior assembly paths instead of one generic behavior path
