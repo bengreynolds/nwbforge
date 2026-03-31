@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from nwbforge.domain.models import (
     ConversionSession,
+    ExecutionReviewRecord,
     ExtractionResult,
     MappingPlan,
     NormalizedMetadataBundle,
@@ -33,3 +34,11 @@ class ConversionExecution:
     provenance_record: ProvenanceRecord
     validation_summary: ValidationSummary
     review_outcome: ValidationReviewOutcome
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewSubmission:
+    execution: ConversionExecution
+    review_record: ExecutionReviewRecord
+    review_artifact: ProvenanceArtifact
+    provenance_record: ProvenanceRecord

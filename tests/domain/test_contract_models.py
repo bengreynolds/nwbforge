@@ -8,11 +8,13 @@ from nwbforge.domain.enums import (
     ReviewStatus,
     SessionStatus,
     SourceType,
+    ValidationReviewStatus,
     ValueOrigin,
 )
 from nwbforge.domain.models import (
     AcquisitionStream,
     ConversionSession,
+    ExecutionReviewRecord,
     MappingDecision,
     MappingPlan,
     NormalizedMetadataBundle,
@@ -138,4 +140,20 @@ def test_provenance_and_validation_models_provide_basic_summaries() -> None:
     )
     assert validation.errors() == ()
     assert len(validation.warnings()) == 1
+    assert validation.issue_refs() == ("schema-warning",)
     assert validation.is_passing() is True
+
+
+def test_execution_review_record_captures_review_metadata() -> None:
+    record = ExecutionReviewRecord(
+        session_id="sess-001",
+        reviewer="alice",
+        decision=ReviewStatus.APPROVED,
+        validation_status=ValidationReviewStatus.REVIEW,
+        acknowledged_issue_refs=("warning-1",),
+        rationale="Accepted after manual review.",
+    )
+
+    assert record.reviewer == "alice"
+    assert record.decision == ReviewStatus.APPROVED
+    assert record.acknowledged_issue_refs == ("warning-1",)

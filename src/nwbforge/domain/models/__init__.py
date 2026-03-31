@@ -11,12 +11,14 @@ from nwbforge.domain.models.normalization import (
     NormalizedSubject,
 )
 from nwbforge.domain.models.provenance import ProvenanceArtifact, ProvenanceRecord
+from nwbforge.domain.models.review import ExecutionReviewRecord
 from nwbforge.domain.models.session import ConversionSession, SourceReference
 from nwbforge.domain.models.validation import ValidationIssue, ValidationReviewOutcome, ValidationSummary
 
 __all__ = [
     "AcquisitionStream",
     "ConversionSession",
+    "ExecutionReviewRecord",
     "ExtractedField",
     "ExtractionResult",
     "MappingDecision",

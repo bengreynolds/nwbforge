@@ -6,6 +6,7 @@ from typing import Protocol
 
 from nwbforge.domain.models import (
     ConversionSession,
+    ExecutionReviewRecord,
     ExtractionResult,
     MappingPlan,
     NormalizedMetadataBundle,
@@ -87,3 +88,15 @@ class ValidationReportService(Protocol):
         review_outcome: ValidationReviewOutcome,
     ) -> ProvenanceArtifact:
         """Write a machine-readable validation report and return its artifact metadata."""
+
+
+class ReviewArtifactService(Protocol):
+    def write_review(
+        self,
+        session: ConversionSession,
+        provenance_record: ProvenanceRecord,
+        validation_summary: ValidationSummary,
+        review_outcome: ValidationReviewOutcome,
+        review_record: ExecutionReviewRecord,
+    ) -> ProvenanceArtifact:
+        """Persist a workflow review decision and return its artifact metadata."""

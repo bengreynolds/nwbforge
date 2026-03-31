@@ -11,3 +11,7 @@ class AdapterSelectionError(LookupError):
 
 class AssemblyConfigurationError(RuntimeError):
     """Raised when execution is requested without a configured assembly service."""
+
+
+class ReviewDecisionError(ValueError):
+    """Raised when a review submission is inconsistent with the current validation outcome."""

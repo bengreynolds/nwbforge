@@ -26,8 +26,17 @@ class ValidationSummary:
     def warnings(self) -> tuple[ValidationIssue, ...]:
         return tuple(issue for issue in self.issues if issue.severity == IssueSeverity.WARNING)
 
+    def issue_refs(self) -> tuple[str, ...]:
+        return tuple(self.issue_ref(issue) for issue in self.issues)
+
     def is_passing(self) -> bool:
         return not self.errors()
+
+    @staticmethod
+    def issue_ref(issue: ValidationIssue) -> str:
+        if issue.location:
+            return f"{issue.code}@{issue.location}"
+        return issue.code
 
 
 @dataclass(frozen=True, slots=True)
