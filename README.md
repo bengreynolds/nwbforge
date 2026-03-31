@@ -8,6 +8,7 @@ The architecture is intentionally split into explicit layers:
 - metadata normalization
 - NWB mapping and assembly
 - validation, provenance, and reporting
+- release packaging and update workflows
 
 The system is planned around three conversion pathways:
 - Supported pathway: common formats handled primarily through existing NWB ecosystem tooling
@@ -16,33 +17,46 @@ The system is planned around three conversion pathways:
 
 ## Current repository state
 
-This repository is in the planning and scaffolding phase. The first objective is to establish architecture, operating rules, and documentation before building implementation code.
+This repository is in early backend implementation. The current work has focused on making the architecture concrete in small, testable slices before any NWB-writing or UI-heavy work begins.
 
 Key files:
 - [planning.md](planning.md): living project plan and architecture document
 - [AGENTS.md](AGENTS.md): persistent repository operating manual for human and agent contributors
+- [decisions.md](decisions.md): canonical architectural and process decision history
 - [docs/architecture/core-contracts.md](docs/architecture/core-contracts.md): current canonical model baseline
 - [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md): adapter and service-interface baseline
 - [docs/architecture/application-services.md](docs/architecture/application-services.md): first concrete orchestration services
 - [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md): first normalization implementation
 - [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md): first mapping-planner implementation
+- [docs/architecture/validation-services.md](docs/architecture/validation-services.md): first validation implementation
+- [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): release, installer, and updater planning
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
-- [docs/decision-log.md](docs/decision-log.md): decision history
 
 ## Recommended repository structure
 
 ```text
+decisions.md
 docs/
   architecture/
   research/
-  decision-log.md
 src/
   nwbforge/
 tests/
 ```
 
 Planned backend package layout is documented in [planning.md](planning.md).
+
+## Implemented backend slices
+
+- Canonical domain models for sessions, sources, normalized metadata, mapping plans, provenance, and validation summaries
+- Adapter contracts and registry
+- Concrete source-inspection and provenance services
+- Rule-based normalization service
+- Rule-based mapping planner
+- Artifact validation service
+
+All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
 ## Local development
 
@@ -55,7 +69,7 @@ pytest
 
 ## Initial next steps
 
-1. Define adapter and registry contracts for supported and custom source systems.
-2. Implement validation services that wrap schema and best-practice checks.
-3. Choose an initial supported-path pilot format and implement one end-to-end thin slice.
-4. Define the first NWB assembly slice that consumes the mapping plan.
+1. Integrate PyNWB and NWB Inspector into the validation layer.
+2. Choose an initial supported-path pilot format and implement the first real adapter thin slice.
+3. Define the first NWB assembly slice that consumes the mapping plan and validation outputs.
+4. Continue release-packaging design toward installer and updater implementation once the desktop application direction is finalized.

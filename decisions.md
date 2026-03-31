@@ -134,3 +134,15 @@ Consequences:
 - Release and update design must be specified in planning before implementation
 - Cross-platform installers, update behavior, and versioning become core architecture concerns
 - Future UI and distribution choices must be evaluated against installer and updater requirements
+
+### DEC-012: Start validation with artifact-policy checks before toolchain integration
+Status: Accepted
+
+Reasoning:
+- The system needs a concrete validation layer now, but PyNWB and NWB Inspector should be added deliberately rather than as an incidental dependency spike.
+- Artifact-level checks provide immediate value and exercise the validation boundary cleanly.
+
+Consequences:
+- `ArtifactValidationService` is the current validation baseline
+- Missing, empty, or ambiguous output artifacts can be surfaced before schema validation is integrated
+- PyNWB and NWB Inspector remain the next validation-expansion steps

@@ -12,6 +12,7 @@ Completed:
 - First concrete application services for source inspection and provenance
 - First concrete normalization-layer implementation
 - First concrete mapping-layer implementation
+- First concrete validation-layer implementation
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -19,7 +20,7 @@ In progress:
 
 Next:
 - Concrete application services built on the new contracts
-- Validation-service implementations
+- PyNWB and NWB Inspector validation integrations
 - First supported-path pilot adapter
 - Persistence contract decisions
 - NWB assembly-layer design and implementation
@@ -512,7 +513,8 @@ Current status:
 - Initial source-inspection and provenance services are in place
 - Initial rule-based normalization is in place
 - Initial rule-based mapping planner is in place
-- Validation, pilot adapters, and assembly remain to be implemented
+- Initial artifact validation is in place
+- PyNWB/NWB Inspector integration, pilot adapters, and assembly remain to be implemented
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -561,6 +563,7 @@ Implementation references:
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
 - Mapping note: [docs/architecture/mapping-services.md](docs/architecture/mapping-services.md)
+- Validation note: [docs/architecture/validation-services.md](docs/architecture/validation-services.md)
 - Release note: [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md)
 
 ## Research References
