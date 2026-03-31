@@ -8,6 +8,7 @@ from nwbforge.app.services.errors import (
 )
 from nwbforge.app.services.inspection import RegistrySourceInspectionService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
+from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.pipeline import ConversionPipelineService
 from nwbforge.app.services.provenance import SessionProvenanceService
 from nwbforge.app.services.review import ExecutionReviewService
@@ -22,6 +23,7 @@ __all__ = [
     "RegistrySourceInspectionService",
     "ReviewDecisionError",
     "ReviewSubmission",
+    "SessionPersistenceService",
     "SessionProvenanceService",
     "SourceNotFoundError",
 ]
