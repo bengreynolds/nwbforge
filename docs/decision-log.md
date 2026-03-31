@@ -1,0 +1,38 @@
+# Decision Log
+
+## 2026-03-31
+
+### DEC-001: Treat supported, custom, and hybrid conversion pathways as first-class concepts
+Status: Accepted
+
+Reasoning:
+- The workflow, risk profile, and review needs differ materially across these cases.
+- A single undifferentiated `conversion` pipeline would hide critical complexity and make UX and validation weaker.
+
+Consequences:
+- Session orchestration must branch by pathway
+- Reports should state the pathway explicitly
+- Tests should cover each pathway separately
+
+### DEC-002: Keep metadata normalization separate from source adapters and NWB assembly
+Status: Accepted
+
+Reasoning:
+- Source naming and NWB semantics should not be coupled directly.
+- A dedicated normalization layer improves reuse, traceability, and lab-profile support.
+
+Consequences:
+- Canonical internal models become a core design asset
+- Source adapters remain focused on extraction
+- NWB assembly can target normalized models instead of raw parser output
+
+### DEC-003: Use NeuroConv first for supported ingestion, PyNWB for custom or hybrid assembly
+Status: Accepted
+
+Reasoning:
+- Existing NWB ecosystem tooling should be reused wherever it already fits.
+- Lower-level PyNWB control is still necessary for unsupported and hybrid cases.
+
+Consequences:
+- Supported-path adapters should evaluate NeuroConv before custom parsing is written
+- The architecture must accommodate both direct and lower-level assembly paths
