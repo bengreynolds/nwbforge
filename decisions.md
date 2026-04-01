@@ -341,3 +341,17 @@ Consequences:
 - Behavior streams with `behavior_type=position` now write into `Position` containers with `SpatialSeries`
 - Behavior streams without that subtype remain in `BehavioralTimeSeries`
 - The manifest-backed pilot now exercises two distinct behavior assembly paths instead of one generic behavior path
+
+### DEC-029: Make NeuroConv the required first-stop dependency for supported-path conversion work
+Status: Accepted
+
+Reasoning:
+- NeuroConv is specifically designed to convert many supported neurophysiology formats into NWB and documents supported routes through the Conversion Gallery.
+- The repository should not default to manual PyNWB conversion work when a documented NeuroConv interface already exists.
+- PyNWB should remain the documented fallback and custom/hybrid assembly layer, not the first choice for every supported format.
+
+Consequences:
+- Future supported-path implementation must check NeuroConv support before manual converter design
+- The first real supported-path adapter slice should introduce `neuroconv` as a declared dependency
+- Direct PyNWB construction remains the fallback for unsupported or unusually custom cases
+- PyNWB documentation is the required source of truth for low-level NWB API usage and container placement

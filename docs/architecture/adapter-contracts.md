@@ -36,9 +36,11 @@ These protocols define what higher-level services must do without choosing concr
 - Registry logic remains small and deterministic
 - Service protocols depend on canonical domain models, not raw dict payloads
 - Extraction remains separate from normalization so source-specific naming does not leak downstream
+- Supported-path adapters should prefer NeuroConv interfaces when documented support exists
+- Custom supported-path adapter work should start only after checking the NeuroConv Conversion Gallery for an existing route
 
 ## Immediate follow-on work
 
 1. Add concrete application services that consume these protocols.
 2. Add lab-profile contracts and normalization rule interfaces.
-3. Choose the first supported-path pilot adapter and implement it behind the registry.
+3. Choose the first real NeuroConv-backed supported adapter and implement it behind the registry.

@@ -45,6 +45,8 @@ This is enough to prove a real NWB file can be written from the current preview 
 - the writer emits a minimal file and only supports behavior traces, behavior position data, plus generic inline fallback, not broader modality coverage yet
 - device manufacturer is currently written through PyNWB's deprecated `manufacturer` argument as a temporary bridge pending a fuller `DeviceModel` design
 - acquisition streams currently require inline `data`, `unit`, and either `rate` or `timestamps`
+- direct writer code should follow official PyNWB APIs and prefer built-in container classes over custom HDF5-level logic
+- `pynwb.file` objects such as `NWBFile` and `Subject` remain the default path for file-level metadata
 
 ## Immediate follow-on work
 

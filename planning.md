@@ -23,6 +23,7 @@ Completed:
 - Added initial acquisition-stream support across the manifest-backed supported conversion path
 - Added first modality-specific acquisition assembly for behavior streams
 - Added behavior spatial-data assembly through `Position` and `SpatialSeries`
+- Established NeuroConv-first supported-path planning as explicit repository policy
 - Added machine-readable validation report artifacts to the execution pipeline
 - Added an explicit validation review-outcome policy for UI and workflow consumers
 - Added persisted post-execution review decisions and override records as machine-readable artifacts
@@ -35,6 +36,7 @@ In progress:
 
 Next:
 - First real supported acquisition adapter selection and spike
+- Add `neuroconv` as an active implementation dependency when the first real supported-path adapter slice begins
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
 - Additional modality-specific NWB containers beyond the new behavior baseline
 - Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
@@ -120,6 +122,12 @@ Validation in the NWB ecosystem is layered:
 
 Planning implication: validation must be a dedicated layer with machine checks and human review artifacts.
 
+### Implementation-source-of-truth policy
+- Official PyNWB documentation is the source of truth for API usage, data modeling, container selection, and file-writing patterns.
+- Supported-path implementation should begin by checking the NeuroConv Conversion Gallery for an existing interface or combined workflow.
+- Direct PyNWB construction is the fallback path when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB route is clearly simpler and more maintainable.
+- Custom HDF5-level writing should be avoided when documented PyNWB APIs provide a schema-compliant path.
+
 ## Department-Wide Requirements and Constraints
 
 ### Functional requirements
@@ -129,6 +137,7 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Produce NWB outputs that are understandable to downstream researchers
 - Persist conversion configuration, decisions, assumptions, and provenance
 - Allow users to resume recent execution and review state without reconstructing it from artifact files alone
+- Evaluate NeuroConv support status as a first-class step in supported-path planning
 
 ### Non-functional requirements
 - Modular codebase with stable internal contracts
@@ -253,10 +262,12 @@ Responsibilities:
 - Detect source systems
 - Read raw files and sidecar metadata
 - Expose canonical extracted records to the rest of the system
+- Prefer NeuroConv interfaces when the source format is already supported
 
 Key rule:
 - Adapters translate source-specific structures into internal extraction models
 - Adapters never write NWB directly
+- Before writing a custom supported-path adapter, check the NeuroConv gallery and documented interfaces for an existing route
 
 ### Layer 4: Metadata normalization layer
 Responsibilities:
@@ -275,6 +286,7 @@ Responsibilities:
 
 Key rule:
 - This is the only layer allowed to construct NWB containers
+- Direct construction should follow documented PyNWB APIs, with preference for built-in container classes and `pynwb.file` metadata objects over custom wrappers
 
 ### Layer 6: Validation, provenance, and reporting layer
 Responsibilities:
@@ -351,13 +363,14 @@ Recommended first-pass workflow:
 1. Create conversion session
 2. Add one or more input sources
 3. Detect likely format and pathway
-4. Inspect extracted structure and metadata coverage
-5. Apply lab profile or mapping template if available
-6. Review normalized metadata
-7. Review planned NWB mapping and hybrid merge decisions
-8. Run validation precheck
-9. Write NWB
-10. Review final report and export artifacts
+4. Check NeuroConv support and recommended interface/gallery example for supported candidates
+5. Inspect extracted structure and metadata coverage
+6. Apply lab profile or mapping template if available
+7. Review normalized metadata
+8. Review planned NWB mapping and hybrid merge decisions
+9. Run validation precheck
+10. Write NWB
+11. Review final report and export artifacts
 
 Critical UX principles:
 - Always show what was inferred versus explicitly supplied
@@ -528,6 +541,7 @@ Design goals:
 Recommended concepts:
 - Adapter manifest with id, version, supported patterns, and capability flags
 - Registry-based discovery for supported adapters
+- NeuroConv-backed adapter implementations for officially supported source systems
 - Plugin package contract for lab-specific parsers and mapping presets
 - Lab profile package for naming conventions, metadata aliases, defaults, and review policies
 
@@ -535,6 +549,14 @@ Important separation:
 - Source adapter: how to parse a format or folder structure
 - Lab profile: how a specific lab uses or names concepts
 - Mapping template: how normalized concepts should populate NWB for a repeated experiment style
+
+### Supported-path implementation protocol
+1. Determine whether the source format or pipeline is already supported by NeuroConv.
+2. Check the NeuroConv Conversion Gallery for the exact interface or combined workflow.
+3. Prefer the NeuroConv route when documented support exists.
+4. Fall back to direct PyNWB only when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB solution is clearly simpler and more maintainable.
+5. When using direct PyNWB, use documented high-level APIs and standard NWB container placement, including `NWBFile`, `Subject`, `acquisition`, `processing`, `stimulus`, `intervals`, and `units` as appropriate.
+6. If an NDX is required, stop and document that requirement before implementation.
 
 ## Risk Register
 
@@ -591,6 +613,7 @@ Current status:
 - The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus first-pass behavior trace and position pathways, but broader modality-specific and multimodal content remain out of scope
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
+- The first real supported-path implementation should add `neuroconv` as a declared project dependency rather than keeping it only as architectural intent
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -654,6 +677,9 @@ Implementation references:
 - Converting neurophysiology data to NWB: https://nwb-overview.readthedocs.io/en/latest/conversion_tutorial/user_guide.html
 - NWB GUIDE docs: https://nwb-guide.readthedocs.io/en/latest/
 - NeuroConv docs: https://neuroconv.readthedocs.io/en/stable/
+- NeuroConv Conversion Gallery: https://neuroconv.readthedocs.io/en/stable/conversion_examples_gallery/index.html
 - PyNWB docs: https://pynwb.readthedocs.io/en/stable/
+- PyNWB file module: https://pynwb.readthedocs.io/en/stable/pynwb.file.html
+- PyNWB behavior module: https://pynwb.readthedocs.io/en/stable/pynwb.behavior.html
 - NWB Inspector docs: https://nwbinspector.readthedocs.io/
 - OpenAI Codex AGENTS.md guide: https://developers.openai.com/codex/guides/agents-md

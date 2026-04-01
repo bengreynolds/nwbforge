@@ -68,6 +68,10 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - NWB assembly code must not contain raw source-format parsing logic
 - Normalize metadata into canonical internal models before NWB mapping
 - Treat supported, custom, and hybrid pathways as different workflows over shared contracts, not as unrelated codepaths
+- For supported-path conversions, check NeuroConv support before designing a custom parser or direct PyNWB converter
+- Treat official PyNWB documentation as the source of truth for NWB API usage, container placement, and file-writing patterns
+- Prefer the simplest correct documented PyNWB container and method rather than wrapping built-in APIs without need
+- When `pynwb.file` or another standard PyNWB module solves the problem directly, use it instead of inventing a parallel abstraction
 
 ## Documentation Rules
 
@@ -83,6 +87,8 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - If a mapping is uncertain, document the assumption and surface it for review
 - Prefer explicit `needs review` states over confident but weak inference
 - Do not represent custom lab concepts as standard NWB semantics unless the meaning is actually aligned
+- If NeuroConv does not support a format, state that explicitly before implementing a direct PyNWB path
+- If a representation would require an NWB extension, state that explicitly before implementing it
 
 ## Testing and Validation Rule
 
@@ -111,3 +117,5 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Prefer primary-source documentation for NWB behavior and scientific format assumptions
 - Favor reversible, incremental changes over broad speculative scaffolding
 - When adding new adapters or mappings, define the contract first and implementation second
+- For supported-path work, check the NeuroConv Conversion Gallery before proposing a manual converter
+- For direct NWB writing, prefer documented PyNWB patterns for `NWBFile`, `Subject`, acquisitions, processing modules, stimuli, intervals, units, ophys, and ecephys containers

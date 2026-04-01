@@ -71,8 +71,11 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 - Behavior-stream assembly into NWB `BehavioralTimeSeries` containers, with generic `TimeSeries` fallback for other modalities
 - Behavior position assembly into NWB `Position`/`SpatialSeries` containers
+- NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 
 The supported-path pilot adapter is intentionally a repo-native fixture source for architecture validation. It is not yet a claim of real acquisition-format support.
+
+Supported-path policy is now explicit: check the NeuroConv Conversion Gallery first, use a documented NeuroConv interface when one exists, and fall back to direct PyNWB only when NeuroConv does not support the format or the direct PyNWB path is clearly simpler and more maintainable. For direct NWB writing, official PyNWB docs remain the source of truth.
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
@@ -102,5 +105,5 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current behavior trace/position baseline into richer modality-specific and multimodal content.
-3. Choose the first real supported acquisition format and spike a NeuroConv-backed adapter.
+3. Choose the first real supported acquisition format, add `neuroconv` as a declared dependency, and spike a NeuroConv-backed adapter.
 4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.
