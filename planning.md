@@ -47,6 +47,7 @@ Completed:
 - Dedicated isolated Conda workflow for current development and testing
 - Added backend package-management service contracts for future setup and extension-install UI flows
 - Added backend package-install execution service with progress, logging, and user-facing failure wrapping
+- Added a threaded runtime executor for package-install execution
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -82,6 +83,7 @@ Next:
 - Package-management work is now split between developer bootstrap and future UI flows: setup remains tied to the dedicated Conda environment, while the future UI should expose route-name package selection and post-setup installs without forcing a full reinstall.
 - The route-based package layer now includes a service boundary for future UI consumers: screens should call backend package-management services for route listing, install preview, persisted selection loading, and compatibility validation rather than reaching directly into setup scripts.
 - The route-based package layer now also includes an install-execution service so future setup and extension-install screens can run installs, surface progress, log context, and present user-facing errors without owning subprocess logic.
+- The route-based package layer now also has a threaded runtime executor, so future setup and extension-install screens can run installs off the UI thread while preserving queued, progress, completion, and failure events.
 
 ## Project Vision and Scope
 

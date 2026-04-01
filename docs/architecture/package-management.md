@@ -72,6 +72,7 @@ Current service-facing models:
 Current service:
 - `PackageManagementService`
 - `PackageInstallationService`
+- `ThreadedPackageInstallationExecutor`
 
 Current service responsibilities:
 - list available route packages
@@ -82,6 +83,7 @@ Current service responsibilities:
 - persist a validated selection when requested
 - execute an install command for a validated selection
 - emit install progress events and structured failure information
+- run install execution off the UI thread for future setup and extension-install screens
 
 ## Future UI expectations
 
@@ -102,3 +104,4 @@ That later flow should:
 - report progress and failures through the standard runtime/logging model
 - call the same backend package-management service boundary used by setup
 - reuse the same backend package-install execution service used by initial setup
+- run the actual install through the threaded package runtime executor rather than directly on the UI thread

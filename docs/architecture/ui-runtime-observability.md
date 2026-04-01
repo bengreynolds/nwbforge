@@ -51,6 +51,7 @@ This note captures the required runtime behaviors for the future desktop shell b
 Current scope:
 - `ConversionPipelineService` now emits real stage/progress events at inspection, normalization, mapping, writing, validation, and terminal states
 - `ThreadedConversionExecutor` runs preview and execution work off the calling thread and wraps failures in `PipelineRuntimeError`
+- `ThreadedPackageInstallationExecutor` now runs route-based package installs off the calling thread and preserves install-stage progress/failure events
 - structured logging is now implemented across `ConversionPipelineService`, `NeuroConvSupportedExecutionService`, and `ThreadedConversionExecutor`
 - log records now carry stable context payloads for session id, source id, adapter id, output path, and related runtime details where applicable
 
@@ -63,5 +64,5 @@ Still pending:
 ## Immediate follow-on work
 
 1. Add a log-sink abstraction that can feed file output and an in-app log viewer.
-2. Add explicit user-facing error translation policy on top of `PipelineRuntimeError`.
-3. Introduce the first UI-facing runtime consumer for status/progress events.
+2. Add explicit user-facing error translation policy on top of `PipelineRuntimeError` and package-install runtime errors.
+3. Introduce the first UI-facing runtime consumer for conversion and package-install status/progress events.

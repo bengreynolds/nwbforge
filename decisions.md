@@ -563,3 +563,16 @@ Consequences:
 - package-install execution now has explicit progress-event, result, and runtime-error models
 - future UI screens should call a backend install-execution service rather than invoking setup scripts directly
 - structured logging and failure wrapping are now part of the package-install backend contract
+
+### DEC-046: Use the same background-execution pattern for package installs as for conversions
+Status: Accepted
+
+Reasoning:
+- Package installation is also long-running work that should not block the future desktop UI.
+- The repository already has a threaded runtime-execution pattern for conversions, and package installs should follow the same model instead of inventing a second asynchronous strategy.
+- Reusing the background-execution pattern keeps UI integration simpler and aligns progress/error handling across conversion and install flows.
+
+Consequences:
+- package installs now have a threaded runtime executor alongside the conversion executor
+- future setup and `File -> Install Extensions / Packages` screens should run installs through the package runtime executor, not directly on the UI thread
+- queued, progress, completion, and failure behaviors for installs now follow the same general runtime pattern as conversion work
