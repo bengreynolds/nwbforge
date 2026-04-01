@@ -1,4 +1,4 @@
-"""Base contracts for source adapters."""
+"""Base contracts for source and workflow adapters."""
 
 from __future__ import annotations
 
@@ -30,3 +30,17 @@ class SourceAdapter(Protocol):
 
     def inspect(self, source: SourceReference) -> ExtractionResult:
         """Inspect a source and emit extracted fields for normalization."""
+
+
+@runtime_checkable
+class SourceWorkflowAdapter(Protocol):
+    adapter_id: str
+    display_name: str
+    version: str
+    capabilities: AdapterCapabilities
+
+    def can_handle_sources(self, sources: tuple[SourceReference, ...]) -> bool:
+        """Return whether this adapter can inspect the supplied multi-source set."""
+
+    def inspect_sources(self, sources: tuple[SourceReference, ...]) -> tuple[ExtractionResult, ...]:
+        """Inspect multiple sources and emit extracted fields for normalization."""
