@@ -420,3 +420,28 @@ Consequences:
 - CSV and Excel now share `NeuroConvTabularTimeIntervalsAdapter`
 - warning and extraction behavior for missing `stop_time` is now family-level rather than CSV-specific
 - additional text/tabular interval routes should reuse the same family contract when their NWB target is equivalent
+
+### DEC-035: Prefer family modules and route declarations over one-file-per-route wrappers when semantics are shared
+Status: Accepted
+
+Reasoning:
+- A large supported-route catalog will become noisy and harder to maintain if every entry becomes a dedicated module even when the route differences are mostly declarative.
+- The architecture should encode semantic differences, not turn interface names alone into a module explosion.
+- Combined NeuroConv workflows are architecturally different from single-interface routes and should have their own layer rather than being jammed into the same shape.
+
+Consequences:
+- supported routes that mainly differ by interface class, suffixes, or light source sniffing should prefer family registries and config declarations
+- only routes with materially different extraction, normalization, mapping, or workflow behavior should grow dedicated modules
+- the current text/tabular family should migrate away from separate route-specific modules
+
+### DEC-036: Make combined NeuroConv workflows a first-class adapter layer
+Status: Accepted
+
+Reasoning:
+- Combined gallery routes such as `SpikeGLX & Phy` or `Tiff & Suite2p` are structurally different from single-interface sources and should not be forced through single-source adapter contracts.
+- The repository needs a clear place to encode multi-source matching and future combined-workflow extraction behavior before those routes are implemented.
+
+Consequences:
+- workflow routes should implement a dedicated multi-source contract rather than masquerading as ordinary source adapters
+- the NeuroConv framework now includes declarative workflow source requirements and a base workflow adapter
+- future combined supported routes should land on the workflow layer instead of inventing ad hoc orchestration-only matching logic

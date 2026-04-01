@@ -28,6 +28,7 @@ Completed:
 - Added `neuroconv` as a declared project dependency
 - Implemented the first real NeuroConv-backed supported adapter via CSV time intervals
 - Implemented a shared NeuroConv interface-adapter framework for supported routes
+- Added a dedicated NeuroConv workflow-adapter base for future combined gallery routes
 - Implemented concrete runtime contracts for stage/progress/error reporting plus a threaded conversion executor
 - Expanded the real supported text/tabular family to include Excel time intervals
 - Added first-class normalized interval-table and trial-row support
@@ -58,6 +59,7 @@ Next:
 - The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV and Excel time-interval adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
+- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real workflow route is implemented yet.
 - The project can write real NWB files for the manifest-backed pilot path and for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the text/tabular routes, or full multimodal NWB coverage.
 
@@ -626,6 +628,7 @@ Recommended concepts:
 - Adapter manifest with id, version, supported patterns, and capability flags
 - Registry-based discovery for supported adapters
 - NeuroConv-backed adapter implementations for officially supported source systems
+- Family registries and route configuration declarations for supported routes that differ mostly by metadata, interface class, or light sniffing behavior
 - Plugin package contract for lab-specific parsers and mapping presets
 - Lab profile package for naming conventions, metadata aliases, defaults, and review policies
 
@@ -642,28 +645,40 @@ Important separation:
 5. When using direct PyNWB, use documented high-level APIs and standard NWB container placement, including `NWBFile`, `Subject`, `acquisition`, `processing`, `stimulus`, `intervals`, and `units` as appropriate.
 6. If an NDX is required, stop and document that requirement before implementation.
 
+### Preferred supported-adapter shape
+- Use one shared NeuroConv core for common interface construction, source-config parsing, and extraction assembly.
+- Prefer family modules plus route configuration declarations when multiple supported entries target the same semantic NWB shape.
+- Use smaller numbers of truly distinct route modules only when a route needs meaningfully different source sniffing, normalization bridging, mapping behavior, or NWB targets.
+- Reserve dedicated workflow adapters for combined NeuroConv pipelines and multi-interface conversions rather than forcing them into single-source wrappers.
+
+Criteria for when a supported route deserves its own module:
+- it targets a different NWB container family or normalization contract
+- it needs materially different extraction logic beyond declarative route config
+- it requires non-trivial source sniffing or metadata bridging that would make a family module less clear
+- it is a workflow composition rather than a single interface route
+
 ### Concrete NeuroConv rollout sequence
 1. Build a shared NeuroConv adapter framework for single-interface routes:
    - common source-configuration parsing
    - common interface instantiation
    - common extraction-field and issue helpers
-2. Refactor existing real NeuroConv-backed adapters onto that shared framework before adding more routes.
-3. Add the behavior pose and trajectory family:
+2. Refactor existing real NeuroConv-backed adapters toward family modules and route configuration declarations before adding more routes.
+3. Establish a dedicated multi-source workflow-adapter base for combined NeuroConv gallery routes.
+4. Add the behavior pose and trajectory family:
    - DeepLabCut
    - FicTrac
    - LightningPose
    - SLEAP
    - Neuralynx NVT
-4. Add behavior task and media routes:
+5. Add behavior task and media routes:
    - MedPC
    - Audio
    - Videos
    - Image
-5. Add workflow-aware NeuroConv adapter support for combined routes and multi-interface sessions.
-6. Add ophys imaging and segmentation families.
-7. Add intracellular and fiber photometry routes.
-8. Add extracellular recording and sorting families.
-9. Add combined workflow routes such as `SpikeGLX & Phy`, `Tiff & Suite2p`, and electrophysiology-plus-behavior sessions.
+6. Add the first concrete combined-workflow NeuroConv routes such as `SpikeGLX & Phy`, `Tiff & Suite2p`, and electrophysiology-plus-behavior sessions.
+7. Add ophys imaging and segmentation families.
+8. Add intracellular and fiber photometry routes.
+9. Add extracellular recording and sorting families.
 10. Introduce the desktop runtime shell with:
    - background execution infrastructure
    - structured logging integration
@@ -672,6 +687,7 @@ Important separation:
 
 Execution rule:
 - single-interface routes should land on the shared interface-adapter framework
+- routes that differ mostly by metadata or interface selection should share family modules and config declarations rather than one-file-per-route wrappers
 - combined gallery workflows should land on a workflow adapter layer rather than being forced into single-source wrappers
 - each implemented route must include adapter tests plus at least one orchestration-level or integration-level proof path
 - UI implementation should consume runtime/logging/progress contracts rather than reaching directly into conversion internals
@@ -733,6 +749,7 @@ Current status:
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
 - `neuroconv` is now a declared project dependency and the first real supported-path route is implemented through `CsvTimeIntervalsInterface`
 - The current real supported text/tabular routes cover CSV and Excel interval/trial data and combine cleanly with the manifest-backed metadata pilot in multi-source supported sessions
+- Combined NeuroConv workflows now have a dedicated adapter base and matching contract, but no real workflow-backed route has been implemented yet
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
 - Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise

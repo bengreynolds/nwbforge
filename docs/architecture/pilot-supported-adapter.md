@@ -34,32 +34,23 @@ Its purpose is to:
 
 Still used as the repo-native metadata and inline-stream fixture path for architecture validation.
 
-### `NeuroConvCsvTimeIntervalsAdapter`
+### `NeuroConvTabularTimeIntervalsAdapter` family
 
-Location: `src/nwbforge/adapters/supported/neuroconv_csv_time_intervals.py`
+Location: `src/nwbforge/adapters/supported/neuroconv_time_intervals.py`
 
 Responsibilities:
-- inspect CSV interval sources through NeuroConv's documented `CsvTimeIntervalsInterface`
-- emit stable extracted keys for interval-table metadata and trial-style row data
-- provide the first real NeuroConv-backed supported route in the repository
+- provide the shared family-level extraction path for NeuroConv tabular interval interfaces
+- keep CSV and Excel interval routes on one semantic implementation path
+- expose declarative route configs rather than growing separate route-specific modules when the semantics are identical
+
+Current family routes:
+- `NeuroConvCsvTimeIntervalsAdapter` using NeuroConv's documented `CsvTimeIntervalsInterface`
+- `NeuroConvExcelTimeIntervalsAdapter` using NeuroConv's documented `ExcelTimeIntervalsInterface`
 
 Current role:
 - combine with the manifest-backed pilot metadata source in multi-source supported sessions
 - drive normalized interval-table models, mapping-plan visibility, and NWB trial writing
-- prove a truthful NeuroConv-backed supported workflow without claiming broad acquisition-system coverage yet
-
-### `NeuroConvExcelTimeIntervalsAdapter`
-
-Location: `src/nwbforge/adapters/supported/neuroconv_excel_time_intervals.py`
-
-Responsibilities:
-- inspect Excel interval sources through NeuroConv's documented `ExcelTimeIntervalsInterface`
-- reuse the shared tabular-interval adapter path for stable extracted trial rows and metadata
-- extend the real supported text/tabular family beyond CSV
-
-Current role:
-- combine with the manifest-backed pilot metadata source in multi-source supported sessions
-- prove the shared tabular-interval family contract against a second real NeuroConv interface
+- prove the family-module approach for supported routes that differ mostly by interface class and source sniffing
 
 ## Design constraints
 
@@ -69,6 +60,6 @@ Current role:
 
 ## Immediate follow-on work
 
-1. Add another real NeuroConv-backed supported adapter from the approved route catalog.
-2. Expand beyond the current behavior trace/position and trials assembly slices into additional modality-aware mappings.
-3. Decide when supported-path sessions should rely on multiple coordinated sources versus single-format all-in-one adapters.
+1. Add another real NeuroConv-backed family from the approved route catalog.
+2. Add the first real combined NeuroConv workflow adapter on top of the new workflow base.
+3. Expand beyond the current behavior trace/position and trials assembly slices into additional modality-aware mappings.

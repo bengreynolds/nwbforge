@@ -75,12 +75,14 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - NeuroConv-backed Excel time-interval inspection through `ExcelTimeIntervalsInterface`
 - Interval-table normalization, mapping, and NWB trial assembly
 - Shared NeuroConv adapter framework for single-interface supported routes
+- Family-module text/tabular supported-route implementation with declarative route configs for CSV and Excel
+- Dedicated NeuroConv workflow-adapter base for future combined gallery routes
 - Shared runtime contracts for stage/progress/error reporting and threaded background execution
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
 
-The manifest-backed supported-path pilot adapter remains a repo-native fixture source for architecture validation. In addition, the repo now includes real NeuroConv-backed CSV and Excel time-interval routes that carry trial-style interval data into NWB trials.
+The manifest-backed supported-path pilot adapter remains a repo-native fixture source for architecture validation. In addition, the repo now includes a real NeuroConv-backed text/tabular family that carries CSV and Excel trial-style interval data into NWB trials through one shared family module plus route declarations.
 
 Supported-path policy is now explicit: check the NeuroConv Conversion Gallery first, use a documented NeuroConv interface when one exists, and fall back to direct PyNWB only when NeuroConv does not support the format or the direct PyNWB path is clearly simpler and more maintainable. For direct NWB writing, official PyNWB docs remain the source of truth.
 
@@ -88,7 +90,7 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
-The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported text/tabular family now has real NeuroConv-backed CSV and Excel routes, a shared NeuroConv adapter framework exists for additional single-interface routes, and runtime contracts now exist for background execution plus stage/progress/error reporting, but broader supported-format coverage is still ahead.
+The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported text/tabular family now has real NeuroConv-backed CSV and Excel routes, a shared NeuroConv adapter framework exists for additional single-interface routes, a dedicated workflow base exists for future combined NeuroConv pipelines, and runtime contracts now exist for background execution plus stage/progress/error reporting, but broader supported-format coverage is still ahead.
 
 UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, while structured logging, a File menu, status bar, progress bar, and optional log viewer remain the next UI-facing layers to build.
 
