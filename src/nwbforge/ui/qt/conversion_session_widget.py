@@ -61,6 +61,7 @@ class ConversionSessionWidget(QWidget):
         self._reject_button.clicked.connect(lambda: self._screen_model.submit_review(ReviewStatus.REJECTED))
         self._status_label = QLabel("Ready.", self)
         self._result_label = QLabel("No preview or execution yet.", self)
+        self._artifact_list = QListWidget(self)
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
@@ -90,6 +91,8 @@ class ConversionSessionWidget(QWidget):
         layout.addWidget(self._rationale_edit)
         layout.addLayout(review_button_row)
         layout.addWidget(self._result_label)
+        layout.addWidget(QLabel("Generated artifacts", self))
+        layout.addWidget(self._artifact_list, stretch=1)
         layout.addWidget(self._status_label)
 
         self._bridge = StateBridge(self)
@@ -107,6 +110,7 @@ class ConversionSessionWidget(QWidget):
 
         self._sync_sources(state)
         self._sync_validation_issues(state)
+        self._sync_generated_artifacts(state)
 
         if state.user_error is not None:
             self._status_label.setText(state.user_error.message)
@@ -189,6 +193,17 @@ class ConversionSessionWidget(QWidget):
             item = self._issue_list.item(index)
             if item.data(Qt.ItemDataRole.UserRole) not in seen_refs:
                 self._issue_list.takeItem(index)
+
+    def _sync_generated_artifacts(self, state: ConversionSessionScreenState) -> None:
+        self._artifact_list.clear()
+        for artifact in state.generated_artifacts:
+            label = f"[{artifact.artifact_type}] {artifact.location.name}"
+            item = QListWidgetItem(label)
+            tooltip = str(artifact.location)
+            if artifact.description:
+                tooltip = f"{artifact.description}\n{tooltip}"
+            item.setToolTip(tooltip)
+            self._artifact_list.addItem(item)
 
     @staticmethod
     def _validation_summary_text(state: ConversionSessionScreenState) -> str:

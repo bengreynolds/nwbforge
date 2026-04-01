@@ -43,6 +43,9 @@ class DesktopShellModel:
             listener(self._state)
 
     def invoke_file_menu_action(self, action: FileMenuAction) -> DesktopShellState:
+        if action is FileMenuAction.OPEN_SESSION:
+            return self._state
+
         if action is FileMenuAction.TOGGLE_LOG_VIEWER:
             return self._set_state(
                 replace(

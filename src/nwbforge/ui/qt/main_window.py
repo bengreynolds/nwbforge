@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
 
+from nwbforge.domain.models import ConversionSession
 from nwbforge.ui import (
     CompositeUiLogSink,
     DesktopShellModel,
@@ -42,6 +44,7 @@ class MainWindow(QMainWindow):
         *,
         log_sink: UiLogSubscriptionSink | None = None,
         log_file_path: Path | None = None,
+        session_loader: Callable[[Path], ConversionSession] | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -52,6 +55,7 @@ class MainWindow(QMainWindow):
         self._settings_screen_model = settings_screen_model
         self._package_screen_model = package_screen_model
         self._conversion_screen_model = conversion_screen_model
+        self._session_loader = session_loader or self._default_session_loader
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
         self._viewer_log_sink = log_sink or InMemoryUiLogSink()
         self._log_handler: UiLogHandler | None = None
@@ -143,6 +147,10 @@ class MainWindow(QMainWindow):
     def _build_file_menu(self) -> None:
         self._file_menu = self.menuBar().addMenu("&File")
 
+        self._open_session_action = QAction("Open Session...", self)
+        self._open_session_action.triggered.connect(self._open_session_from_dialog)
+        self._file_menu.addAction(self._open_session_action)
+
         self._settings_action = QAction("Settings", self)
         self._settings_action.triggered.connect(
             lambda: self._shell_model.invoke_file_menu_action(FileMenuAction.SETTINGS)
@@ -171,6 +179,56 @@ class MainWindow(QMainWindow):
         self._progress_bar.setTextVisible(True)
         status_bar.addWidget(self._status_label, 1)
         status_bar.addPermanentWidget(self._progress_bar)
+
+    def _open_session_from_dialog(self) -> None:
+        selected_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Session Manifest",
+            str(Path.cwd()),
+            "Session manifest (session_manifest.json);;JSON files (*.json)",
+        )
+        if not selected_path:
+            return
+
+        self._load_session(Path(selected_path))
+
+    def _load_session(self, session_path: Path) -> None:
+        try:
+            session = self._session_loader(session_path)
+        except Exception as exc:
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:open:error",
+                    message=str(exc),
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                ),
+                user_error=UserFacingError(
+                    title="Open Session Error",
+                    message=str(exc),
+                    detail=f"Could not load session from {session_path}.",
+                    category="session",
+                ),
+            )
+            return
+
+        self._conversion_widget.load_session(session)
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="session:loaded",
+                message=f"Loaded session {session.session_id}.",
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+
+    @staticmethod
+    def _default_session_loader(session_path: Path) -> ConversionSession:
+        from nwbforge.app.desktop import load_manifest_session
+
+        return load_manifest_session(session_path)
 
     def _apply_shell_state(self, state) -> None:
         self._status_label.setText(state.status_bar.message)

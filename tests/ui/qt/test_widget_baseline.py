@@ -113,6 +113,7 @@ def make_preview_and_execution(
     *,
     validation_summary: ValidationSummary | None = None,
     review_outcome: ValidationReviewOutcome | None = None,
+    generated_artifacts: tuple[ProvenanceArtifact, ...] = (),
 ) -> tuple[ConversionPreview, ConversionExecution]:
     preview = ConversionPreview(
         session=session.transition(SessionStatus.READY_TO_WRITE),
@@ -154,7 +155,12 @@ def make_preview_and_execution(
                 description="Converted NWB file",
             ),
         ),
-        provenance_record=preview.provenance_record,
+        provenance_record=ProvenanceRecord(
+            session_id=preview.provenance_record.session_id,
+            pathway=preview.provenance_record.pathway,
+            input_artifacts=preview.provenance_record.input_artifacts,
+            generated_artifacts=generated_artifacts,
+        ),
         validation_summary=validation_summary or ValidationSummary(),
         review_outcome=review_outcome
         or ValidationReviewOutcome(
@@ -227,6 +233,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     window.conversion_widget._execute_button.click()
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Execution status: completed"
+    assert window.conversion_widget._artifact_list.count() == 0
 
     window.package_dialog.show()
     qapp.processEvents()
@@ -363,4 +370,61 @@ def test_conversion_widget_submits_review(qapp, tmp_path: Path) -> None:
     qapp.processEvents()
 
     assert "approved" in window.conversion_widget._review_status_label.text()
+    window.close()
+
+
+def test_main_window_opens_manifest_session_from_file_menu(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(session.sources[0].location), "session_manifest.json"),
+    )
+
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    assert "desktop-" in window.conversion_widget._session_label.text()
+    window.close()
+
+
+def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(
+        session,
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=tmp_path / "validation-report.json",
+                description="Validation report artifact",
+            ),
+        ),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    window.conversion_widget._execute_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._artifact_list.count() == 1
+    assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
     window.close()

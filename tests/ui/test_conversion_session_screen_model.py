@@ -130,6 +130,7 @@ def make_execution(
     *,
     issues: tuple[ValidationIssue, ...] = (),
     review_outcome: ValidationReviewOutcome | None = None,
+    generated_artifacts: tuple[ProvenanceArtifact, ...] = (),
 ) -> ConversionExecution:
     validation_summary = ValidationSummary(issues=issues)
     return ConversionExecution(
@@ -142,7 +143,12 @@ def make_execution(
                 description="Converted NWB file",
             ),
         ),
-        provenance_record=preview.provenance_record,
+        provenance_record=ProvenanceRecord(
+            session_id=preview.provenance_record.session_id,
+            pathway=preview.provenance_record.pathway,
+            input_artifacts=preview.provenance_record.input_artifacts,
+            generated_artifacts=generated_artifacts,
+        ),
         validation_summary=validation_summary,
         review_outcome=review_outcome
         or ValidationReviewOutcome(
@@ -194,6 +200,30 @@ def test_conversion_session_screen_model_runs_execution_after_preview() -> None:
     assert screen.state.progress_event.stage is PipelineStage.WRITING
     assert screen.state.is_execution_running is False
     assert screen.state.validation_issues == ()
+
+
+def test_conversion_session_screen_model_projects_generated_artifacts() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    execution = make_execution(
+        preview,
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=Path("C:/tmp/validation-report.json"),
+                description="Validation report artifact",
+            ),
+        ),
+    )
+    screen = ConversionSessionScreenModel(
+        FakeConversionExecutor(preview_result=preview, execution_result=execution)
+    )
+    screen.load_session(session)
+    screen.start_preview().result(timeout=5)
+    screen.start_execution(Path("C:/tmp/output.nwb")).result(timeout=5)
+
+    assert len(screen.state.generated_artifacts) == 1
+    assert screen.state.generated_artifacts[0].artifact_type == "validation_report"
 
 
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:

@@ -28,6 +28,7 @@ from nwbforge.ui.logs import UiLogEntry
 class FileMenuAction(StrEnum):
     """Top-level file-menu actions exposed by the desktop shell."""
 
+    OPEN_SESSION = "open_session"
     SETTINGS = "settings"
     INSTALL_PACKAGES = "install_packages"
     TOGGLE_LOG_VIEWER = "toggle_log_viewer"
@@ -98,6 +99,15 @@ class ValidationIssueItem:
 
 
 @dataclass(frozen=True, slots=True)
+class GeneratedArtifactItem:
+    """A UI-facing generated artifact summary."""
+
+    artifact_type: str
+    location: Path
+    description: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ConversionSessionScreenState:
     """State consumable by a conversion-session screen."""
 
@@ -107,6 +117,7 @@ class ConversionSessionScreenState:
     execution: ConversionExecution | None = None
     progress_event: PipelineProgressEvent | None = None
     output_path: Path | None = None
+    generated_artifacts: tuple[GeneratedArtifactItem, ...] = ()
     validation_issues: tuple[ValidationIssueItem, ...] = ()
     reviewer_name: str = ""
     review_rationale: str = ""
@@ -172,6 +183,10 @@ def default_file_menu_entries() -> tuple[FileMenuEntry, ...]:
     """Return the current file-menu baseline for the desktop shell."""
 
     return (
+        FileMenuEntry(
+            action=FileMenuAction.OPEN_SESSION,
+            label="Open Session...",
+        ),
         FileMenuEntry(
             action=FileMenuAction.SETTINGS,
             label="Settings",

@@ -16,6 +16,7 @@ from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import (
     ConversionSessionScreenState,
     ConversionSessionStateListener,
+    GeneratedArtifactItem,
     ValidationIssueItem,
     conversion_source_items,
 )
@@ -54,6 +55,7 @@ class ConversionSessionScreenModel:
             ConversionSessionScreenState(
                 session=session,
                 sources=conversion_source_items(session.sources),
+                generated_artifacts=(),
                 error_message=None,
                 review_message=None,
                 user_error=None,
@@ -69,6 +71,7 @@ class ConversionSessionScreenModel:
                 error_message=None,
                 preview=None,
                 execution=None,
+                generated_artifacts=(),
                 validation_issues=(),
                 last_review_submission=None,
                 review_message=None,
@@ -89,6 +92,7 @@ class ConversionSessionScreenModel:
                 output_path=output_path,
                 error_message=None,
                 execution=None,
+                generated_artifacts=(),
                 last_review_submission=None,
                 review_message=None,
                 progress_event=None,
@@ -182,6 +186,7 @@ class ConversionSessionScreenModel:
             replace(
                 self._state,
                 last_review_submission=submission,
+                generated_artifacts=generated_artifact_items(submission.provenance_record.generated_artifacts),
                 review_message=f"Review {submission.review_record.decision.value} by {submission.review_record.reviewer}.",
                 error_message=None,
                 user_error=None,
@@ -215,6 +220,7 @@ class ConversionSessionScreenModel:
                 sources=conversion_source_items(preview.session.sources),
                 preview=preview,
                 execution=None,
+                generated_artifacts=(),
                 validation_issues=(),
                 last_review_submission=None,
                 review_message=None,
@@ -247,6 +253,7 @@ class ConversionSessionScreenModel:
                 sources=conversion_source_items(execution.session.sources),
                 execution=execution,
                 preview=execution.preview,
+                generated_artifacts=generated_artifact_items(execution.provenance_record.generated_artifacts),
                 validation_issues=validation_issue_items(execution),
                 last_review_submission=None,
                 review_message=None,
@@ -295,4 +302,17 @@ def validation_issue_items(execution: ConversionExecution) -> tuple[ValidationIs
             is_acknowledged=False,
         )
         for issue in execution.validation_summary.issues
+    )
+
+
+def generated_artifact_items(artifacts) -> tuple[GeneratedArtifactItem, ...]:
+    """Project generated provenance artifacts into UI-facing summaries."""
+
+    return tuple(
+        GeneratedArtifactItem(
+            artifact_type=artifact.artifact_type,
+            location=artifact.location,
+            description=artifact.description,
+        )
+        for artifact in artifacts
     )
