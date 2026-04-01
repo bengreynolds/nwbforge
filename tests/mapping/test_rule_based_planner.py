@@ -12,7 +12,9 @@ from nwbforge.domain.models import (
     NormalizedMetadataBundle,
     NormalizedSessionMetadata,
     NormalizedSubject,
+    NormalizedTimeIntervalTable,
     NormalizedValue,
+    TimeIntervalRow,
 )
 from nwbforge.mapping import RuleBasedMappingPlanner
 
@@ -162,3 +164,51 @@ def test_rule_based_planner_marks_reviewable_values_and_unmapped_metadata() -> N
     assert plan.extension_recommendations == (
         "Review whether 'operator_note' belongs in existing NWB fields, lab metadata, or an extension.",
     )
+
+
+def test_rule_based_planner_maps_time_interval_rows() -> None:
+    metadata = NormalizedMetadataBundle(
+        session=NormalizedSessionMetadata(
+            session_description=NormalizedValue("Visual task recording", origin=ValueOrigin.USER_SUPPLIED),
+            start_time=NormalizedValue("2026-03-31T10:15:00-06:00", origin=ValueOrigin.ADAPTER_EXTRACTED),
+        ),
+        time_interval_tables=(
+            NormalizedTimeIntervalTable(
+                table_id="trials",
+                table_name=NormalizedValue("trials", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                table_description=NormalizedValue(
+                    "Experimental trials",
+                    origin=ValueOrigin.ADAPTER_EXTRACTED,
+                ),
+                rows=(
+                    TimeIntervalRow(
+                        row_id="0",
+                        source_ids=("source-2",),
+                        start_time=NormalizedValue(0.5, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        metadata={
+                            "condition": NormalizedValue("left", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        },
+                    ),
+                    TimeIntervalRow(
+                        row_id="1",
+                        source_ids=("source-2",),
+                        start_time=NormalizedValue(1.2, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        stop_time=NormalizedValue(1.8, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        metadata={
+                            "correct": NormalizedValue(False, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        },
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    plan = RuleBasedMappingPlanner().plan(make_session(), metadata)
+
+    target_paths = set(plan.target_paths())
+    assert "TimeIntervals[trials].table_name" in target_paths
+    assert "TimeIntervals[trials].rows[0].start_time" in target_paths
+    assert "TimeIntervals[trials].rows[0].condition" in target_paths
+    assert "TimeIntervals[trials].rows[1].stop_time" in target_paths
+    assert "TimeIntervals[trials].rows[1].correct" in target_paths
+    assert any(issue.code == "missing-interval-stop-time" for issue in plan.issues)

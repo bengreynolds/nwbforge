@@ -1,4 +1,5 @@
 from pathlib import Path
+from math import isnan
 
 from pynwb import NWBHDF5IO
 
@@ -12,7 +13,9 @@ from nwbforge.domain.models import (
     NormalizedMetadataBundle,
     NormalizedSessionMetadata,
     NormalizedSubject,
+    NormalizedTimeIntervalTable,
     NormalizedValue,
+    TimeIntervalRow,
 )
 from nwbforge.mapping import PyNWBAssemblyService
 from nwbforge.domain.enums import MappingAction
@@ -73,6 +76,34 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
                 },
             ),
         ),
+        time_interval_tables=(
+            NormalizedTimeIntervalTable(
+                table_id="trials",
+                table_name=NormalizedValue("trials", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                table_description=NormalizedValue(
+                    "Experimental trials",
+                    origin=ValueOrigin.ADAPTER_EXTRACTED,
+                ),
+                rows=(
+                    TimeIntervalRow(
+                        row_id="0",
+                        source_ids=("source-2",),
+                        start_time=NormalizedValue(0.5, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        metadata={
+                            "condition": NormalizedValue("left", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        },
+                    ),
+                    TimeIntervalRow(
+                        row_id="1",
+                        source_ids=("source-2",),
+                        start_time=NormalizedValue(1.2, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        metadata={
+                            "condition": NormalizedValue("right", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                        },
+                    ),
+                ),
+            ),
+        ),
         session=NormalizedSessionMetadata(
             session_id=NormalizedValue("session-01", origin=ValueOrigin.ADAPTER_EXTRACTED),
             session_description=NormalizedValue("Visual task", origin=ValueOrigin.USER_SUPPLIED),
@@ -131,4 +162,10 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
             [1.5, 2.5],
             [3.0, 4.0],
         ]
+        assert nwbfile.trials is not None
+        assert nwbfile.trials["start_time"][:].tolist() == [0.5, 1.2]
+        stop_times = nwbfile.trials["stop_time"][:].tolist()
+        assert stop_times[0] == 1.2
+        assert isnan(stop_times[1])
+        assert nwbfile.trials["condition"][:].tolist() == ["left", "right"]
         assert "vision" in nwbfile.keywords

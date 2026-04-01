@@ -16,7 +16,9 @@ from nwbforge.domain.models import (
     NormalizedDevice,
     NormalizedSessionMetadata,
     NormalizedSubject,
+    NormalizedTimeIntervalTable,
     NormalizedValue,
+    TimeIntervalRow,
 )
 from nwbforge.normalization.rules import DEFAULT_FIELD_ALIASES, NormalizationRuleSet
 
@@ -27,6 +29,12 @@ class RuleBasedNormalizationService(NormalizationService):
     _DEVICE_FIELD_PATTERN = re.compile(r"^devices\.(?P<device_key>[^.]+)\.(?P<field_name>[^.]+)$")
     _STREAM_FIELD_PATTERN = re.compile(
         r"^acquisition_streams\.(?P<stream_key>[^.]+)\.(?P<field_name>[^.]+)$"
+    )
+    _TIME_INTERVAL_TABLE_FIELD_PATTERN = re.compile(
+        r"^time_intervals\.(?P<table_key>[^.]+)\.(?P<field_name>table_name|table_description)$"
+    )
+    _TIME_INTERVAL_ROW_FIELD_PATTERN = re.compile(
+        r"^time_intervals\.(?P<table_key>[^.]+)\.rows\.(?P<row_key>[^.]+)\.(?P<field_name>[^.]+)$"
     )
 
     def __init__(self, rules: NormalizationRuleSet | None = None) -> None:
@@ -41,6 +49,7 @@ class RuleBasedNormalizationService(NormalizationService):
         session_metadata = NormalizedSessionMetadata()
         devices: dict[str, NormalizedDevice] = {}
         acquisition_streams: dict[str, AcquisitionStream] = {}
+        time_interval_tables: dict[str, NormalizedTimeIntervalTable] = {}
         additional_metadata: dict[str, NormalizedValue[object]] = {}
 
         for result in extraction_results:
@@ -64,6 +73,32 @@ class RuleBasedNormalizationService(NormalizationService):
                     acquisition_streams[stream_key] = self._assign_acquisition_stream(
                         acquisition_streams.get(stream_key),
                         stream_key=stream_key,
+                        field_name=field_name,
+                        extracted_field=extracted_field,
+                    )
+                    continue
+
+                time_interval_table_match = self._TIME_INTERVAL_TABLE_FIELD_PATTERN.match(extracted_field.key)
+                if time_interval_table_match is not None:
+                    table_key = time_interval_table_match.group("table_key")
+                    field_name = time_interval_table_match.group("field_name")
+                    time_interval_tables[table_key] = self._assign_time_interval_table(
+                        time_interval_tables.get(table_key),
+                        table_key=table_key,
+                        field_name=field_name,
+                        extracted_field=extracted_field,
+                    )
+                    continue
+
+                time_interval_row_match = self._TIME_INTERVAL_ROW_FIELD_PATTERN.match(extracted_field.key)
+                if time_interval_row_match is not None:
+                    table_key = time_interval_row_match.group("table_key")
+                    row_key = time_interval_row_match.group("row_key")
+                    field_name = time_interval_row_match.group("field_name")
+                    time_interval_tables[table_key] = self._assign_time_interval_row(
+                        time_interval_tables.get(table_key),
+                        table_key=table_key,
+                        row_key=row_key,
                         field_name=field_name,
                         extracted_field=extracted_field,
                     )
@@ -104,6 +139,9 @@ class RuleBasedNormalizationService(NormalizationService):
             devices=tuple(devices[key] for key in sorted(devices)),
             acquisition_streams=tuple(
                 acquisition_streams[key] for key in sorted(acquisition_streams)
+            ),
+            time_interval_tables=tuple(
+                time_interval_tables[key] for key in sorted(time_interval_tables)
             ),
             additional_metadata=additional_metadata,
         )
@@ -207,6 +245,90 @@ class RuleBasedNormalizationService(NormalizationService):
         metadata = dict(stream.metadata)
         metadata[normalized_field_name] = self._to_value(extracted_field)
         return replace(stream, metadata=metadata, source_ids=merged_source_ids)
+
+    def _assign_time_interval_table(
+        self,
+        table: NormalizedTimeIntervalTable | None,
+        *,
+        table_key: str,
+        field_name: str,
+        extracted_field: ExtractedField,
+    ) -> NormalizedTimeIntervalTable:
+        table = table or NormalizedTimeIntervalTable(
+            table_id=table_key,
+            table_name=NormalizedValue(
+                value=table_key,
+                origin=ValueOrigin.COMPUTED,
+                source_ids=(extracted_field.source_id,),
+                notes=("Filled from extracted interval table key until a table name is provided.",),
+            ),
+        )
+        if field_name == "table_name":
+            return replace(table, table_name=self._merge_value(table.table_name, extracted_field))
+        if field_name == "table_description":
+            return replace(
+                table,
+                table_description=self._merge_value(table.table_description, extracted_field),
+            )
+        return table
+
+    def _assign_time_interval_row(
+        self,
+        table: NormalizedTimeIntervalTable | None,
+        *,
+        table_key: str,
+        row_key: str,
+        field_name: str,
+        extracted_field: ExtractedField,
+    ) -> NormalizedTimeIntervalTable:
+        table = table or NormalizedTimeIntervalTable(
+            table_id=table_key,
+            table_name=NormalizedValue(
+                value=table_key,
+                origin=ValueOrigin.COMPUTED,
+                source_ids=(extracted_field.source_id,),
+                notes=("Filled from extracted interval table key until a table name is provided.",),
+            ),
+        )
+        rows_by_id = {row.row_id: row for row in table.rows}
+        row = rows_by_id.get(row_key) or TimeIntervalRow(row_id=row_key, source_ids=(extracted_field.source_id,))
+        merged_source_ids = tuple(dict.fromkeys(row.source_ids + (extracted_field.source_id,)))
+        normalized_field_name = field_name.strip().lower().replace("-", "_")
+
+        if normalized_field_name == "start_time":
+            row = replace(
+                row,
+                start_time=self._merge_value(row.start_time, extracted_field),
+                source_ids=merged_source_ids,
+            )
+        elif normalized_field_name == "stop_time":
+            row = replace(
+                row,
+                stop_time=self._merge_value(row.stop_time, extracted_field),
+                source_ids=merged_source_ids,
+            )
+        else:
+            metadata = dict(row.metadata)
+            metadata[normalized_field_name] = self._to_value(extracted_field)
+            row = replace(row, metadata=metadata, source_ids=merged_source_ids)
+
+        rows_by_id[row_key] = row
+        ordered_rows = tuple(self._sort_interval_rows(rows_by_id.values()))
+        return replace(table, rows=ordered_rows)
+
+    @staticmethod
+    def _sort_interval_rows(rows: list[TimeIntervalRow] | tuple[TimeIntervalRow, ...]):
+        def sort_key(row: TimeIntervalRow):
+            return (RuleBasedNormalizationService._numeric_or_text_sort_key(row.row_id), row.row_id)
+
+        return sorted(rows, key=sort_key)
+
+    @staticmethod
+    def _numeric_or_text_sort_key(value: str) -> tuple[int, int | str]:
+        try:
+            return (0, int(value))
+        except ValueError:
+            return (1, value)
 
     def _merge_value(
         self,

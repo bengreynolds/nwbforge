@@ -30,6 +30,7 @@ class RuleBasedMappingPlanner(MappingPlanner):
         self._map_subject(metadata, decisions)
         self._map_devices(metadata, decisions)
         self._map_acquisition_streams(metadata, decisions, issues)
+        self._map_time_interval_tables(metadata, decisions, issues)
         self._map_additional_metadata(metadata, decisions, issues, extension_recommendations)
 
         summary_notes = (
@@ -350,6 +351,98 @@ class RuleBasedMappingPlanner(MappingPlanner):
                     decisions=decisions,
                     issues=issues,
                 )
+
+    def _map_time_interval_tables(
+        self,
+        metadata: NormalizedMetadataBundle,
+        decisions: list[MappingDecision],
+        issues: list[ReviewIssue],
+    ) -> None:
+        for table in metadata.time_interval_tables:
+            table_prefix = f"time_intervals.{table.table_id}"
+            target_prefix = f"TimeIntervals[{table.table_id}]"
+
+            decisions.append(
+                self._decision(
+                    source_key=f"{table_prefix}.table_name",
+                    value=table.table_name,
+                    target_path=f"{target_prefix}.table_name",
+                    action=MappingAction.DIRECT,
+                    rationale="Direct mapping for normalized interval table name.",
+                )
+            )
+            if table.table_description is not None:
+                decisions.append(
+                    self._decision(
+                        source_key=f"{table_prefix}.table_description",
+                        value=table.table_description,
+                        target_path=f"{target_prefix}.table_description",
+                        action=MappingAction.DIRECT,
+                        rationale="Direct mapping for normalized interval table description.",
+                    )
+                )
+
+            for row in table.rows:
+                row_prefix = f"{table_prefix}.rows.{row.row_id}"
+                row_target = f"{target_prefix}.rows[{row.row_id}]"
+                if row.start_time is None:
+                    issues.append(
+                        ReviewIssue(
+                            code="missing-interval-start-time",
+                            message=(
+                                f"Time interval row '{row.row_id}' in table '{table.table_id}' "
+                                "requires start_time before NWB export."
+                            ),
+                            severity=IssueSeverity.ERROR,
+                            field=f"{row_prefix}.start_time",
+                            source_ids=row.source_ids,
+                        )
+                    )
+                else:
+                    decisions.append(
+                        self._decision(
+                            source_key=f"{row_prefix}.start_time",
+                            value=row.start_time,
+                            target_path=f"{row_target}.start_time",
+                            action=MappingAction.DIRECT,
+                            rationale="Direct mapping for interval start_time.",
+                        )
+                    )
+
+                if row.stop_time is not None:
+                    decisions.append(
+                        self._decision(
+                            source_key=f"{row_prefix}.stop_time",
+                            value=row.stop_time,
+                            target_path=f"{row_target}.stop_time",
+                            action=MappingAction.DIRECT,
+                            rationale="Direct mapping for interval stop_time.",
+                        )
+                    )
+                else:
+                    issues.append(
+                        ReviewIssue(
+                            code="missing-interval-stop-time",
+                            message=(
+                                f"Time interval row '{row.row_id}' in table '{table.table_id}' is missing "
+                                "stop_time; the writer will infer it from the next interval when possible."
+                            ),
+                            severity=IssueSeverity.WARNING,
+                            field=f"{row_prefix}.stop_time",
+                            source_ids=row.source_ids,
+                        )
+                    )
+
+                for field_name, value in sorted(row.metadata.items()):
+                    decisions.append(
+                        self._decision(
+                            source_key=f"{row_prefix}.{field_name}",
+                            value=value,
+                            target_path=f"{row_target}.{field_name}",
+                            action=MappingAction.DIRECT,
+                            rationale="Direct mapping for interval-table row metadata.",
+                        )
+                    )
 
     @staticmethod
     def _stream_target_prefix(stream) -> str:

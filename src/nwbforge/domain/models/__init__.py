@@ -9,6 +9,8 @@ from nwbforge.domain.models.normalization import (
     NormalizedMetadataBundle,
     NormalizedSessionMetadata,
     NormalizedSubject,
+    NormalizedTimeIntervalTable,
+    TimeIntervalRow,
 )
 from nwbforge.domain.models.persistence import SessionSnapshot
 from nwbforge.domain.models.provenance import ProvenanceArtifact, ProvenanceRecord
@@ -28,12 +30,14 @@ __all__ = [
     "NormalizedMetadataBundle",
     "NormalizedSessionMetadata",
     "NormalizedSubject",
+    "NormalizedTimeIntervalTable",
     "NormalizedValue",
     "ProvenanceArtifact",
     "ProvenanceRecord",
     "ReviewIssue",
     "SessionSnapshot",
     "SourceReference",
+    "TimeIntervalRow",
     "ValidationIssue",
     "ValidationReviewOutcome",
     "ValidationSummary",

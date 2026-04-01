@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from math import nan
 from pathlib import Path
 
 from pynwb import NWBHDF5IO, NWBFile, TimeSeries
@@ -47,6 +48,7 @@ class PyNWBAssemblyService(AssemblyService):
                 manufacturer=self._optional_text(device.manufacturer),
             )
         self._write_acquisition_streams(nwbfile, metadata)
+        self._write_time_interval_tables(nwbfile, metadata)
 
         with NWBHDF5IO(path=str(output_file), mode="w") as io:
             io.write(nwbfile)
@@ -151,6 +153,34 @@ class PyNWBAssemblyService(AssemblyService):
             nwbfile.add_acquisition(timeseries)
 
     @classmethod
+    def _write_time_interval_tables(cls, nwbfile: NWBFile, metadata: NormalizedMetadataBundle) -> None:
+        for table in metadata.time_interval_tables:
+            table_name = str(table.table_name.value).strip().lower()
+            if table_name != "trials":
+                raise ValueError(
+                    f"Interval table '{table.table_id}' targets '{table_name}', but only trials are supported "
+                    "by the current writer."
+                )
+
+            extra_columns = cls._trial_extra_columns(table.rows)
+            for column_name in extra_columns:
+                if nwbfile.trials is None or column_name not in nwbfile.trials.colnames:
+                    nwbfile.add_trial_column(
+                        name=column_name,
+                        description=f"Imported interval metadata column '{column_name}'.",
+                    )
+
+            for row_index, row in enumerate(table.rows):
+                kwargs = {
+                    "start_time": cls._interval_time_value(row.start_time, row, "start_time"),
+                    "stop_time": cls._interval_stop_time(table.rows, row_index),
+                }
+                for column_name in extra_columns:
+                    value = row.metadata.get(column_name)
+                    kwargs[column_name] = None if value is None else value.value
+                nwbfile.add_trial(**kwargs)
+
+    @classmethod
     def _timeseries(cls, stream) -> TimeSeries:
         data = cls._required_stream_metadata(stream, "data")
         unit = str(cls._required_stream_metadata(stream, "unit"))
@@ -208,6 +238,31 @@ class PyNWBAssemblyService(AssemblyService):
             )
 
         return SpatialSeries(**kwargs)
+
+    @staticmethod
+    def _trial_extra_columns(rows) -> tuple[str, ...]:
+        column_names: list[str] = []
+        for row in rows:
+            for column_name in row.metadata:
+                if column_name not in column_names:
+                    column_names.append(column_name)
+        return tuple(column_names)
+
+    @staticmethod
+    def _interval_time_value(value, row, field_name: str) -> float:
+        if value is None or value.value in (None, ""):
+            raise ValueError(f"Time interval row '{row.row_id}' is missing required '{field_name}'.")
+        return float(value.value)
+
+    @classmethod
+    def _interval_stop_time(cls, rows, row_index: int) -> float:
+        row = rows[row_index]
+        if row.stop_time is not None and row.stop_time.value not in (None, ""):
+            return float(row.stop_time.value)
+        if row_index + 1 < len(rows):
+            next_row = rows[row_index + 1]
+            return cls._interval_time_value(next_row.start_time, next_row, "start_time")
+        return nan
 
     @staticmethod
     def _stream_modality(stream) -> str:

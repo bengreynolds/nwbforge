@@ -94,11 +94,40 @@ class AcquisitionStream:
 
 
 @dataclass(frozen=True, slots=True)
+class TimeIntervalRow:
+    row_id: str
+    source_ids: tuple[str, ...]
+    start_time: NormalizedValue[object] | None = None
+    stop_time: NormalizedValue[object] | None = None
+    metadata: dict[str, NormalizedValue[object]] = field(default_factory=dict)
+
+    def iter_values(self) -> tuple[NormalizedValue[object], ...]:
+        values = [self.start_time, self.stop_time]
+        values.extend(self.metadata.values())
+        return tuple(value for value in values if value is not None)
+
+
+@dataclass(frozen=True, slots=True)
+class NormalizedTimeIntervalTable:
+    table_id: str
+    table_name: NormalizedValue[str]
+    table_description: NormalizedValue[str] | None = None
+    rows: tuple[TimeIntervalRow, ...] = ()
+
+    def iter_values(self) -> tuple[NormalizedValue[object], ...]:
+        values = [self.table_name, self.table_description]
+        for row in self.rows:
+            values.extend(row.iter_values())
+        return tuple(value for value in values if value is not None)
+
+
+@dataclass(frozen=True, slots=True)
 class NormalizedMetadataBundle:
     subject: NormalizedSubject = field(default_factory=NormalizedSubject)
     session: NormalizedSessionMetadata = field(default_factory=NormalizedSessionMetadata)
     devices: tuple[NormalizedDevice, ...] = ()
     acquisition_streams: tuple[AcquisitionStream, ...] = ()
+    time_interval_tables: tuple[NormalizedTimeIntervalTable, ...] = ()
     additional_metadata: dict[str, NormalizedValue[object]] = field(default_factory=dict)
 
     def pending_review_values(self) -> tuple[NormalizedValue[object], ...]:
@@ -109,5 +138,7 @@ class NormalizedMetadataBundle:
             values.extend(value for value in device.iter_values() if value.needs_review)
         for stream in self.acquisition_streams:
             values.extend(value for value in stream.iter_values() if value.needs_review)
+        for table in self.time_interval_tables:
+            values.extend(value for value in table.iter_values() if value.needs_review)
         values.extend(value for value in self.additional_metadata.values() if value.needs_review)
         return tuple(values)
