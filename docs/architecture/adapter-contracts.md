@@ -25,6 +25,17 @@ Implemented adapters now include:
 - `SessionManifestAdapter` for the repo-native fixture path
 - `NeuroConvCsvTimeIntervalsAdapter` for real NeuroConv-backed CSV interval sources
 
+Near-term framework direction:
+- a shared NeuroConv interface-adapter base for single-source `DataInterface` routes
+- shared source-configuration parsing and extraction helpers reused across supported routes
+- a later workflow-adapter layer for multi-interface NeuroConv gallery workflows
+
+Implemented framework pieces:
+- `NeuroConvInterfaceAdapter` for common source-config parsing, interface construction, and `ExtractionResult` assembly
+- `NeuroConvSourceConfig` for parsed NeuroConv-specific source settings
+- shared extraction helpers for flattened mapping and dataframe-backed field emission
+- the CSV intervals adapter now uses this framework as the first proof case
+
 ### Service protocols
 - `SourceInspectionService`
 - `NormalizationService`

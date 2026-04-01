@@ -381,3 +381,16 @@ Consequences:
 - `NeuroConvCsvTimeIntervalsAdapter` is the first real NeuroConv-backed supported adapter in the repo
 - The canonical normalization, mapping, and assembly layers now include interval-table and trial-row support targeting NWB trials
 - The next supported-path increment should add another real NeuroConv route rather than revisiting whether NeuroConv belongs in the stack
+
+### DEC-032: Build a shared NeuroConv interface-adapter framework before scaling the approved route catalog
+Status: Accepted
+
+Reasoning:
+- The approved NeuroConv route catalog is too large and heterogeneous to implement as unrelated one-off adapter classes.
+- NeuroConv's `DataInterface` pattern is the natural unit for single-source supported routes, while combined gallery workflows need a separate orchestration-aware layer.
+- A shared framework reduces repeated source-config parsing, interface setup, extraction helpers, and test shape across the supported catalog.
+
+Consequences:
+- New single-interface NeuroConv routes should inherit from a shared framework rather than duplicating wrapper logic
+- The current CSV intervals adapter should be refactored onto that framework as the first proof case
+- Combined gallery workflows will need a distinct workflow-adapter layer instead of being forced into single-source adapter abstractions
