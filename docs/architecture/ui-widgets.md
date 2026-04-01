@@ -33,6 +33,7 @@ Responsibilities:
 - render one loaded conversion session
 - show source summaries and output-path entry
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
+- summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
 - open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
@@ -104,6 +105,7 @@ Responsibilities:
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
   - conversion-session section layout for summary, execution, review, and artifacts
+  - conversion-session run-overview and review-guidance summaries
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
 
@@ -124,5 +126,5 @@ Responsibilities:
 ## Immediate follow-on work
 
 1. Add additional screens and navigation while keeping the current model-first boundary intact.
-2. Add a more intentional session-summary/review presentation beyond the current sectioned baseline.
+2. Evolve the run-overview and review workspace into a richer session-summary/review presentation beyond the current baseline.
 3. Add persisted window/layout state once the core desktop information architecture settles.

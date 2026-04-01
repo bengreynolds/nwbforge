@@ -69,6 +69,7 @@ Completed:
 - Added dedicated desktop shortcuts for validation-report and review-decision artifacts on top of the generic generated-artifact list
 - Added a real desktop output-path chooser dialog for NWB save targets instead of relying only on manual path entry
 - Refactored the desktop conversion panel into explicit session-summary, execution-status, validation/review, and generated-artifact panes
+- Added a run-overview/readiness layer to the desktop conversion panel with explicit stage, output, validation-count, artifact-count, and review-guidance summaries
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -130,6 +131,7 @@ Next:
 - The conversion-session panel now also exposes dedicated validation-report and review-decision shortcuts so the most important review artifacts are directly reachable without manually selecting them from the artifact list.
 - The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
 - The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.
+- The desktop conversion surface now also summarizes current stage, output target, validation counts, artifact counts, and review guidance explicitly, so users can read session readiness before interacting with raw issue lists or artifact tables.
 
 ## Project Vision and Scope
 

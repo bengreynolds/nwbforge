@@ -823,3 +823,16 @@ Consequences:
 - `ConversionSessionWidget` now uses dedicated section containers for session summary, execution status, validation/review, and generated artifacts
 - widget tests now treat those section boundaries as part of the expected desktop structure
 - future desktop UI work should preserve or improve this sectioned workflow layout instead of collapsing it back into one stacked column
+
+### DEC-066: Add explicit run-overview and review-guidance summaries to the conversion panel
+Status: Accepted
+
+Reasoning:
+- Section boundaries alone were not enough; users still had to infer session readiness by reading raw labels, issue lists, and artifact tables.
+- The desktop panel needs a small amount of intentional summary state so users can answer basic workflow questions quickly: what stage is the session in, what output is targeted, how many issues exist, how many artifacts were generated, and what review action is expected.
+- This is still a view-level improvement and does not require new backend contracts.
+
+Consequences:
+- the execution section now includes explicit stage, output-target, validation-count, and artifact-count summaries
+- the review section now includes review-guidance and acknowledgement-summary text above the detailed issue checklist
+- future UI work should preserve this summary-first approach before adding richer desktop navigation or visual styling
