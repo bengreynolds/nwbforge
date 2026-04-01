@@ -44,4 +44,4 @@ def test_neuroconv_csv_time_intervals_adapter_inspects_rows_and_table_metadata(t
     assert result.fields["time_intervals.trials.rows.0.start_time"].value == 0.5
     assert result.fields["time_intervals.trials.rows.0.condition"].value == "left"
     assert result.fields["time_intervals.trials.rows.1.correct"].value is False
-    assert any(issue.code == "csv-time-intervals-missing-stop-time" for issue in result.issues)
+    assert any(issue.code == "time-intervals-missing-stop-time" for issue in result.issues)
