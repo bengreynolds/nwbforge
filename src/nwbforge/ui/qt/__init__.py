@@ -5,6 +5,7 @@ from nwbforge.ui.qt.conversion_session_widget import ConversionSessionWidget
 from nwbforge.ui.qt.log_viewer import LogViewerDockWidget
 from nwbforge.ui.qt.main_window import MainWindow
 from nwbforge.ui.qt.package_dialog import PackageInstallerDialog
+from nwbforge.ui.qt.settings_dialog import SettingsDialog
 
 __all__ = [
     "ConversionSessionWidget",
@@ -12,4 +13,5 @@ __all__ = [
     "LogViewerDockWidget",
     "MainWindow",
     "PackageInstallerDialog",
+    "SettingsDialog",
 ]

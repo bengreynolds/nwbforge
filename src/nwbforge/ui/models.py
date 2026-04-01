@@ -17,6 +17,7 @@ from nwbforge.app.packages import (
     RoutePackageSpec,
 )
 from nwbforge.app.runtime import PipelineProgressEvent
+from nwbforge.app.services import UiSettings
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.domain.models import ConversionSession, SourceReference
 from nwbforge.ui.errors import UserFacingError
@@ -106,6 +107,19 @@ class ConversionSessionScreenState:
         return self.preview is not None and not self.is_preview_running and not self.is_execution_running
 
 
+@dataclass(frozen=True, slots=True)
+class SettingsScreenState:
+    """State consumable by a desktop settings screen."""
+
+    applied_settings: UiSettings = field(default_factory=UiSettings)
+    verbose_logging_enabled: bool = False
+    file_logging_enabled: bool = False
+    log_file_path: str = str(UiSettings().log_file_path)
+    has_unsaved_changes: bool = False
+    status_message: str = "Ready."
+    user_error: UserFacingError | None = None
+
+
 def conversion_source_items(sources: tuple[SourceReference, ...]) -> tuple[ConversionSourceItem, ...]:
     """Project domain source references into UI-facing source summaries."""
 
@@ -164,3 +178,4 @@ class DesktopShellState:
 ShellStateListener = Callable[[DesktopShellState], None]
 PackageInstallerStateListener = Callable[[PackageInstallerState], None]
 ConversionSessionStateListener = Callable[[ConversionSessionScreenState], None]
+SettingsScreenStateListener = Callable[[SettingsScreenState], None]

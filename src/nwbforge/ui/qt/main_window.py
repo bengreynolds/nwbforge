@@ -20,12 +20,14 @@ from nwbforge.ui import (
     UserFacingError,
 )
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
-from nwbforge.ui.models import ConversionSessionScreenState, PackageInstallerState, StatusBarState
+from nwbforge.ui.models import ConversionSessionScreenState, PackageInstallerState, SettingsScreenState, StatusBarState
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
+from nwbforge.ui.settings import SettingsScreenModel
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.qt.conversion_session_widget import ConversionSessionWidget
 from nwbforge.ui.qt.log_viewer import LogViewerDockWidget
 from nwbforge.ui.qt.package_dialog import PackageInstallerDialog
+from nwbforge.ui.qt.settings_dialog import SettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -34,6 +36,7 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         shell_model: DesktopShellModel,
+        settings_screen_model: SettingsScreenModel,
         package_screen_model: PackageInstallerScreenModel,
         conversion_screen_model: ConversionSessionScreenModel,
         *,
@@ -41,21 +44,20 @@ class MainWindow(QMainWindow):
         log_file_path: Path | None = None,
         parent=None,
     ) -> None:
-        self._log_sink = log_sink or self._build_default_log_sink(log_file_path)
-        self._log_handler = UiLogHandler(self._log_sink)
-        logger = logging.getLogger("nwbforge")
-        logger.addHandler(self._log_handler)
-        logger.setLevel(logging.INFO)
-
         super().__init__(parent)
         self.setWindowTitle("NWB Forge")
         self.resize(1120, 760)
 
         self._shell_model = shell_model
+        self._settings_screen_model = settings_screen_model
         self._package_screen_model = package_screen_model
         self._conversion_screen_model = conversion_screen_model
-        self._shell_model.attach_log_sink(self._log_sink)
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
+        self._viewer_log_sink = log_sink or InMemoryUiLogSink()
+        self._log_handler: UiLogHandler | None = None
+        self._applied_settings = self._settings_screen_model.state.applied_settings
+        self._configure_logging(self._applied_settings, log_file_path=log_file_path)
+        self._shell_model.attach_log_sink(self._viewer_log_sink)
 
         self._build_file_menu()
         self._build_status_bar()
@@ -70,9 +72,16 @@ class MainWindow(QMainWindow):
         self._package_dialog = PackageInstallerDialog(self._package_screen_model, self)
         self._package_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
 
+        self._settings_dialog = SettingsDialog(self._settings_screen_model, self)
+        self._settings_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
+
         self._shell_bridge = StateBridge(self)
         self._shell_bridge.state_changed.connect(self._apply_shell_state)
         self._shell_model.subscribe(self._shell_bridge.publish)
+
+        self._settings_bridge = StateBridge(self)
+        self._settings_bridge.state_changed.connect(self._apply_settings_state)
+        self._settings_screen_model.subscribe(self._settings_bridge.publish)
 
         self._package_bridge = StateBridge(self)
         self._package_bridge.state_changed.connect(self._apply_package_state)
@@ -91,6 +100,10 @@ class MainWindow(QMainWindow):
         return self._package_dialog
 
     @property
+    def settings_dialog(self) -> SettingsDialog:
+        return self._settings_dialog
+
+    @property
     def log_dock(self) -> LogViewerDockWidget:
         return self._log_dock
 
@@ -100,18 +113,31 @@ class MainWindow(QMainWindow):
 
     @property
     def log_sink(self) -> UiLogSubscriptionSink:
-        return self._log_sink
+        return self._viewer_log_sink
 
-    @staticmethod
-    def _build_default_log_sink(log_file_path: Path | None) -> UiLogSubscriptionSink:
-        memory_sink = InMemoryUiLogSink()
-        if log_file_path is None:
-            return memory_sink
-        return CompositeUiLogSink(memory_sink, FileUiLogSink(log_file_path))
+    def _configure_logging(self, settings, *, log_file_path: Path | None = None) -> None:
+        logger = logging.getLogger("nwbforge")
+        if self._log_handler is not None:
+            logger.removeHandler(self._log_handler)
+            self._log_handler.close()
+
+        effective_log_path = log_file_path
+        if settings.file_logging_enabled:
+            effective_log_path = settings.log_file_path
+
+        handler_sink: UiLogSubscriptionSink | CompositeUiLogSink = self._viewer_log_sink
+        if effective_log_path is not None:
+            handler_sink = CompositeUiLogSink(self._viewer_log_sink, FileUiLogSink(effective_log_path))
+
+        self._log_handler = UiLogHandler(handler_sink)
+        logger.addHandler(self._log_handler)
+        logger.setLevel(logging.DEBUG if settings.verbose_logging_enabled else logging.INFO)
+        self._shell_model.set_verbose_logging_enabled(settings.verbose_logging_enabled)
 
     def closeEvent(self, event) -> None:  # noqa: N802
-        logging.getLogger("nwbforge").removeHandler(self._log_handler)
-        self._log_handler.close()
+        if self._log_handler is not None:
+            logging.getLogger("nwbforge").removeHandler(self._log_handler)
+            self._log_handler.close()
         super().closeEvent(event)
 
     def _build_file_menu(self) -> None:
@@ -153,16 +179,19 @@ class MainWindow(QMainWindow):
         self._log_dock.set_entries(state.log_entries)
         self._show_user_error_if_needed(state.last_user_error)
 
+        if state.active_dialog == "settings" and not self._settings_dialog.isVisible():
+            self._settings_dialog.show()
+            self._settings_dialog.raise_()
+            self._settings_dialog.activateWindow()
+        elif state.active_dialog != "settings" and self._settings_dialog.isVisible():
+            self._settings_dialog.hide()
+
         if state.active_dialog == "install_packages" and not self._package_dialog.isVisible():
             self._package_dialog.show()
             self._package_dialog.raise_()
             self._package_dialog.activateWindow()
         elif state.active_dialog != "install_packages" and self._package_dialog.isVisible():
             self._package_dialog.hide()
-
-        if state.active_dialog == "settings":
-            QMessageBox.information(self, "Settings", "Settings UI is not implemented yet.")
-            self._shell_model.close_active_dialog()
 
     def _show_user_error_if_needed(self, error: UserFacingError | None) -> None:
         if error is None:
@@ -181,6 +210,34 @@ class MainWindow(QMainWindow):
         if error.detail:
             message_box.setDetailedText(error.detail)
         message_box.open()
+
+    def _apply_settings_state(self, state: SettingsScreenState) -> None:
+        if state.applied_settings != self._applied_settings:
+            self._applied_settings = state.applied_settings
+            self._configure_logging(state.applied_settings)
+
+        if state.user_error is not None:
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="settings:error",
+                    message=state.user_error.message,
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                ),
+                user_error=state.user_error,
+            )
+            return
+
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="settings",
+                message=state.status_message,
+                percent_complete=100 if not state.has_unsaved_changes else 0,
+                is_busy=False,
+                is_error=False,
+            )
+        )
 
     def _apply_package_state(self, state: PackageInstallerState) -> None:
         if state.user_error is not None:

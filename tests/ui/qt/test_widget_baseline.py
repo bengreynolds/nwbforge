@@ -7,7 +7,7 @@ from subprocess import CompletedProcess
 
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
-from nwbforge.app.services import PackageManagementController
+from nwbforge.app.services import PackageManagementController, UiSettingsService
 from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType, ValidationReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
@@ -22,7 +22,7 @@ from nwbforge.domain.models import (
     ValidationSummary,
 )
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
-from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel
+from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.qt import MainWindow
 
@@ -80,6 +80,10 @@ def make_package_screen(tmp_path: Path) -> PackageInstallerScreenModel:
     executor = ThreadedPackageInstallationExecutor(installation_service)
     controller = PackageManagementController(package_service, executor)
     return PackageInstallerScreenModel(controller)
+
+
+def make_settings_screen(tmp_path: Path) -> SettingsScreenModel:
+    return SettingsScreenModel(UiSettingsService(tmp_path / "ui-settings.json"))
 
 
 def make_session(tmp_path: Path) -> ConversionSession:
@@ -160,6 +164,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     log_file_path = tmp_path / "ui.log.jsonl"
     window = MainWindow(
         DesktopShellModel(),
+        make_settings_screen(tmp_path),
         make_package_screen(tmp_path),
         ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
         log_file_path=log_file_path,
@@ -193,8 +198,9 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)
     package_screen = make_package_screen(tmp_path)
+    settings_screen = make_settings_screen(tmp_path)
     conversion_screen = ConversionSessionScreenModel(FakeConversionExecutor(preview, execution))
-    window = MainWindow(DesktopShellModel(), package_screen, conversion_screen)
+    window = MainWindow(DesktopShellModel(), settings_screen, package_screen, conversion_screen)
     window.show()
     qapp.processEvents()
 
@@ -235,6 +241,7 @@ def test_main_window_shows_user_error_dialog(qapp, tmp_path: Path, monkeypatch) 
 
     window = MainWindow(
         shell,
+        make_settings_screen(tmp_path),
         make_package_screen(tmp_path),
         ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
     )
@@ -256,5 +263,42 @@ def test_main_window_shows_user_error_dialog(qapp, tmp_path: Path, monkeypatch) 
         "text": "Conversion failed.",
         "detail": "Missing session metadata.",
     }
+
+    window.close()
+
+
+def test_settings_dialog_updates_runtime_logging_preferences(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    shell = DesktopShellModel()
+    settings_screen = make_settings_screen(tmp_path)
+    window = MainWindow(
+        shell,
+        settings_screen,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._settings_action.trigger()
+    qapp.processEvents()
+    assert window.settings_dialog.isVisible() is True
+
+    settings_dialog = window.settings_dialog
+    settings_dialog._verbose_checkbox.setChecked(True)
+    settings_dialog._file_logging_checkbox.setChecked(True)
+    settings_dialog._log_path_edit.setText(str(tmp_path / "logs" / "runtime.jsonl"))
+    settings_dialog._save_button.click()
+    qapp.processEvents()
+
+    assert shell.state.verbose_logging_enabled is True
+    assert logging.getLogger("nwbforge").level == logging.DEBUG
+
+    logger = logging.getLogger("nwbforge.tests.qt.settings")
+    logger.info("Settings dialog log entry", extra={"nwbforge_context": {"dialog": "settings"}})
+    qapp.processEvents()
+    assert "Settings dialog log entry" in window.log_dock.editor.toPlainText()
+    assert (tmp_path / "logs" / "runtime.jsonl").exists()
 
     window.close()
