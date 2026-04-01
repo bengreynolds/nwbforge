@@ -1,6 +1,6 @@
 # Pilot Supported Adapter Baseline
 
-Last updated: 2026-03-31
+Last updated: 2026-04-01
 
 ## Purpose
 
@@ -80,14 +80,43 @@ Current role:
 - write audio data into NWB through NeuroConv's documented conversion API
 - broaden the supported-path proof from images and trials into a second non-tabular media route
 
+### `NeuroConvFicTracAdapter`
+
+Location: `src/nwbforge/adapters/supported/neuroconv_fictrac.py`
+
+Responsibilities:
+- inspect FicTrac `.dat` sources through NeuroConv's documented `FicTracDataInterface`
+- prove a real supported behavior route that writes directly into NWB behavior processing structures through NeuroConv
+- surface route-level configuration inputs such as FicTrac radius and optional config-file location without rebuilding the conversion locally
+
+Current role:
+- combine with the manifest-backed pilot metadata source in supported sessions
+- write FicTrac behavior data into NWB behavior processing modules through NeuroConv's documented conversion API
+- broaden the supported-path proof into direct NeuroConv-backed behavior data beyond the repository's fallback behavior writer
+
+### `NeuroConvDeepLabCutAdapter`
+
+Location: `src/nwbforge/adapters/supported/neuroconv_deeplabcut.py`
+
+Responsibilities:
+- inspect DeepLabCut `.csv` and `.h5` sources through NeuroConv's documented `DeepLabCutInterface`
+- prove a real supported pose-estimation route that writes through the `ndx-pose` extension using NeuroConv rather than local NWB assembly
+- surface route-level configuration inputs such as `subject_name` and optional DeepLabCut config-file location for later UI collection
+
+Current role:
+- combine with the manifest-backed pilot metadata source in supported sessions
+- write pose-estimation data into NWB processing modules through NeuroConv's documented conversion API
+- broaden the supported-path proof into a route that depends on a documented NWB extension package while preserving the repository's NeuroConv-first execution model
+
 ## Design constraints
 
 - most supported adapters remain extraction-oriented, but direct NeuroConv routes now also own their final write path through documented NeuroConv APIs
 - manifest structure stays intentionally simple and explicit
 - pilot behavior should remain easy to replace once a real supported format is chosen
+- route-specific interface parameters for supported NeuroConv behavior routes should be treated as UI/orchestration inputs rather than hard-coded conversion logic
 
 ## Immediate follow-on work
 
-1. Add another real NeuroConv-backed family from the approved route catalog.
+1. Add another real NeuroConv-backed family from the approved route catalog or deepen the current behavior family.
 2. Add the first real combined NeuroConv workflow adapter on top of the new workflow base.
 3. Expand beyond the current behavior trace/position and trials assembly slices into additional modality-aware mappings.

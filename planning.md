@@ -1,6 +1,6 @@
 # NWB Forge Planning
 
-Last updated: 2026-03-31
+Last updated: 2026-04-01
 Status: Late Phase 2 / entering Phase 3 supported-path MVP
 
 ## Current Execution Status
@@ -35,6 +35,8 @@ Completed:
 - Expanded the real supported text/tabular family to include Excel time intervals
 - Added a NeuroConv-backed still-image route using `ImageInterface`
 - Added a NeuroConv-backed audio route using `AudioInterface`
+- Added a NeuroConv-backed FicTrac behavior route using `FicTracDataInterface`
+- Added a NeuroConv-backed DeepLabCut pose-estimation route using `DeepLabCutInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -45,7 +47,7 @@ Completed:
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Supported-path MVP expansion beyond the initial CSV and Excel text/tabular routes
+- Supported-path MVP expansion beyond the initial text/tabular, image, audio, and first behavior routes
 - Continued expansion of direct NeuroConv-backed supported routes beyond the initial text/tabular family
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
@@ -62,13 +64,14 @@ Next:
 
 ### Current application baseline
 - The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
-- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, and audio adapters.
+- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real workflow route is implemented yet.
-- The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for manifest-plus-image supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
+- The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for combined manifest-plus-image, manifest-plus-audio, manifest-plus-FicTrac, and manifest-plus-DeepLabCut supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
 - Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, and threaded executor.
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
+- Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
 
 ## Project Vision and Scope
 

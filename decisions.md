@@ -483,3 +483,16 @@ Consequences:
 - `ConversionPipelineService`, `NeuroConvSupportedExecutionService`, and `ThreadedConversionExecutor` now emit structured log records with stable context payloads
 - runtime observability can expand incrementally from the current core services into persistence, review, and plugin paths
 - log viewer and verbose-mode UI work can build on an existing structured logging baseline rather than inventing one later
+
+### DEC-040: Let supported behavior routes keep NeuroConv-owned processing semantics instead of remapping them locally
+Status: Accepted
+
+Reasoning:
+- Behavior routes such as FicTrac and DeepLabCut already have documented NeuroConv interfaces that write richer NWB behavior-processing structures than the repository's current fallback writer path.
+- Rebuilding those route-specific conversions locally would add complexity while producing a weaker result than the documented NeuroConv API.
+- The repository's value for these supported routes is orchestration, metadata collection, validation, and multi-source session composition, not replacing NeuroConv's behavior writers.
+
+Consequences:
+- Supported behavior routes should prefer direct NeuroConv execution into processing modules when NeuroConv documents the route.
+- The future UI should expose route-specific inputs such as subject identity, optional config files, and similar interface parameters for supported behavior routes.
+- Repository-owned PyNWB behavior assembly remains the fallback and hybrid path, not the preferred implementation for supported NeuroConv behavior interfaces.

@@ -1,6 +1,6 @@
 # Adapter and Service Contract Baseline
 
-Last updated: 2026-03-31
+Last updated: 2026-04-01
 
 ## Purpose
 
@@ -28,6 +28,8 @@ Implemented adapters now include:
 - `NeuroConvExcelTimeIntervalsAdapter` for real NeuroConv-backed Excel interval sources
 - `NeuroConvImageAdapter` for real NeuroConv-backed still-image sources
 - `NeuroConvAudioAdapter` for real NeuroConv-backed audio sources
+- `NeuroConvFicTracAdapter` for real NeuroConv-backed FicTrac behavior sources
+- `NeuroConvDeepLabCutAdapter` for real NeuroConv-backed DeepLabCut pose-estimation sources
 
 Near-term framework direction:
 - a shared NeuroConv interface-adapter base for single-source `DataInterface` routes
@@ -44,7 +46,7 @@ Implemented framework pieces:
 - metadata merge helpers for NeuroConv interface metadata plus repository overrides
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
-- the CSV and Excel interval adapters plus the still-image and audio adapters now use this framework as proof cases
+- the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
 
 Preferred tightening direction:
 - fewer route-specific modules when a route differs only by interface metadata and light sniffing behavior
@@ -69,6 +71,7 @@ These protocols define what higher-level services must do without choosing concr
 - Extraction remains separate from normalization so source-specific naming does not leak downstream
 - Supported-path adapters should prefer NeuroConv interfaces when documented support exists
 - Custom supported-path adapter work should start only after checking the NeuroConv Conversion Gallery for an existing route
+- Supported behavior and media routes may write directly into their documented NWB processing or stimulus targets through NeuroConv, with the repository providing orchestration, metadata overrides, and validation around that write path
 
 ## Immediate follow-on work
 
