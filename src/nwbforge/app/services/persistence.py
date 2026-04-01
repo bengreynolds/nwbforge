@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from nwbforge.app.services.models import ConversionExecution, ReviewSubmission
+from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.domain.contracts import SessionSnapshotStore
 from nwbforge.domain.models import SessionSnapshot
 
@@ -12,6 +12,13 @@ class SessionPersistenceService:
 
     def __init__(self, snapshot_store: SessionSnapshotStore) -> None:
         self._snapshot_store = snapshot_store
+
+    def persist_preview(self, preview: ConversionPreview):
+        snapshot = SessionSnapshot(
+            session=preview.session,
+            provenance_record=preview.provenance_record,
+        )
+        return self._snapshot_store.save(snapshot)
 
     def persist_execution(self, execution: ConversionExecution):
         snapshot = SessionSnapshot(

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
-from nwbforge.app.services import ExecutionReviewService
+from nwbforge.app.services import ExecutionReviewService, SessionPersistenceService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.domain.enums import ConversionPathway, IssueSeverity, ReviewStatus, SessionStatus, SourceType, ValidationReviewStatus
 from nwbforge.domain.models import (
@@ -25,6 +26,7 @@ from nwbforge.domain.models import (
 )
 from nwbforge.validation import JsonExecutionReviewArtifactService
 from nwbforge.ui import ConversionSessionScreenModel
+from nwbforge.persistence import JsonSessionSnapshotStore
 
 
 class FakeConversionExecutor:
@@ -296,3 +298,57 @@ def test_conversion_session_screen_model_submits_review(tmp_path: Path) -> None:
     assert submission.review_record.decision == ReviewStatus.APPROVED
     assert screen.state.last_review_submission == submission
     assert "approved" in screen.state.review_message
+
+
+def test_conversion_session_screen_model_persists_preview_execution_and_review() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    issue = ValidationIssue(
+        code="nwbinspector-warning",
+        message="Subject metadata should be reviewed.",
+        severity=IssueSeverity.WARNING,
+        location="/general/subject",
+        tool="nwbinspector",
+    )
+    execution = make_execution(
+        preview,
+        issues=(issue,),
+        review_outcome=ValidationReviewOutcome(
+            status=ValidationReviewStatus.REVIEW,
+            blocks_completion=False,
+            requires_manual_review=True,
+            error_count=0,
+            warning_count=1,
+        ),
+    )
+
+    with TemporaryDirectory() as temp_dir:
+        persistence_service = SessionPersistenceService(
+            JsonSessionSnapshotStore(Path(temp_dir) / "session-state")
+        )
+        screen = ConversionSessionScreenModel(
+            FakeConversionExecutor(preview_result=preview, execution_result=execution),
+            review_service=ExecutionReviewService(JsonExecutionReviewArtifactService()),
+            persistence_service=persistence_service,
+        )
+        screen.load_session(session)
+        screen.start_preview().result(timeout=5)
+
+        preview_snapshot = persistence_service.load(preview.session.session_id)
+        assert preview_snapshot is not None
+        assert preview_snapshot.session == preview.session
+        assert preview_snapshot.validation_summary is None
+
+        screen.start_execution(Path("C:/tmp/output.nwb")).result(timeout=5)
+        execution_snapshot = persistence_service.load(execution.session.session_id)
+        assert execution_snapshot is not None
+        assert execution_snapshot.validation_summary == execution.validation_summary
+
+        screen.set_reviewer_name("alice")
+        screen.set_issue_acknowledged(screen.state.validation_issues[0].issue_ref, True)
+        screen.submit_review(ReviewStatus.APPROVED)
+
+        review_snapshot = persistence_service.load(execution.session.session_id)
+        assert review_snapshot is not None
+        assert review_snapshot.review_record is not None
+        assert review_snapshot.review_record.decision == ReviewStatus.APPROVED

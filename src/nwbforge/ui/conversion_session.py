@@ -8,6 +8,7 @@ from pathlib import Path
 from threading import Lock
 
 from nwbforge.app.services import ExecutionReviewService
+from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.app.runtime import ConversionExecutor
 from nwbforge.domain.enums import ReviewStatus
@@ -30,10 +31,12 @@ class ConversionSessionScreenModel:
         executor: ConversionExecutor,
         *,
         review_service: ExecutionReviewService | None = None,
+        persistence_service: SessionPersistenceService | None = None,
         error_presenter: UiErrorPresenter | None = None,
     ) -> None:
         self._executor = executor
         self._review_service = review_service
+        self._persistence_service = persistence_service
         self._state = ConversionSessionScreenState()
         self._listeners: list[ConversionSessionStateListener] = []
         self._lock = Lock()
@@ -205,6 +208,7 @@ class ConversionSessionScreenModel:
                 user_error=None,
             )
         )
+        self._persist_review_submission(submission)
         return submission
 
     def _handle_progress(self, event) -> None:
@@ -242,6 +246,7 @@ class ConversionSessionScreenModel:
                 user_error=None,
             )
         )
+        self._persist_preview(preview)
 
     def _handle_execution_complete(self, future: Future[ConversionExecution]) -> None:
         try:
@@ -275,6 +280,7 @@ class ConversionSessionScreenModel:
                 user_error=None,
             )
         )
+        self._persist_execution(execution)
 
     def _require_session(self) -> ConversionSession:
         if self._state.session is None:
@@ -299,6 +305,51 @@ class ConversionSessionScreenModel:
         for listener in listeners:
             listener(state)
         return state
+
+    def _persist_preview(self, preview: ConversionPreview) -> None:
+        if self._persistence_service is None:
+            return
+        try:
+            self._persistence_service.persist_preview(preview)
+        except Exception as exc:
+            user_error = self._error_presenter.present(exc)
+            self._set_state(
+                replace(
+                    self._state,
+                    error_message=f"Preview completed, but state persistence failed: {user_error.message}",
+                    user_error=user_error,
+                )
+            )
+
+    def _persist_execution(self, execution: ConversionExecution) -> None:
+        if self._persistence_service is None:
+            return
+        try:
+            self._persistence_service.persist_execution(execution)
+        except Exception as exc:
+            user_error = self._error_presenter.present(exc)
+            self._set_state(
+                replace(
+                    self._state,
+                    error_message=f"Execution completed, but state persistence failed: {user_error.message}",
+                    user_error=user_error,
+                )
+            )
+
+    def _persist_review_submission(self, submission: ReviewSubmission) -> None:
+        if self._persistence_service is None:
+            return
+        try:
+            self._persistence_service.persist_review_submission(submission)
+        except Exception as exc:
+            user_error = self._error_presenter.present(exc)
+            self._set_state(
+                replace(
+                    self._state,
+                    error_message=f"Review completed, but state persistence failed: {user_error.message}",
+                    user_error=user_error,
+                )
+            )
 
 
 def validation_issue_items(execution: ConversionExecution) -> tuple[ValidationIssueItem, ...]:

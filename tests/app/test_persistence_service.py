@@ -84,6 +84,21 @@ def test_session_persistence_service_persists_execution_state(tmp_path: Path) ->
     assert snapshot.review_outcome == execution.review_outcome
 
 
+def test_session_persistence_service_persists_preview_state(tmp_path: Path) -> None:
+    service = SessionPersistenceService(JsonSessionSnapshotStore(tmp_path / "state"))
+    execution = make_execution(tmp_path)
+
+    artifact = service.persist_preview(execution.preview)
+    snapshot = service.load(execution.preview.session.session_id)
+
+    assert artifact.artifact_type == "session_snapshot"
+    assert snapshot is not None
+    assert snapshot.session == execution.preview.session
+    assert snapshot.provenance_record == execution.preview.provenance_record
+    assert snapshot.validation_summary is None
+    assert snapshot.review_outcome is None
+
+
 def test_session_persistence_service_persists_review_submission_state(tmp_path: Path) -> None:
     issue = ValidationIssue(
         code="warning-1",

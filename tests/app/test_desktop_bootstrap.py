@@ -42,6 +42,13 @@ def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path
     assert execution.session.status.value == "completed"
     assert output_path.exists() is True
     assert execution.validation_summary.is_passing() is True
+    assert (
+        tmp_path
+        / ".nwbforge"
+        / "session-state"
+        / execution.session.session_id
+        / "session-state.json"
+    ).exists() is True
 
     services.conversion_screen_model.shutdown(wait=False)
     services.package_screen_model.shutdown(wait=False)

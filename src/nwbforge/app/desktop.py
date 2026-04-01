@@ -19,6 +19,7 @@ from nwbforge.app.services import (
     ExecutionReviewService,
     PackageManagementController,
     RegistrySourceInspectionService,
+    SessionPersistenceService,
     SessionProvenanceService,
     UiSettingsService,
 )
@@ -27,6 +28,7 @@ from nwbforge.domain.enums import ConversionPathway, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
 from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
 from nwbforge.normalization import RuleBasedNormalizationService
+from nwbforge.persistence import JsonSessionSnapshotStore
 from nwbforge.ui import (
     ConversionSessionScreenModel,
     DesktopShellModel,
@@ -138,9 +140,13 @@ def build_desktop_services(
     pipeline_service = build_desktop_pipeline_service(registry)
     conversion_executor = ThreadedConversionExecutor(pipeline_service)
     review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
+    persistence_service = SessionPersistenceService(
+        JsonSessionSnapshotStore(app_state_dir / "session-state")
+    )
     conversion_screen_model = ConversionSessionScreenModel(
         conversion_executor,
         review_service=review_service,
+        persistence_service=persistence_service,
     )
 
     return DesktopAppServices(
