@@ -6,7 +6,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
-from nwbforge.app.runtime import PipelineProgressEvent, PipelineStage, ThreadedPackageInstallationExecutor
+from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
 from nwbforge.app.services import PackageManagementController
 from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType, ValidationReviewStatus
 from nwbforge.domain.models import (
@@ -157,10 +157,12 @@ def make_preview_and_execution(session: ConversionSession) -> tuple[ConversionPr
 def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)
+    log_file_path = tmp_path / "ui.log.jsonl"
     window = MainWindow(
         DesktopShellModel(),
         make_package_screen(tmp_path),
         ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        log_file_path=log_file_path,
     )
     window.show()
     qapp.processEvents()
@@ -177,6 +179,8 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     logger.info("Widget log message", extra={"nwbforge_context": {"session_id": "sess-qt"}})
     qapp.processEvents()
     assert "Widget log message" in window.log_dock.editor.toPlainText()
+    assert log_file_path.exists()
+    assert "Widget log message" in log_file_path.read_text(encoding="utf-8")
 
     window._install_packages_action.trigger()
     qapp.processEvents()
@@ -212,5 +216,45 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
     assert window.package_dialog._route_list.count() > 0
     assert window.package_dialog._install_button.isEnabled() is True
+
+    window.close()
+
+
+def test_main_window_shows_user_error_dialog(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    shell = DesktopShellModel()
+    shown = {}
+
+    def fake_open(message_box) -> None:
+        shown["title"] = message_box.windowTitle()
+        shown["text"] = message_box.text()
+        shown["detail"] = message_box.detailedText()
+
+    monkeypatch.setattr("nwbforge.ui.qt.main_window.QMessageBox.open", fake_open)
+
+    window = MainWindow(
+        shell,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    shell.apply_pipeline_error(
+        PipelineRuntimeError(
+            stage=PipelineStage.FAILED,
+            user_message="Conversion failed.",
+            detail="Missing session metadata.",
+            session_id=session.session_id,
+        )
+    )
+    qapp.processEvents()
+
+    assert shown == {
+        "title": "Conversion Error",
+        "text": "Conversion failed.",
+        "detail": "Missing session metadata.",
+    }
 
     window.close()

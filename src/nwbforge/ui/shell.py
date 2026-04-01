@@ -8,7 +8,7 @@ from nwbforge.app.packages import PackageInstallProgressEvent, PackageInstallSta
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
 from nwbforge.app.packages.execution import PackageInstallRuntimeError
 from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
-from nwbforge.ui.logs import InMemoryUiLogSink
+from nwbforge.ui.logs import UiLogSubscriptionSink
 from nwbforge.ui.models import (
     DesktopShellState,
     FileMenuAction,
@@ -23,7 +23,7 @@ class DesktopShellModel:
     def __init__(
         self,
         *,
-        log_sink: InMemoryUiLogSink | None = None,
+        log_sink: UiLogSubscriptionSink | None = None,
         error_presenter: UiErrorPresenter | None = None,
     ) -> None:
         self._state = DesktopShellState()
@@ -66,7 +66,7 @@ class DesktopShellModel:
     def set_verbose_logging_enabled(self, enabled: bool) -> DesktopShellState:
         return self._set_state(replace(self._state, verbose_logging_enabled=enabled))
 
-    def attach_log_sink(self, log_sink: InMemoryUiLogSink) -> None:
+    def attach_log_sink(self, log_sink: UiLogSubscriptionSink) -> None:
         if self._log_sink is log_sink:
             return
         self._log_sink = log_sink

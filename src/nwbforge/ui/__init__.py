@@ -10,16 +10,26 @@ from nwbforge.ui.models import (
 )
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter, UserFacingError
-from nwbforge.ui.logs import InMemoryUiLogSink, UiLogEntry, UiLogHandler, UiLogSink
+from nwbforge.ui.logs import (
+    CompositeUiLogSink,
+    FileUiLogSink,
+    InMemoryUiLogSink,
+    UiLogEntry,
+    UiLogHandler,
+    UiLogSink,
+    UiLogSubscriptionSink,
+)
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
 from nwbforge.ui.shell import DesktopShellModel
 
 __all__ = [
     "ConversionSessionScreenModel",
     "ConversionSessionScreenState",
+    "CompositeUiLogSink",
     "DefaultUiErrorPresenter",
     "DesktopShellModel",
     "DesktopShellState",
+    "FileUiLogSink",
     "FileMenuAction",
     "FileMenuEntry",
     "InMemoryUiLogSink",
@@ -30,5 +40,6 @@ __all__ = [
     "UiLogEntry",
     "UiLogHandler",
     "UiLogSink",
+    "UiLogSubscriptionSink",
     "UserFacingError",
 ]

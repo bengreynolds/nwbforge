@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
 
-from nwbforge.ui import DesktopShellModel, FileMenuAction, InMemoryUiLogSink, UiLogHandler
+from nwbforge.ui import (
+    CompositeUiLogSink,
+    DesktopShellModel,
+    FileUiLogSink,
+    FileMenuAction,
+    InMemoryUiLogSink,
+    UiLogHandler,
+    UiLogSubscriptionSink,
+    UserFacingError,
+)
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.models import ConversionSessionScreenState, PackageInstallerState, StatusBarState
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
@@ -27,10 +37,11 @@ class MainWindow(QMainWindow):
         package_screen_model: PackageInstallerScreenModel,
         conversion_screen_model: ConversionSessionScreenModel,
         *,
-        log_sink: InMemoryUiLogSink | None = None,
+        log_sink: UiLogSubscriptionSink | None = None,
+        log_file_path: Path | None = None,
         parent=None,
     ) -> None:
-        self._log_sink = log_sink or InMemoryUiLogSink()
+        self._log_sink = log_sink or self._build_default_log_sink(log_file_path)
         self._log_handler = UiLogHandler(self._log_sink)
         logger = logging.getLogger("nwbforge")
         logger.addHandler(self._log_handler)
@@ -44,6 +55,7 @@ class MainWindow(QMainWindow):
         self._package_screen_model = package_screen_model
         self._conversion_screen_model = conversion_screen_model
         self._shell_model.attach_log_sink(self._log_sink)
+        self._last_error_signature: tuple[str, str, str | None, str] | None = None
 
         self._build_file_menu()
         self._build_status_bar()
@@ -85,6 +97,17 @@ class MainWindow(QMainWindow):
     @property
     def file_menu(self):
         return self._file_menu
+
+    @property
+    def log_sink(self) -> UiLogSubscriptionSink:
+        return self._log_sink
+
+    @staticmethod
+    def _build_default_log_sink(log_file_path: Path | None) -> UiLogSubscriptionSink:
+        memory_sink = InMemoryUiLogSink()
+        if log_file_path is None:
+            return memory_sink
+        return CompositeUiLogSink(memory_sink, FileUiLogSink(log_file_path))
 
     def closeEvent(self, event) -> None:  # noqa: N802
         logging.getLogger("nwbforge").removeHandler(self._log_handler)
@@ -128,6 +151,7 @@ class MainWindow(QMainWindow):
         self._progress_bar.setValue(state.status_bar.percent_complete)
         self._log_dock.setVisible(state.is_log_viewer_visible)
         self._log_dock.set_entries(state.log_entries)
+        self._show_user_error_if_needed(state.last_user_error)
 
         if state.active_dialog == "install_packages" and not self._package_dialog.isVisible():
             self._package_dialog.show()
@@ -139,6 +163,24 @@ class MainWindow(QMainWindow):
         if state.active_dialog == "settings":
             QMessageBox.information(self, "Settings", "Settings UI is not implemented yet.")
             self._shell_model.close_active_dialog()
+
+    def _show_user_error_if_needed(self, error: UserFacingError | None) -> None:
+        if error is None:
+            self._last_error_signature = None
+            return
+
+        signature = (error.title, error.message, error.detail, error.category)
+        if signature == self._last_error_signature:
+            return
+
+        self._last_error_signature = signature
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Warning)
+        message_box.setWindowTitle(error.title)
+        message_box.setText(error.message)
+        if error.detail:
+            message_box.setDetailedText(error.detail)
+        message_box.open()
 
     def _apply_package_state(self, state: PackageInstallerState) -> None:
         if state.user_error is not None:
