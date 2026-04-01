@@ -92,6 +92,7 @@ def make_settings_screen(tmp_path: Path) -> SettingsScreenModel:
 
 def make_session(tmp_path: Path) -> ConversionSession:
     manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps({"session": {"session_id": "sess-qt"}}), encoding="utf-8")
     return ConversionSession(
         session_id="sess-qt",
@@ -397,6 +398,43 @@ def test_main_window_opens_manifest_session_from_file_menu(qapp, tmp_path: Path,
     window.close()
 
 
+def test_main_window_tracks_recent_sessions_menu(qapp, tmp_path: Path, monkeypatch) -> None:
+    first = make_session(tmp_path / "first")
+    second = make_session(tmp_path / "second")
+    preview, execution = make_preview_and_execution(first)
+    settings_screen = make_settings_screen(tmp_path)
+    window = MainWindow(
+        DesktopShellModel(),
+        settings_screen,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    selected_paths = iter(
+        [
+            (str(first.sources[0].location), "session_manifest.json"),
+            (str(second.sources[0].location), "session_manifest.json"),
+        ]
+    )
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: next(selected_paths),
+    )
+
+    window._open_session_action.trigger()
+    qapp.processEvents()
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    recent_actions = window._recent_sessions_menu.actions()
+    assert len(recent_actions) == 2
+    assert "second" in recent_actions[0].text()
+    assert "first" in recent_actions[1].text()
+    window.close()
+
+
 def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(
@@ -427,4 +465,49 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
 
     assert window.conversion_widget._artifact_list.count() == 1
     assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
+    window.close()
+
+
+def test_conversion_widget_opens_selected_artifact_and_folder(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    artifact_path = tmp_path / "reports" / "validation-report.json"
+    preview, execution = make_preview_and_execution(
+        session,
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=artifact_path,
+                description="Validation report artifact",
+            ),
+        ),
+    )
+    opened_urls: list[str] = []
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.conversion_session_widget.QDesktopServices.openUrl",
+        lambda url: opened_urls.append(url.toLocalFile()) or True,
+    )
+
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    window.conversion_widget._execute_button.click()
+    qapp.processEvents()
+
+    window.conversion_widget._artifact_list.setCurrentRow(0)
+    qapp.processEvents()
+    window.conversion_widget._open_artifact_button.click()
+    window.conversion_widget._reveal_artifact_button.click()
+    qapp.processEvents()
+
+    assert opened_urls == [artifact_path.as_posix(), artifact_path.parent.as_posix()]
     window.close()

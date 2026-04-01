@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QSignalBlocker, Qt
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from PySide6.QtCore import QUrl
 
 from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import ConversionSession
@@ -62,6 +64,11 @@ class ConversionSessionWidget(QWidget):
         self._status_label = QLabel("Ready.", self)
         self._result_label = QLabel("No preview or execution yet.", self)
         self._artifact_list = QListWidget(self)
+        self._artifact_list.itemSelectionChanged.connect(self._refresh_artifact_actions)
+        self._open_artifact_button = QPushButton("Open Selected Artifact", self)
+        self._open_artifact_button.clicked.connect(self._open_selected_artifact)
+        self._reveal_artifact_button = QPushButton("Open Artifact Folder", self)
+        self._reveal_artifact_button.clicked.connect(self._reveal_selected_artifact)
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
@@ -75,6 +82,10 @@ class ConversionSessionWidget(QWidget):
         review_button_row = QHBoxLayout()
         review_button_row.addWidget(self._approve_button)
         review_button_row.addWidget(self._reject_button)
+
+        artifact_button_row = QHBoxLayout()
+        artifact_button_row.addWidget(self._open_artifact_button)
+        artifact_button_row.addWidget(self._reveal_artifact_button)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form_layout)
@@ -93,6 +104,7 @@ class ConversionSessionWidget(QWidget):
         layout.addWidget(self._result_label)
         layout.addWidget(QLabel("Generated artifacts", self))
         layout.addWidget(self._artifact_list, stretch=1)
+        layout.addLayout(artifact_button_row)
         layout.addWidget(self._status_label)
 
         self._bridge = StateBridge(self)
@@ -156,6 +168,7 @@ class ConversionSessionWidget(QWidget):
         self._issue_list.setEnabled(state.execution is not None)
         self._rationale_edit.setEnabled(state.execution is not None)
         self._reviewer_edit.setEnabled(state.execution is not None)
+        self._refresh_artifact_actions()
 
     def _sync_sources(self, state: ConversionSessionScreenState) -> None:
         self._source_list.clear()
@@ -199,11 +212,13 @@ class ConversionSessionWidget(QWidget):
         for artifact in state.generated_artifacts:
             label = f"[{artifact.artifact_type}] {artifact.location.name}"
             item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, str(artifact.location))
             tooltip = str(artifact.location)
             if artifact.description:
                 tooltip = f"{artifact.description}\n{tooltip}"
             item.setToolTip(tooltip)
             self._artifact_list.addItem(item)
+        self._refresh_artifact_actions()
 
     @staticmethod
     def _validation_summary_text(state: ConversionSessionScreenState) -> str:
@@ -257,3 +272,27 @@ class ConversionSessionWidget(QWidget):
                 item.data(Qt.ItemDataRole.UserRole),
                 item.checkState() == Qt.CheckState.Checked,
             )
+
+    def _refresh_artifact_actions(self) -> None:
+        has_selection = self._selected_artifact_path() is not None
+        self._open_artifact_button.setEnabled(has_selection)
+        self._reveal_artifact_button.setEnabled(has_selection)
+
+    def _selected_artifact_path(self) -> Path | None:
+        item = self._artifact_list.currentItem()
+        if item is None:
+            return None
+        path_text = item.data(Qt.ItemDataRole.UserRole)
+        return Path(path_text) if path_text else None
+
+    def _open_selected_artifact(self) -> None:
+        path = self._selected_artifact_path()
+        if path is None:
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+
+    def _reveal_selected_artifact(self) -> None:
+        path = self._selected_artifact_path()
+        if path is None:
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
