@@ -24,6 +24,7 @@ Completed:
 - Added first modality-specific acquisition assembly for behavior streams
 - Added behavior spatial-data assembly through `Position` and `SpatialSeries`
 - Established NeuroConv-first supported-path planning as explicit repository policy
+- Added an explicit approved NeuroConv-first route catalog for supported-path work
 - Added machine-readable validation report artifacts to the execution pipeline
 - Added an explicit validation review-outcome policy for UI and workflow consumers
 - Added persisted post-execution review decisions and override records as machine-readable artifacts
@@ -39,6 +40,7 @@ In progress:
 Next:
 - First real supported acquisition adapter selection and spike
 - Add `neuroconv` as an active implementation dependency when the first real supported-path adapter slice begins
+- Select the first real supported-path adapter from the approved NeuroConv route catalog
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
 - Additional modality-specific NWB containers beyond the new behavior baseline
 - Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
@@ -133,6 +135,7 @@ Planning implication: validation must be a dedicated layer with machine checks a
 ### Implementation-source-of-truth policy
 - Official PyNWB documentation is the source of truth for API usage, data modeling, container selection, and file-writing patterns.
 - Supported-path implementation should begin by checking the NeuroConv Conversion Gallery for an existing interface or combined workflow.
+- The approved repository route catalog lives in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md).
 - Direct PyNWB construction is the fallback path when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB route is clearly simpler and more maintainable.
 - Custom HDF5-level writing should be avoided when documented PyNWB APIs provide a schema-compliant path.
 
@@ -560,7 +563,7 @@ Important separation:
 
 ### Supported-path implementation protocol
 1. Determine whether the source format or pipeline is already supported by NeuroConv.
-2. Check the NeuroConv Conversion Gallery for the exact interface or combined workflow.
+2. Check the approved route catalog and then the NeuroConv Conversion Gallery for the exact interface or combined workflow.
 3. Prefer the NeuroConv route when documented support exists.
 4. Fall back to direct PyNWB only when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB solution is clearly simpler and more maintainable.
 5. When using direct PyNWB, use documented high-level APIs and standard NWB container placement, including `NWBFile`, `Subject`, `acquisition`, `processing`, `stimulus`, `intervals`, and `units` as appropriate.
@@ -622,6 +625,7 @@ Current status:
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
 - The first real supported-path implementation should add `neuroconv` as a declared project dependency rather than keeping it only as architectural intent
+- The first real supported-path adapter should be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -678,6 +682,7 @@ Implementation references:
 - Pilot adapter note: [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md)
 - Development environment note: [docs/architecture/development-environment.md](docs/architecture/development-environment.md)
 - Release note: [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md)
+- NeuroConv route catalog: [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 
 ## Research References
 

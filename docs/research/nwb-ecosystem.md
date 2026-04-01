@@ -27,6 +27,7 @@ Current planning guidance:
 - start with the NeuroConv Conversion Gallery when evaluating whether a supported-path format already has an interface
 - prefer documented NeuroConv interfaces and combined workflows before designing a low-level converter
 - treat direct PyNWB writing as the fallback for unsupported or unusually custom datasets
+- use [neuroconv-supported-routes.md](neuroconv-supported-routes.md) as the repository's approved NeuroConv-first route catalog
 
 ### PyNWB
 PyNWB is the lower-level Python API for creating, reading, validating, and extending NWB files. It is the foundation for custom assembly and cases that need more control than standard conversion interfaces provide.

@@ -72,6 +72,7 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Treat official PyNWB documentation as the source of truth for NWB API usage, container placement, and file-writing patterns
 - Prefer the simplest correct documented PyNWB container and method rather than wrapping built-in APIs without need
 - When `pynwb.file` or another standard PyNWB module solves the problem directly, use it instead of inventing a parallel abstraction
+- For software and workflows listed in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md), assume NeuroConv should be investigated first and used whenever feasible
 
 ## Documentation Rules
 
@@ -119,3 +120,4 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - When adding new adapters or mappings, define the contract first and implementation second
 - For supported-path work, check the NeuroConv Conversion Gallery before proposing a manual converter
 - For direct NWB writing, prefer documented PyNWB patterns for `NWBFile`, `Subject`, acquisitions, processing modules, stimuli, intervals, units, ophys, and ecephys containers
+- Use [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md) as the repo's approved NeuroConv-first route catalog

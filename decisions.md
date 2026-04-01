@@ -355,3 +355,15 @@ Consequences:
 - The first real supported-path adapter slice should introduce `neuroconv` as a declared dependency
 - Direct PyNWB construction remains the fallback for unsupported or unusually custom cases
 - PyNWB documentation is the required source of truth for low-level NWB API usage and container placement
+
+### DEC-030: Maintain an explicit approved NeuroConv route catalog in the repository
+Status: Accepted
+
+Reasoning:
+- The project now has a concrete set of NeuroConv-supported formats and workflows that should default future implementation choices.
+- Encoding that list in one canonical repository note is more reliable than re-deciding support assumptions ad hoc in each implementation task.
+
+Consequences:
+- The route catalog lives in `docs/research/neuroconv-supported-routes.md`
+- When an input mentions a listed software package or workflow, NeuroConv should be investigated first and used whenever feasible
+- Format-specific caveats still need to be checked against the exact NeuroConv gallery page before implementation
