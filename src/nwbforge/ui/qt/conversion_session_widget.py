@@ -59,8 +59,14 @@ class ConversionSessionWidget(QWidget):
         self._validation_summary_label = QLabel("Validation summary: not available.", self)
         self._review_outcome_label = QLabel("Review outcome: not available.", self)
         self._review_status_label = QLabel("Review status: not reviewed.", self)
+        self._stage_value_label = QLabel("idle", self)
+        self._output_value_label = QLabel("No output selected.", self)
+        self._issue_count_value_label = QLabel("0 issues", self)
+        self._artifact_count_value_label = QLabel("0 artifacts", self)
         self._issue_list = QListWidget(self)
         self._issue_list.itemChanged.connect(self._on_issue_item_changed)
+        self._review_guidance_label = QLabel("Run preview or execution to unlock review guidance.", self)
+        self._acknowledgement_summary_label = QLabel("Acknowledged 0 of 0 issues.", self)
         self._reviewer_edit = QLineEdit(self)
         self._reviewer_edit.setPlaceholderText("Reviewer name")
         self._reviewer_edit.textChanged.connect(self._screen_model.set_reviewer_name)
@@ -118,7 +124,14 @@ class ConversionSessionWidget(QWidget):
         session_summary_layout.addLayout(button_row)
         self._session_summary_group.setLayout(session_summary_layout)
 
+        run_overview_layout = QFormLayout()
+        run_overview_layout.addRow("Stage", self._stage_value_label)
+        run_overview_layout.addRow("Output target", self._output_value_label)
+        run_overview_layout.addRow("Validation", self._issue_count_value_label)
+        run_overview_layout.addRow("Artifacts", self._artifact_count_value_label)
+
         execution_layout = QVBoxLayout()
+        execution_layout.addLayout(run_overview_layout)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
         execution_layout.addWidget(self._validation_summary_label)
@@ -128,6 +141,8 @@ class ConversionSessionWidget(QWidget):
         self._execution_group.setLayout(execution_layout)
 
         review_layout = QVBoxLayout()
+        review_layout.addWidget(self._review_guidance_label)
+        review_layout.addWidget(self._acknowledgement_summary_label)
         review_layout.addWidget(QLabel("Validation issues", self))
         review_layout.addWidget(self._issue_list, stretch=1)
         review_layout.addWidget(self._override_checkbox)
@@ -196,6 +211,12 @@ class ConversionSessionWidget(QWidget):
         self._validation_summary_label.setText(self._validation_summary_text(state))
         self._review_outcome_label.setText(self._review_outcome_text(state))
         self._review_status_label.setText(self._review_status_text(state))
+        self._stage_value_label.setText(self._stage_text(state))
+        self._output_value_label.setText(self._output_text(state))
+        self._issue_count_value_label.setText(self._issue_count_text(state))
+        self._artifact_count_value_label.setText(self._artifact_count_text(state))
+        self._review_guidance_label.setText(self._review_guidance_text(state))
+        self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
 
         if state.output_path is not None and self._output_path_edit.text() != str(state.output_path):
             self._output_path_edit.setText(str(state.output_path))
@@ -302,6 +323,55 @@ class ConversionSessionWidget(QWidget):
         if state.review_message:
             return f"Review status: {state.review_message}"
         return "Review status: not reviewed."
+
+    @staticmethod
+    def _stage_text(state: ConversionSessionScreenState) -> str:
+        if state.progress_event is not None:
+            return state.progress_event.stage.value
+        if state.execution is not None:
+            return state.execution.session.status.value
+        if state.preview is not None:
+            return state.preview.session.status.value
+        if state.session is not None:
+            return state.session.status.value
+        return "idle"
+
+    @staticmethod
+    def _output_text(state: ConversionSessionScreenState) -> str:
+        if state.output_path is None:
+            return "No output selected."
+        return str(state.output_path)
+
+    @staticmethod
+    def _issue_count_text(state: ConversionSessionScreenState) -> str:
+        if state.execution is None:
+            return "Not available."
+        issue_count = len(state.validation_issues)
+        warning_count = len([issue for issue in state.validation_issues if issue.severity == "warning"])
+        error_count = len([issue for issue in state.validation_issues if issue.severity == "error"])
+        return f"{issue_count} issues ({error_count} errors, {warning_count} warnings)"
+
+    @staticmethod
+    def _artifact_count_text(state: ConversionSessionScreenState) -> str:
+        count = len(state.generated_artifacts)
+        return f"{count} artifacts"
+
+    @staticmethod
+    def _review_guidance_text(state: ConversionSessionScreenState) -> str:
+        if state.execution is None:
+            return "Run preview or execution to unlock review guidance."
+        outcome = state.execution.review_outcome
+        if outcome.blocks_completion:
+            return "Completion is blocked. Provide rationale and enable override only if the result is acceptable."
+        if outcome.requires_manual_review:
+            return "Manual review is required. Acknowledge issues, add rationale if needed, then approve or reject."
+        return "No blocking review actions are currently required."
+
+    @staticmethod
+    def _acknowledgement_summary_text(state: ConversionSessionScreenState) -> str:
+        total_issues = len(state.validation_issues)
+        acknowledged = len(state.acknowledged_issue_refs)
+        return f"Acknowledged {acknowledged} of {total_issues} issues."
 
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state

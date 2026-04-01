@@ -229,10 +229,13 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._execution_group.title() == "Execution Status"
     assert window.conversion_widget._review_group.title() == "Validation and Review"
     assert window.conversion_widget._artifact_group.title() == "Generated Artifacts"
+    assert window.conversion_widget._stage_value_label.text() == "sources_added"
+    assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
 
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Preview status: ready_to_write"
+    assert window.conversion_widget._stage_value_label.text() == "ready_to_write"
     assert window.statusBar().findChild(type(window._progress_bar)) is not None
 
     window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
@@ -240,6 +243,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Execution status: completed"
     assert window.conversion_widget._artifact_list.count() == 0
+    assert window.conversion_widget._artifact_count_value_label.text() == "0 artifacts"
 
     window.package_dialog.show()
     qapp.processEvents()
@@ -415,10 +419,13 @@ def test_conversion_widget_submits_review(qapp, tmp_path: Path) -> None:
     qapp.processEvents()
 
     assert window.conversion_widget._issue_list.count() == 1
+    assert "Manual review is required." in window.conversion_widget._review_guidance_label.text()
+    assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 0 of 1 issues."
     window.conversion_widget._reviewer_edit.setText("alice")
     issue_item = window.conversion_widget._issue_list.item(0)
     issue_item.setCheckState(Qt.CheckState.Checked)
     qapp.processEvents()
+    assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 1 of 1 issues."
     window.conversion_widget._approve_button.click()
     qapp.processEvents()
 
@@ -576,6 +583,7 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
 
     assert window.conversion_widget._artifact_list.count() == 1
     assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
+    assert window.conversion_widget._artifact_count_value_label.text() == "1 artifacts"
     window.close()
 
 
