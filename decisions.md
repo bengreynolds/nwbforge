@@ -615,3 +615,16 @@ Consequences:
 - `src/nwbforge/ui/` is now the home for toolkit-agnostic shell and screen models
 - the first UI implementation slice focuses on `DesktopShellModel` and `PackageInstallerScreenModel` rather than concrete widgets
 - future widget code should bind to these models instead of duplicating package planning, install execution, or runtime-state logic in views
+
+### DEC-050: Put conversion-session UI behavior behind a screen model over runtime contracts
+Status: Accepted
+
+Reasoning:
+- The conversion workflow already has explicit background-execution and progress/error contracts, so the UI should consume those directly rather than inventing a parallel session-state mechanism.
+- A dedicated conversion-session screen model keeps preview/execution state transitions testable before any widget toolkit is chosen.
+- This keeps the desktop shell thin and preserves the backend rule that conversion logic emits runtime events but does not manipulate UI components.
+
+Consequences:
+- `ConversionSessionScreenModel` is now the UI-facing boundary for one loaded conversion session
+- future widgets should bind to screen state that already carries session, preview, execution, progress, and user-facing error state
+- later UI work can focus on presentation, log sinks, and interaction design instead of reconstructing preview/execution lifecycle rules

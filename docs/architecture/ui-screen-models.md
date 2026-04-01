@@ -36,6 +36,24 @@ Responsibilities:
 - submit background package installs through the controller
 - update screen state from real package-install progress and completion/failure outcomes
 
+### `ConversionSessionScreenModel`
+
+Location: `src/nwbforge/ui/conversion_session.py`
+
+Responsibilities:
+- load a `ConversionSession` into UI-facing state
+- track source summaries, preview state, execution state, and the selected output path
+- submit preview work through `ConversionExecutor`
+- submit write/validation work through `ConversionExecutor`
+- consume `PipelineProgressEvent` updates directly
+- surface `PipelineRuntimeError` user messages into screen state
+
+Current scope:
+- one loaded session at a time
+- in-memory state only
+- explicit separation between preview-running and execution-running flags
+- listener-based updates suitable for a future widget binding layer
+
 ## Design constraints
 
 - UI models are toolkit-agnostic and do not import widget libraries
@@ -49,10 +67,10 @@ Responsibilities:
 - no actual desktop widget toolkit is implemented yet
 - no log-sink/viewer backend exists yet beyond shell visibility state
 - shell state is in-memory only and not persisted
-- the current UI layer covers package-management flows only; conversion-session screens still remain to be built
+- the current UI layer covers package-management flows and the first conversion-session screen model, but still does not include concrete widgets or persisted view state
 
 ## Immediate follow-on work
 
-1. Add a first conversion-session shell model that binds pipeline progress, status, and user-facing errors.
-2. Add a log-sink abstraction that can feed both file logging and a future in-app log viewer.
+1. Add a log-sink abstraction that can feed both file logging and a future in-app log viewer.
+2. Add explicit user-facing error translation policy shared by conversion-session and package-install screens.
 3. Choose the first concrete widget toolkit layer only after the shell and screen-model contracts settle further.

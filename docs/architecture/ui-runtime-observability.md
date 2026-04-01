@@ -56,12 +56,13 @@ Current scope:
 - log records now carry stable context payloads for session id, source id, adapter id, output path, and related runtime details where applicable
 - `DesktopShellModel` now gives the future UI a toolkit-agnostic shell state for File-menu actions, status-bar text, progress display, and log-viewer visibility
 - `PackageInstallerScreenModel` now gives the future setup and extension-install UI a toolkit-agnostic state model over `PackageManagementController`
+- `ConversionSessionScreenModel` now gives the future conversion-session UI a toolkit-agnostic state model over `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError`
 
 Still pending:
 - a log-sink abstraction that can feed file output and an in-app viewer
 - the actual desktop widget components that render status, progress, dialogs, and logs
 - broader structured logging coverage across persistence, review, and plugin paths
-- conversion-session UI models beyond the initial package-management screen model
+- log-sink plumbing between backend logging and a future in-app viewer
 
 ## Immediate follow-on work
 
