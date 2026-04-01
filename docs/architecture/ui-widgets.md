@@ -19,6 +19,7 @@ Responsibilities:
 - host the conversion-session central widget
 - host the docked log viewer
 - open and close the package-install dialog
+- open and close the settings dialog
 
 ### `ConversionSessionWidget`
 
@@ -39,6 +40,15 @@ Responsibilities:
 - render selectable route packages for custom route sets
 - show resolved extras, compatibility issues, and install status
 - submit background installs through `PackageInstallerScreenModel`
+
+### `SettingsDialog`
+
+Location: `src/nwbforge/ui/qt/settings_dialog.py`
+
+Responsibilities:
+- render persisted desktop settings for verbose logging and file-log configuration
+- manage draft changes through `SettingsScreenModel`
+- save or discard settings without embedding persistence logic in widgets
 
 ### `LogViewerDockWidget`
 
@@ -81,11 +91,11 @@ Responsibilities:
   - log-dock visibility and log capture
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
+  - settings-dialog save flow and runtime logging reconfiguration
 
 ## Current limitations
 
 - no toolkit styling or visual design system yet
-- settings is still a placeholder action
 - no persisted window/layout state yet
 - file-backed logging is opt-in and does not yet have an app-level retention/configuration policy
 - no end-to-end packaged desktop entry point yet

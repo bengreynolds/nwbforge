@@ -55,6 +55,7 @@ Completed:
 - Added a shared UI observability layer with an in-memory log sink, logging handler bridge, and shared user-facing error presenter
 - Added the first concrete PySide6 widget baseline over the existing shell, package-install, and conversion-session UI models
 - Added shell-level widget error presentation and an opt-in file-backed/composite UI log-sink path for the PySide6 widget layer
+- Added a persisted desktop settings service plus a model-backed PySide6 settings dialog for verbose logging and file-log configuration
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -68,6 +69,7 @@ In progress:
 - File-backed/composite log sinks and widget-level presentation on top of the new UI model layer
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - File-backed/composite desktop logging expansion beyond the current opt-in shell log-file path
+- Broader desktop settings expansion beyond the initial logging-focused settings dialog
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -101,6 +103,7 @@ Next:
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
+- The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 
 ## Project Vision and Scope
 

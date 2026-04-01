@@ -54,6 +54,17 @@ Current scope:
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
 
+### `SettingsScreenModel`
+
+Location: `src/nwbforge/ui/settings.py`
+
+Responsibilities:
+- load persisted desktop settings through `UiSettingsService`
+- manage draft settings for verbose logging and file-log configuration
+- validate required settings such as the log-file path when file logging is enabled
+- save settings back through the service without exposing persistence details to widgets
+- expose applied settings separately from unsaved draft changes so the shell can reconfigure runtime behavior only after save
+
 ## Design constraints
 
 - UI models are toolkit-agnostic and do not import widget libraries
@@ -69,6 +80,7 @@ Current scope:
 - `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
 - `src/nwbforge/ui/qt/conversion_session_widget.py` binds one conversion-session workflow into a central panel
+- `src/nwbforge/ui/qt/settings_dialog.py` binds persisted desktop settings into a modal dialog
 - `src/nwbforge/ui/qt/log_viewer.py` exposes the current in-memory UI log sink through a docked log viewer
 - `src/nwbforge/ui/qt/bridge.py` provides a minimal QObject signal bridge so model callbacks can safely update Qt widgets
 

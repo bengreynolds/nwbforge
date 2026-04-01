@@ -63,6 +63,7 @@ Current scope:
 - the current widget tests run headlessly with an offscreen Qt platform and validate real menu, dialog, progress, and log-viewer bindings
 - the current shell can optionally mirror UI-visible logs into a JSON-lines file through a composite sink while retaining the in-memory log viewer
 - shell-level `UserFacingError` payloads are now presented through real warning dialogs in the Qt shell instead of only appearing as status-bar text
+- persisted desktop settings can now reconfigure shell verbosity and file-log mirroring at runtime through the settings screen/dialog path
 
 Still pending:
 - richer widget behavior beyond the current baseline shell/dialog/panel set
@@ -73,4 +74,4 @@ Still pending:
 
 1. Expand the current file-backed/composite log-sink path into a durable app-level default and retention policy.
 2. Add richer dialog/banner presentation on top of the current shell-level warning-dialog baseline.
-3. Expand the current widget layer with additional screens and layout polish without bypassing the existing UI-model contracts.
+3. Expand the current widget layer with additional conversion/review screens and broader settings coverage without bypassing the existing UI-model contracts.

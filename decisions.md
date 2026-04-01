@@ -680,3 +680,16 @@ Consequences:
 - the desktop shell may use a `CompositeUiLogSink` to mirror entries to both the in-memory viewer sink and a file-backed JSON-lines sink
 - widget code should rely on `DesktopShellState.last_user_error` for centralized user-error presentation rather than opening ad hoc dialogs from package or conversion widgets
 - the first durable desktop log artifact format is JSON-lines and should remain easy to inspect during development and support workflows
+
+### DEC-055: Put desktop settings behind a persisted service and a dedicated settings screen model
+Status: Accepted
+
+Reasoning:
+- The `File -> Settings` menu item should no longer be a placeholder now that logging verbosity and file-log behavior are real user-facing runtime concerns.
+- Settings persistence should not live in widget code; a small service boundary keeps file format and defaults stable while allowing future UI/toolkit changes.
+- The settings dialog should follow the same model-first UI pattern as package-management and conversion-session work so runtime reconfiguration stays testable outside widgets.
+
+Consequences:
+- desktop settings now persist through `UiSettingsService`
+- the first persisted settings surface is intentionally narrow: verbose logging, file logging enabled, and file log path
+- Qt settings widgets should bind to `SettingsScreenModel`, and runtime shell updates should react to applied settings rather than reading dialog controls directly
