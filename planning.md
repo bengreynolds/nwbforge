@@ -146,6 +146,8 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Official PyNWB documentation is the source of truth for API usage, data modeling, container selection, and file-writing patterns.
 - Supported-path implementation should begin by checking the NeuroConv Conversion Gallery for an existing interface or combined workflow.
 - The approved repository route catalog lives in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md).
+- For supported proprietary and acquisition-system routes, direct NeuroConv conversion APIs should be the primary execution path rather than custom low-level NWB writing.
+- UI-collected metadata, timezone handling, channel/plane selections, and similar user inputs should parameterize documented NeuroConv interfaces and workflows rather than duplicating their conversion logic in custom code.
 - Direct PyNWB construction is the fallback path when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB route is clearly simpler and more maintainable.
 - Custom HDF5-level writing should be avoided when documented PyNWB APIs provide a schema-compliant path.
 
@@ -291,6 +293,7 @@ Responsibilities:
 
 Key rule:
 - Orchestration knows process state, but not format-specific parsing details
+- For real supported acquisition-system routes, orchestration should prefer driving NeuroConv conversion interfaces/workflows directly and reserve custom NWB assembly for fallback, custom, and hybrid cases.
 
 ### Layer 3: Adapter and plugin layer
 Responsibilities:
@@ -301,7 +304,8 @@ Responsibilities:
 
 Key rule:
 - Adapters translate source-specific structures into internal extraction models
-- Adapters never write NWB directly
+- Supported proprietary and acquisition-system adapters may orchestrate documented NeuroConv conversion APIs directly as the primary write path
+- Custom adapters and fallback pathways should continue to feed the repository's normalization and PyNWB assembly layers
 - Before writing a custom supported-path adapter, check the NeuroConv gallery and documented interfaces for an existing route
 
 ### Layer 4: Metadata normalization layer
@@ -322,6 +326,7 @@ Responsibilities:
 Key rule:
 - This is the only layer allowed to construct NWB containers
 - Direct construction should follow documented PyNWB APIs, with preference for built-in container classes and `pynwb.file` metadata objects over custom wrappers
+- This layer is the primary write path for custom and hybrid conversions, and the fallback path for supported routes that NeuroConv does not cover cleanly
 
 ### Layer 6: Validation, provenance, and reporting layer
 Responsibilities:
@@ -640,13 +645,15 @@ Important separation:
 ### Supported-path implementation protocol
 1. Determine whether the source format or pipeline is already supported by NeuroConv.
 2. Check the approved route catalog and then the NeuroConv Conversion Gallery for the exact interface or combined workflow.
-3. Prefer the NeuroConv route when documented support exists.
-4. Fall back to direct PyNWB only when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB solution is clearly simpler and more maintainable.
-5. When using direct PyNWB, use documented high-level APIs and standard NWB container placement, including `NWBFile`, `Subject`, `acquisition`, `processing`, `stimulus`, `intervals`, and `units` as appropriate.
-6. If an NDX is required, stop and document that requirement before implementation.
+3. For supported proprietary and acquisition-system routes, use the documented NeuroConv conversion API as the primary execution path.
+4. Let the UI and orchestration layers supply metadata overrides, timezone resolution, source-specific options, and user selections into NeuroConv rather than recreating its writer logic locally.
+5. Fall back to direct PyNWB only when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB solution is clearly simpler and more maintainable.
+6. When using direct PyNWB, use documented high-level APIs and standard NWB container placement, including `NWBFile`, `Subject`, `acquisition`, `processing`, `stimulus`, `intervals`, and `units` as appropriate.
+7. If an NDX is required, stop and document that requirement before implementation.
 
 ### Preferred supported-adapter shape
 - Use one shared NeuroConv core for common interface construction, source-config parsing, and extraction assembly.
+- For real proprietary/acquisition formats with documented NeuroConv support, prefer a thin orchestration layer around NeuroConv `DataInterface` or workflow execution instead of reimplementing conversion in custom PyNWB code.
 - Prefer family modules plus route configuration declarations when multiple supported entries target the same semantic NWB shape.
 - Use smaller numbers of truly distinct route modules only when a route needs meaningfully different source sniffing, normalization bridging, mapping behavior, or NWB targets.
 - Reserve dedicated workflow adapters for combined NeuroConv pipelines and multi-interface conversions rather than forcing them into single-source wrappers.
@@ -753,6 +760,7 @@ Current status:
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
 - Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
+- The next supported proprietary/acquisition routes should move from inspection-oriented use of NeuroConv toward direct NeuroConv-driven conversion execution, with repository-owned PyNWB assembly reserved for fallback, custom, and hybrid paths
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters

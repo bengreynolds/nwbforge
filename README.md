@@ -86,6 +86,8 @@ The manifest-backed supported-path pilot adapter remains a repo-native fixture s
 
 Supported-path policy is now explicit: check the NeuroConv Conversion Gallery first, use a documented NeuroConv interface when one exists, and fall back to direct PyNWB only when NeuroConv does not support the format or the direct PyNWB path is clearly simpler and more maintainable. For direct NWB writing, official PyNWB docs remain the source of truth.
 
+For real supported proprietary or acquisition-system formats, the intended execution model is to let the UI and orchestration layers parameterize documented NeuroConv conversion APIs directly. Repository-owned PyNWB assembly remains the fallback path for unsupported formats and the primary path for custom and hybrid conversion flows.
+
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.

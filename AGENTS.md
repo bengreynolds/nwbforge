@@ -69,6 +69,8 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Normalize metadata into canonical internal models before NWB mapping
 - Treat supported, custom, and hybrid pathways as different workflows over shared contracts, not as unrelated codepaths
 - For supported-path conversions, check NeuroConv support before designing a custom parser or direct PyNWB converter
+- For supported proprietary or acquisition-system routes that NeuroConv documents, use direct NeuroConv conversion APIs as the primary execution path
+- Use UI/orchestration code to collect metadata and user selections, then feed those into NeuroConv rather than rebuilding supported conversion logic in custom PyNWB code
 - Treat official PyNWB documentation as the source of truth for NWB API usage, container placement, and file-writing patterns
 - Prefer the simplest correct documented PyNWB container and method rather than wrapping built-in APIs without need
 - When `pynwb.file` or another standard PyNWB module solves the problem directly, use it instead of inventing a parallel abstraction
@@ -124,6 +126,7 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Favor reversible, incremental changes over broad speculative scaffolding
 - When adding new adapters or mappings, define the contract first and implementation second
 - For supported-path work, check the NeuroConv Conversion Gallery before proposing a manual converter
+- For supported proprietary/acquisition routes, prefer thin NeuroConv execution wrappers over custom writer implementations
 - For direct NWB writing, prefer documented PyNWB patterns for `NWBFile`, `Subject`, acquisitions, processing modules, stimuli, intervals, units, ophys, and ecephys containers
 - Use [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md) as the repo's approved NeuroConv-first route catalog
 - Instrument actionable code paths with standard logging, not ad hoc printing

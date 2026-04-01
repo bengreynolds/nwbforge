@@ -445,3 +445,16 @@ Consequences:
 - workflow routes should implement a dedicated multi-source contract rather than masquerading as ordinary source adapters
 - the NeuroConv framework now includes declarative workflow source requirements and a base workflow adapter
 - future combined supported routes should land on the workflow layer instead of inventing ad hoc orchestration-only matching logic
+
+### DEC-037: Use direct NeuroConv execution as the primary write path for supported acquisition routes
+Status: Accepted
+
+Reasoning:
+- For formats that NeuroConv already supports, the simplest and most maintainable implementation is to orchestrate NeuroConv's documented conversion APIs rather than rebuilding those conversions in repository-owned PyNWB code.
+- The UI should collect metadata, user choices, and overrides, then pass them into NeuroConv rather than duplicating proven interface-level logic for supported systems.
+- Repository-owned PyNWB assembly is still necessary, but it should be focused on fallback, custom, and hybrid paths instead of replacing supported NeuroConv execution.
+
+Consequences:
+- supported proprietary and acquisition-system routes should prefer direct NeuroConv execution over custom writer implementations
+- adapter and orchestration work for supported routes should focus on route detection, parameter collection, metadata overrides, and workflow handoff into NeuroConv
+- repository-owned PyNWB assembly remains the primary path for custom and hybrid workflows and the fallback when NeuroConv does not cover the route cleanly
