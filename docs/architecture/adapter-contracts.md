@@ -31,6 +31,11 @@ Implemented adapters now include:
 - `NeuroConvFicTracAdapter` for real NeuroConv-backed FicTrac behavior sources
 - `NeuroConvDeepLabCutAdapter` for real NeuroConv-backed DeepLabCut pose-estimation sources
 
+Current package direction:
+- category-first supported packages should hold family modules and route declarations
+- the first concrete example is `src/nwbforge/adapters/supported/behavior/`
+- public exports from `nwbforge.adapters` and `nwbforge.adapters.supported` should stay stable while internal layout evolves
+
 Near-term framework direction:
 - a shared NeuroConv interface-adapter base for single-source `DataInterface` routes
 - shared source-configuration parsing and extraction helpers reused across supported routes
@@ -53,6 +58,7 @@ Preferred tightening direction:
 - more family modules with route config declarations
 - distinct workflow adapters for combined NeuroConv gallery routes
 - stricter criteria for when a route truly needs its own module
+- category-first package structure before software-first file naming when organizing supported routes
 
 ### Service protocols
 - `SourceInspectionService`

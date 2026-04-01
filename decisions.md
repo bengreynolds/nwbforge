@@ -496,3 +496,16 @@ Consequences:
 - Supported behavior routes should prefer direct NeuroConv execution into processing modules when NeuroConv documents the route.
 - The future UI should expose route-specific inputs such as subject identity, optional config files, and similar interface parameters for supported behavior routes.
 - Repository-owned PyNWB behavior assembly remains the fallback and hybrid path, not the preferred implementation for supported NeuroConv behavior interfaces.
+
+### DEC-041: Group supported adapters by category before software name when semantics are shared
+Status: Accepted
+
+Reasoning:
+- A flat `supported/` package with one file per software route drifts toward module sprawl and hides the more important semantic grouping by category.
+- Supported-route maintenance is easier when behavior, tabular, imaging, ecephys, and workflow families each have a clear package boundary.
+- Category-first packaging still allows route-specific declarations, but it prevents file layout from becoming the de facto architecture.
+
+Consequences:
+- supported behavior routes now live under `src/nwbforge/adapters/supported/behavior/`
+- future supported families should prefer category packages plus family modules before introducing software-named top-level files
+- public adapter exports can remain stable while internal package layout continues migrating toward category-first structure

@@ -82,7 +82,7 @@ Current role:
 
 ### `NeuroConvFicTracAdapter`
 
-Location: `src/nwbforge/adapters/supported/neuroconv_fictrac.py`
+Location: `src/nwbforge/adapters/supported/behavior/neuroconv.py`
 
 Responsibilities:
 - inspect FicTrac `.dat` sources through NeuroConv's documented `FicTracDataInterface`
@@ -96,7 +96,7 @@ Current role:
 
 ### `NeuroConvDeepLabCutAdapter`
 
-Location: `src/nwbforge/adapters/supported/neuroconv_deeplabcut.py`
+Location: `src/nwbforge/adapters/supported/behavior/neuroconv.py`
 
 Responsibilities:
 - inspect DeepLabCut `.csv` and `.h5` sources through NeuroConv's documented `DeepLabCutInterface`
@@ -114,6 +114,7 @@ Current role:
 - manifest structure stays intentionally simple and explicit
 - pilot behavior should remain easy to replace once a real supported format is chosen
 - route-specific interface parameters for supported NeuroConv behavior routes should be treated as UI/orchestration inputs rather than hard-coded conversion logic
+- supported families should prefer category-first packaging; the current behavior routes are the first family moved under that structure
 
 ## Immediate follow-on work
 

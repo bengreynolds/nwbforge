@@ -75,6 +75,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - NeuroConv-backed Excel time-interval inspection through `ExcelTimeIntervalsInterface`
 - Interval-table normalization, mapping, and NWB trial assembly
 - Shared NeuroConv adapter framework for single-interface supported routes
+- Category-first supported adapter packaging beginning with `supported/behavior/`
 - Family-module text/tabular supported-route implementation with declarative route configs for CSV and Excel
 - NeuroConv-backed still-image route through `ImageInterface`
 - NeuroConv-backed audio route through `AudioInterface`
@@ -98,7 +99,7 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
-The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, audio, FicTrac, and DeepLabCut conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; a dedicated workflow base exists for future combined NeuroConv pipelines; and runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting, but broader supported-format coverage is still ahead.
+The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, audio, FicTrac, and DeepLabCut conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; supported-route packaging is beginning to migrate toward category-first modules such as `supported/behavior/`; a dedicated workflow base exists for future combined NeuroConv pipelines; and runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting, but broader supported-format coverage is still ahead.
 
 UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, and the core runtime path now emits structured logs with stable context payloads. A File menu, status bar, progress bar, log sinks, and an optional log viewer remain the next UI-facing layers to build.
 

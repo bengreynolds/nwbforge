@@ -66,12 +66,14 @@ Next:
 - The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
+- Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real workflow route is implemented yet.
 - The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for combined manifest-plus-image, manifest-plus-audio, manifest-plus-FicTrac, and manifest-plus-DeepLabCut supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
 - Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, and threaded executor.
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
 - Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
+- The first concrete category-first package refactor is now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/`, which is the intended direction for future supported families.
 
 ## Project Vision and Scope
 
