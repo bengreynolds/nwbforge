@@ -66,6 +66,26 @@ class DesktopShellModel:
     def set_verbose_logging_enabled(self, enabled: bool) -> DesktopShellState:
         return self._set_state(replace(self._state, verbose_logging_enabled=enabled))
 
+    def attach_log_sink(self, log_sink: InMemoryUiLogSink) -> None:
+        if self._log_sink is log_sink:
+            return
+        self._log_sink = log_sink
+        self._log_sink.subscribe(self._handle_log_entries)
+
+    def set_status_bar(
+        self,
+        status_bar: StatusBarState,
+        *,
+        user_error=None,
+    ) -> DesktopShellState:
+        return self._set_state(
+            replace(
+                self._state,
+                status_bar=status_bar,
+                last_user_error=user_error,
+            )
+        )
+
     def apply_pipeline_progress(self, event: PipelineProgressEvent) -> DesktopShellState:
         return self._set_state(
             replace(
