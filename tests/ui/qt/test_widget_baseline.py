@@ -225,6 +225,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     window.conversion_widget.load_session(session)
     qapp.processEvents()
     assert "sess-qt" in window.conversion_widget._session_label.text()
+    assert window.conversion_widget._session_summary_group.title() == "Session Summary"
+    assert window.conversion_widget._execution_group.title() == "Execution Status"
+    assert window.conversion_widget._review_group.title() == "Validation and Review"
+    assert window.conversion_widget._artifact_group.title() == "Generated Artifacts"
 
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
@@ -241,6 +245,28 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
     assert window.package_dialog._route_list.count() > 0
     assert window.package_dialog._install_button.isEnabled() is True
+
+    window.close()
+
+
+def test_conversion_widget_uses_split_session_and_review_layout(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    splitter = window.conversion_widget._splitter
+    assert splitter.count() == 2
+    assert splitter.widget(0) is window.conversion_widget._session_summary_group
+    assert splitter.widget(1).layout().itemAt(0).widget() is window.conversion_widget._execution_group
+    assert splitter.widget(1).layout().itemAt(1).widget() is window.conversion_widget._review_group
+    assert splitter.widget(1).layout().itemAt(2).widget() is window.conversion_widget._artifact_group
 
     window.close()
 

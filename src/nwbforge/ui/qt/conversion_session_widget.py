@@ -10,6 +10,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -84,6 +86,11 @@ class ConversionSessionWidget(QWidget):
         self._open_review_artifact_button = QPushButton("Open Review Decision", self)
         self._open_review_artifact_button.clicked.connect(lambda: self._open_artifact_by_type("review_decision"))
 
+        self._session_summary_group = QGroupBox("Session Summary", self)
+        self._execution_group = QGroupBox("Execution Status", self)
+        self._review_group = QGroupBox("Validation and Review", self)
+        self._artifact_group = QGroupBox("Generated Artifacts", self)
+
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
         form_layout.addRow("Output", self._output_path_edit)
@@ -104,25 +111,52 @@ class ConversionSessionWidget(QWidget):
         artifact_button_row.addWidget(self._open_validation_report_button)
         artifact_button_row.addWidget(self._open_review_artifact_button)
 
+        session_summary_layout = QVBoxLayout()
+        session_summary_layout.addLayout(form_layout)
+        session_summary_layout.addWidget(QLabel("Sources", self))
+        session_summary_layout.addWidget(self._source_list, stretch=1)
+        session_summary_layout.addLayout(button_row)
+        self._session_summary_group.setLayout(session_summary_layout)
+
+        execution_layout = QVBoxLayout()
+        execution_layout.addWidget(self._status_label)
+        execution_layout.addWidget(self._result_label)
+        execution_layout.addWidget(self._validation_summary_label)
+        execution_layout.addWidget(self._review_outcome_label)
+        execution_layout.addWidget(self._review_status_label)
+        execution_layout.addStretch(1)
+        self._execution_group.setLayout(execution_layout)
+
+        review_layout = QVBoxLayout()
+        review_layout.addWidget(QLabel("Validation issues", self))
+        review_layout.addWidget(self._issue_list, stretch=1)
+        review_layout.addWidget(self._override_checkbox)
+        review_layout.addWidget(QLabel("Review rationale", self))
+        review_layout.addWidget(self._rationale_edit)
+        review_layout.addLayout(review_button_row)
+        self._review_group.setLayout(review_layout)
+
+        artifact_layout = QVBoxLayout()
+        artifact_layout.addWidget(self._artifact_list, stretch=1)
+        artifact_layout.addLayout(artifact_button_row)
+        self._artifact_group.setLayout(artifact_layout)
+
+        right_column = QWidget(self)
+        right_column_layout = QVBoxLayout(right_column)
+        right_column_layout.addWidget(self._execution_group)
+        right_column_layout.addWidget(self._review_group, stretch=1)
+        right_column_layout.addWidget(self._artifact_group, stretch=1)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        splitter.addWidget(self._session_summary_group)
+        splitter.addWidget(right_column)
+        splitter.setChildrenCollapsible(False)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 2)
+        self._splitter = splitter
+
         layout = QVBoxLayout(self)
-        layout.addLayout(form_layout)
-        layout.addWidget(QLabel("Sources", self))
-        layout.addWidget(self._source_list, stretch=1)
-        layout.addLayout(button_row)
-        layout.addWidget(self._validation_summary_label)
-        layout.addWidget(self._review_outcome_label)
-        layout.addWidget(self._review_status_label)
-        layout.addWidget(QLabel("Validation issues", self))
-        layout.addWidget(self._issue_list, stretch=1)
-        layout.addWidget(self._override_checkbox)
-        layout.addWidget(QLabel("Review rationale", self))
-        layout.addWidget(self._rationale_edit)
-        layout.addLayout(review_button_row)
-        layout.addWidget(self._result_label)
-        layout.addWidget(QLabel("Generated artifacts", self))
-        layout.addWidget(self._artifact_list, stretch=1)
-        layout.addLayout(artifact_button_row)
-        layout.addWidget(self._status_label)
+        layout.addWidget(splitter)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
