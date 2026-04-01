@@ -46,3 +46,13 @@ def test_settings_screen_model_surfaces_validation_error(tmp_path: Path) -> None
     assert state.user_error is not None
     assert state.user_error.category == "validation"
     assert "Log file path is required" in state.user_error.message
+
+
+def test_settings_screen_model_records_recent_session(tmp_path: Path) -> None:
+    screen = make_screen_model(tmp_path)
+    screen.load()
+
+    state = screen.record_recent_session(tmp_path / "demo" / "session_manifest.json")
+
+    assert state.last_open_session_path.endswith("session_manifest.json")
+    assert len(state.recent_session_paths) == 1

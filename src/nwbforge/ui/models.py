@@ -159,6 +159,8 @@ class SettingsScreenState:
     verbose_logging_enabled: bool = False
     file_logging_enabled: bool = False
     log_file_path: str = str(UiSettings().log_file_path)
+    last_open_session_path: str = ""
+    recent_session_paths: tuple[str, ...] = ()
     has_unsaved_changes: bool = False
     status_message: str = "Ready."
     user_error: UserFacingError | None = None

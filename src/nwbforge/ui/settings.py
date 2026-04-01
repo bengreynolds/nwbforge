@@ -70,6 +70,10 @@ class SettingsScreenModel:
 
         return self._set_state(self._state_from_settings(saved, status_message="Settings saved."))
 
+    def record_recent_session(self, session_path: Path) -> SettingsScreenState:
+        saved = self._settings_service.record_recent_session(session_path)
+        return self._set_state(self._state_from_settings(saved, status_message="Session opened."))
+
     def _build_settings(self) -> UiSettings:
         path_text = self._state.log_file_path.strip()
         if self._state.file_logging_enabled and not path_text:
@@ -98,6 +102,8 @@ class SettingsScreenModel:
             verbose_logging_enabled=settings.verbose_logging_enabled,
             file_logging_enabled=settings.file_logging_enabled,
             log_file_path=str(settings.log_file_path),
+            last_open_session_path=str(settings.last_open_session_path) if settings.last_open_session_path else "",
+            recent_session_paths=tuple(str(path) for path in settings.recent_session_paths),
             has_unsaved_changes=False,
             status_message=status_message,
             user_error=None,
