@@ -6,10 +6,12 @@ from pathlib import Path
 import pytest
 
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
+from nwbforge.app.services import ExecutionReviewService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
-from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType, ValidationReviewStatus
+from nwbforge.domain.enums import ConversionPathway, IssueSeverity, ReviewStatus, SessionStatus, SourceType, ValidationReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
+    ExecutionReviewRecord,
     ExtractedField,
     ExtractionResult,
     MappingPlan,
@@ -17,9 +19,11 @@ from nwbforge.domain.models import (
     ProvenanceArtifact,
     ProvenanceRecord,
     SourceReference,
+    ValidationIssue,
     ValidationReviewOutcome,
     ValidationSummary,
 )
+from nwbforge.validation import JsonExecutionReviewArtifactService
 from nwbforge.ui import ConversionSessionScreenModel
 
 
@@ -121,8 +125,13 @@ def make_preview(session: ConversionSession) -> ConversionPreview:
     )
 
 
-def make_execution(preview: ConversionPreview) -> ConversionExecution:
-    validation_summary = ValidationSummary(issues=())
+def make_execution(
+    preview: ConversionPreview,
+    *,
+    issues: tuple[ValidationIssue, ...] = (),
+    review_outcome: ValidationReviewOutcome | None = None,
+) -> ConversionExecution:
+    validation_summary = ValidationSummary(issues=issues)
     return ConversionExecution(
         preview=preview,
         session=preview.session.transition(SessionStatus.COMPLETED),
@@ -135,7 +144,8 @@ def make_execution(preview: ConversionPreview) -> ConversionExecution:
         ),
         provenance_record=preview.provenance_record,
         validation_summary=validation_summary,
-        review_outcome=ValidationReviewOutcome(
+        review_outcome=review_outcome
+        or ValidationReviewOutcome(
             status=ValidationReviewStatus.PASS,
             blocks_completion=False,
             requires_manual_review=False,
@@ -183,6 +193,7 @@ def test_conversion_session_screen_model_runs_execution_after_preview() -> None:
     assert screen.state.progress_event is not None
     assert screen.state.progress_event.stage is PipelineStage.WRITING
     assert screen.state.is_execution_running is False
+    assert screen.state.validation_issues == ()
 
 
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:
@@ -204,3 +215,42 @@ def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:
     assert screen.state.user_error is not None
     assert screen.state.user_error.category == "conversion"
     assert screen.state.is_preview_running is False
+
+
+def test_conversion_session_screen_model_submits_review(tmp_path: Path) -> None:
+    session = make_session()
+    preview = make_preview(session)
+    issue = ValidationIssue(
+        code="nwbinspector-warning",
+        message="Subject metadata should be reviewed.",
+        severity=IssueSeverity.WARNING,
+        location="/general/subject",
+        tool="nwbinspector",
+    )
+    execution = make_execution(
+        preview,
+        issues=(issue,),
+        review_outcome=ValidationReviewOutcome(
+            status=ValidationReviewStatus.REVIEW,
+            blocks_completion=False,
+            requires_manual_review=True,
+            error_count=0,
+            warning_count=1,
+        ),
+    )
+    screen = ConversionSessionScreenModel(
+        FakeConversionExecutor(preview_result=preview, execution_result=execution),
+        review_service=ExecutionReviewService(JsonExecutionReviewArtifactService()),
+    )
+    screen.load_session(session)
+    screen.start_preview().result(timeout=5)
+    screen.start_execution(Path("C:/tmp/output.nwb")).result(timeout=5)
+
+    assert len(screen.state.validation_issues) == 1
+    screen.set_reviewer_name("alice")
+    screen.set_issue_acknowledged(screen.state.validation_issues[0].issue_ref, True)
+    submission = screen.submit_review(ReviewStatus.APPROVED)
+
+    assert submission.review_record.decision == ReviewStatus.APPROVED
+    assert screen.state.last_review_submission == submission
+    assert "approved" in screen.state.review_message

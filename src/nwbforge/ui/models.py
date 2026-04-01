@@ -18,7 +18,8 @@ from nwbforge.app.packages import (
 )
 from nwbforge.app.runtime import PipelineProgressEvent
 from nwbforge.app.services import UiSettings
-from nwbforge.app.services.models import ConversionExecution, ConversionPreview
+from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
+from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import ConversionSession, SourceReference
 from nwbforge.ui.errors import UserFacingError
 from nwbforge.ui.logs import UiLogEntry
@@ -84,6 +85,19 @@ class ConversionSourceItem:
 
 
 @dataclass(frozen=True, slots=True)
+class ValidationIssueItem:
+    """A UI-facing validation issue with acknowledgement state."""
+
+    issue_ref: str
+    code: str
+    message: str
+    severity: str
+    location: str | None = None
+    tool: str | None = None
+    is_acknowledged: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class ConversionSessionScreenState:
     """State consumable by a conversion-session screen."""
 
@@ -93,6 +107,12 @@ class ConversionSessionScreenState:
     execution: ConversionExecution | None = None
     progress_event: PipelineProgressEvent | None = None
     output_path: Path | None = None
+    validation_issues: tuple[ValidationIssueItem, ...] = ()
+    reviewer_name: str = ""
+    review_rationale: str = ""
+    override_blocks_completion: bool = False
+    last_review_submission: ReviewSubmission | None = None
+    review_message: str | None = None
     error_message: str | None = None
     user_error: UserFacingError | None = None
     is_preview_running: bool = False
@@ -105,6 +125,19 @@ class ConversionSessionScreenState:
     @property
     def can_run_execution(self) -> bool:
         return self.preview is not None and not self.is_preview_running and not self.is_execution_running
+
+    @property
+    def can_submit_review(self) -> bool:
+        return (
+            self.execution is not None
+            and bool(self.reviewer_name.strip())
+            and not self.is_preview_running
+            and not self.is_execution_running
+        )
+
+    @property
+    def acknowledged_issue_refs(self) -> tuple[str, ...]:
+        return tuple(issue.issue_ref for issue in self.validation_issues if issue.is_acknowledged)
 
 
 @dataclass(frozen=True, slots=True)

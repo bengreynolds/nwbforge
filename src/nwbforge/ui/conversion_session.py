@@ -7,13 +7,16 @@ from dataclasses import replace
 from pathlib import Path
 from threading import Lock
 
+from nwbforge.app.services import ExecutionReviewService
+from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.app.runtime import ConversionExecutor
-from nwbforge.app.services.models import ConversionExecution, ConversionPreview
+from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import ConversionSession
 from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import (
     ConversionSessionScreenState,
     ConversionSessionStateListener,
+    ValidationIssueItem,
     conversion_source_items,
 )
 
@@ -25,9 +28,11 @@ class ConversionSessionScreenModel:
         self,
         executor: ConversionExecutor,
         *,
+        review_service: ExecutionReviewService | None = None,
         error_presenter: UiErrorPresenter | None = None,
     ) -> None:
         self._executor = executor
+        self._review_service = review_service
         self._state = ConversionSessionScreenState()
         self._listeners: list[ConversionSessionStateListener] = []
         self._lock = Lock()
@@ -50,6 +55,7 @@ class ConversionSessionScreenModel:
                 session=session,
                 sources=conversion_source_items(session.sources),
                 error_message=None,
+                review_message=None,
                 user_error=None,
             )
         )
@@ -63,6 +69,9 @@ class ConversionSessionScreenModel:
                 error_message=None,
                 preview=None,
                 execution=None,
+                validation_issues=(),
+                last_review_submission=None,
+                review_message=None,
                 progress_event=None,
                 user_error=None,
             )
@@ -80,6 +89,8 @@ class ConversionSessionScreenModel:
                 output_path=output_path,
                 error_message=None,
                 execution=None,
+                last_review_submission=None,
+                review_message=None,
                 progress_event=None,
                 user_error=None,
             )
@@ -97,6 +108,87 @@ class ConversionSessionScreenModel:
         if shutdown is not None:
             shutdown(wait=wait)
 
+    def set_reviewer_name(self, reviewer_name: str) -> ConversionSessionScreenState:
+        return self._set_state(
+            replace(
+                self._state,
+                reviewer_name=reviewer_name,
+                error_message=None,
+                user_error=None,
+            )
+        )
+
+    def set_review_rationale(self, rationale: str) -> ConversionSessionScreenState:
+        return self._set_state(
+            replace(
+                self._state,
+                review_rationale=rationale,
+                error_message=None,
+                user_error=None,
+            )
+        )
+
+    def set_override_blocks_completion(self, enabled: bool) -> ConversionSessionScreenState:
+        return self._set_state(
+            replace(
+                self._state,
+                override_blocks_completion=enabled,
+                error_message=None,
+                user_error=None,
+            )
+        )
+
+    def set_issue_acknowledged(self, issue_ref: str, acknowledged: bool) -> ConversionSessionScreenState:
+        issues = tuple(
+            replace(issue, is_acknowledged=acknowledged) if issue.issue_ref == issue_ref else issue
+            for issue in self._state.validation_issues
+        )
+        return self._set_state(
+            replace(
+                self._state,
+                validation_issues=issues,
+                error_message=None,
+                user_error=None,
+            )
+        )
+
+    def submit_review(self, decision: ReviewStatus) -> ReviewSubmission:
+        if self._review_service is None:
+            raise ValueError("Review submission is not configured for this conversion session.")
+
+        execution = self._require_execution()
+        try:
+            submission = self._review_service.submit_review(
+                execution,
+                reviewer=self._state.reviewer_name.strip(),
+                decision=decision,
+                acknowledged_issue_refs=self._state.acknowledged_issue_refs,
+                override_blocks_completion=self._state.override_blocks_completion,
+                rationale=self._state.review_rationale.strip() or None,
+            )
+        except Exception as exc:
+            user_error = self._error_presenter.present(exc)
+            self._set_state(
+                replace(
+                    self._state,
+                    error_message=user_error.message,
+                    review_message=user_error.message,
+                    user_error=user_error,
+                )
+            )
+            raise
+
+        self._set_state(
+            replace(
+                self._state,
+                last_review_submission=submission,
+                review_message=f"Review {submission.review_record.decision.value} by {submission.review_record.reviewer}.",
+                error_message=None,
+                user_error=None,
+            )
+        )
+        return submission
+
     def _handle_progress(self, event) -> None:
         self._set_state(replace(self._state, progress_event=event, error_message=None, user_error=None))
 
@@ -110,6 +202,7 @@ class ConversionSessionScreenModel:
                     self._state,
                     is_preview_running=False,
                     error_message=user_error.message,
+                    review_message=None,
                     user_error=user_error,
                 )
             )
@@ -122,6 +215,9 @@ class ConversionSessionScreenModel:
                 sources=conversion_source_items(preview.session.sources),
                 preview=preview,
                 execution=None,
+                validation_issues=(),
+                last_review_submission=None,
+                review_message=None,
                 is_preview_running=False,
                 error_message=None,
                 user_error=None,
@@ -138,6 +234,7 @@ class ConversionSessionScreenModel:
                     self._state,
                     is_execution_running=False,
                     error_message=user_error.message,
+                    review_message=None,
                     user_error=user_error,
                 )
             )
@@ -150,6 +247,9 @@ class ConversionSessionScreenModel:
                 sources=conversion_source_items(execution.session.sources),
                 execution=execution,
                 preview=execution.preview,
+                validation_issues=validation_issue_items(execution),
+                last_review_submission=None,
+                review_message=None,
                 is_execution_running=False,
                 error_message=None,
                 user_error=None,
@@ -166,6 +266,11 @@ class ConversionSessionScreenModel:
             raise ValueError("Conversion preview must be available before execution can start.")
         return self._state.preview
 
+    def _require_execution(self) -> ConversionExecution:
+        if self._state.execution is None:
+            raise ValueError("Conversion execution must be available before review can start.")
+        return self._state.execution
+
     def _set_state(self, new_state: ConversionSessionScreenState) -> ConversionSessionScreenState:
         with self._lock:
             self._state = new_state
@@ -174,3 +279,20 @@ class ConversionSessionScreenModel:
         for listener in listeners:
             listener(state)
         return state
+
+
+def validation_issue_items(execution: ConversionExecution) -> tuple[ValidationIssueItem, ...]:
+    """Project validation issues into UI-facing issue items."""
+
+    return tuple(
+        ValidationIssueItem(
+            issue_ref=execution.validation_summary.issue_ref(issue),
+            code=issue.code,
+            message=issue.message,
+            severity=issue.severity.value,
+            location=issue.location,
+            tool=issue.tool,
+            is_acknowledged=False,
+        )
+        for issue in execution.validation_summary.issues
+    )

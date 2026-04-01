@@ -5,10 +5,12 @@ import logging
 from pathlib import Path
 from subprocess import CompletedProcess
 
+from PySide6.QtCore import Qt
+
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
-from nwbforge.app.services import PackageManagementController, UiSettingsService
-from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType, ValidationReviewStatus
+from nwbforge.app.services import ExecutionReviewService, PackageManagementController, UiSettingsService
+from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus, SourceType, ValidationReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
     ExtractedField,
@@ -18,6 +20,7 @@ from nwbforge.domain.models import (
     ProvenanceArtifact,
     ProvenanceRecord,
     SourceReference,
+    ValidationIssue,
     ValidationReviewOutcome,
     ValidationSummary,
 )
@@ -25,6 +28,7 @@ from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.qt import MainWindow
+from nwbforge.validation import JsonExecutionReviewArtifactService
 
 
 class FakeRunner:
@@ -104,7 +108,12 @@ def make_session(tmp_path: Path) -> ConversionSession:
     )
 
 
-def make_preview_and_execution(session: ConversionSession) -> tuple[ConversionPreview, ConversionExecution]:
+def make_preview_and_execution(
+    session: ConversionSession,
+    *,
+    validation_summary: ValidationSummary | None = None,
+    review_outcome: ValidationReviewOutcome | None = None,
+) -> tuple[ConversionPreview, ConversionExecution]:
     preview = ConversionPreview(
         session=session.transition(SessionStatus.READY_TO_WRITE),
         extraction_results=(
@@ -146,8 +155,9 @@ def make_preview_and_execution(session: ConversionSession) -> tuple[ConversionPr
             ),
         ),
         provenance_record=preview.provenance_record,
-        validation_summary=ValidationSummary(),
-        review_outcome=ValidationReviewOutcome(
+        validation_summary=validation_summary or ValidationSummary(),
+        review_outcome=review_outcome
+        or ValidationReviewOutcome(
             status=ValidationReviewStatus.PASS,
             blocks_completion=False,
             requires_manual_review=False,
@@ -301,4 +311,56 @@ def test_settings_dialog_updates_runtime_logging_preferences(qapp, tmp_path: Pat
     assert "Settings dialog log entry" in window.log_dock.editor.toPlainText()
     assert (tmp_path / "logs" / "runtime.jsonl").exists()
 
+    window.close()
+
+
+def test_conversion_widget_submits_review(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    issue = ValidationIssue(
+        code="nwbinspector-warning",
+        message="Review the subject metadata.",
+        severity=IssueSeverity.WARNING,
+        location="/general/subject",
+        tool="nwbinspector",
+    )
+    preview, execution = make_preview_and_execution(
+        session,
+        validation_summary=ValidationSummary(issues=(issue,)),
+        review_outcome=ValidationReviewOutcome(
+            status=ValidationReviewStatus.REVIEW,
+            blocks_completion=False,
+            requires_manual_review=True,
+            error_count=0,
+            warning_count=1,
+        ),
+    )
+    conversion_screen = ConversionSessionScreenModel(
+        FakeConversionExecutor(preview, execution),
+        review_service=ExecutionReviewService(JsonExecutionReviewArtifactService()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        conversion_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    window.conversion_widget._execute_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._issue_list.count() == 1
+    window.conversion_widget._reviewer_edit.setText("alice")
+    issue_item = window.conversion_widget._issue_list.item(0)
+    issue_item.setCheckState(Qt.CheckState.Checked)
+    qapp.processEvents()
+    window.conversion_widget._approve_button.click()
+    qapp.processEvents()
+
+    assert "approved" in window.conversion_widget._review_status_label.text()
     window.close()
