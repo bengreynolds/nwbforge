@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -127,13 +128,6 @@ class NeuroConvDirectConversionAdapter(NeuroConvInterfaceAdapter):
     writes_time_interval_tables = False
     writes_acquisition_streams = False
 
-    def build_conversion_metadata(self, source: SourceReference, config: NeuroConvSourceConfig) -> dict[str, object]:
-        interface = self.build_interface(source, config)
-        metadata = interface.get_metadata()
-        if config.metadata_overrides:
-            metadata = merge_neuroconv_metadata(metadata, config.metadata_overrides)
-        return metadata
-
     def write_conversion(
         self,
         *,
@@ -145,7 +139,8 @@ class NeuroConvDirectConversionAdapter(NeuroConvInterfaceAdapter):
         del session
         config = self.build_source_config(source)
         interface = self.build_interface(source, config)
-        metadata = interface.get_metadata()
+        metadata = self._metadata_from_nwbfile(nwbfile)
+        metadata = merge_neuroconv_metadata(metadata, interface.get_metadata())
         if config.metadata_overrides:
             metadata = merge_neuroconv_metadata(metadata, config.metadata_overrides)
 
@@ -165,3 +160,45 @@ class NeuroConvDirectConversionAdapter(NeuroConvInterfaceAdapter):
                 description=f"NWB file written through NeuroConv adapter '{self.adapter_id}'.",
             ),
         )
+
+    @staticmethod
+    def _metadata_from_nwbfile(nwbfile: NWBFile) -> dict[str, object]:
+        nwbfile_metadata: dict[str, object] = {
+            "session_start_time": nwbfile.session_start_time.isoformat(),
+            "session_description": nwbfile.session_description,
+            "identifier": nwbfile.identifier,
+        }
+        if nwbfile.experiment_description:
+            nwbfile_metadata["experiment_description"] = nwbfile.experiment_description
+        if nwbfile.session_id:
+            nwbfile_metadata["session_id"] = nwbfile.session_id
+        if nwbfile.experimenter:
+            nwbfile_metadata["experimenter"] = list(nwbfile.experimenter)
+        if nwbfile.institution:
+            nwbfile_metadata["institution"] = nwbfile.institution
+        if nwbfile.lab:
+            nwbfile_metadata["lab"] = nwbfile.lab
+        if nwbfile.keywords:
+            nwbfile_metadata["keywords"] = list(nwbfile.keywords)
+
+        metadata: dict[str, object] = {"NWBFile": nwbfile_metadata}
+        if nwbfile.subject is not None:
+            subject_metadata: dict[str, object] = {}
+            for field_name in (
+                "subject_id",
+                "species",
+                "sex",
+                "age",
+                "description",
+                "genotype",
+                "strain",
+            ):
+                value = getattr(nwbfile.subject, field_name, None)
+                if value not in (None, ""):
+                    subject_metadata[field_name] = value
+            date_of_birth = getattr(nwbfile.subject, "date_of_birth", None)
+            if isinstance(date_of_birth, datetime):
+                subject_metadata["date_of_birth"] = date_of_birth.isoformat()
+            if subject_metadata:
+                metadata["Subject"] = subject_metadata
+        return metadata
