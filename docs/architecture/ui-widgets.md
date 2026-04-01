@@ -31,7 +31,7 @@ Location: `src/nwbforge/ui/qt/conversion_session_widget.py`
 
 Responsibilities:
 - render one loaded conversion session
-- show source summaries and output-path entry
+- show source summaries, selected-source details, and output-path entry
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
 - summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
 - expose the right-hand conversion workspace through explicit desktop tabs for run overview, review work, and artifacts
@@ -96,6 +96,7 @@ Responsibilities:
 - The shell may mirror logs through `CompositeUiLogSink` so the docked log viewer and a file-backed JSON-lines sink receive the same entries.
 - The conversion-session widget should preserve clear workflow sections instead of collapsing status, review, and artifacts into one undifferentiated stacked form.
 - The conversion-session widget should prefer desktop navigation patterns such as tabs when they make the review and artifact workflow easier to scan.
+- The conversion-session widget should keep enough source/session context visible that supported, custom, and later hybrid sessions remain readable without opening a second inspector view.
 
 ## Testing baseline
 
@@ -107,6 +108,7 @@ Responsibilities:
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
   - conversion-session section layout for summary, execution, review, and artifacts
+  - conversion-session source-detail presentation for pathway, source count, and selected-source metadata
   - conversion-session run-overview and review-guidance summaries
   - conversion-session workspace-tab structure and state-driven tab selection
   - settings-dialog save flow and runtime logging reconfiguration
@@ -123,11 +125,11 @@ Responsibilities:
 
 - `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
 - it now bootstraps the real desktop service composition from `src/nwbforge/app/desktop.py`
-- it loads either a user-provided `session_manifest.json` path via `--manifest`, the last-opened manifest from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
+- it loads either a user-provided `session_manifest.json` or `custom_session.json` path via `--session`, the last-opened session from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
 - it should be treated as a development aid, not as the final application startup path
 
 ## Immediate follow-on work
 
 1. Add additional screens and navigation while keeping the current model-first boundary intact.
-2. Evolve the tabbed run-overview and review workspace into a richer session-summary/review presentation beyond the current baseline.
+2. Extend the current workspace for the first hybrid workflow without losing the new source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

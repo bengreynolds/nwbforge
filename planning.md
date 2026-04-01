@@ -71,11 +71,13 @@ Completed:
 - Refactored the desktop conversion panel into explicit session-summary, execution-status, validation/review, and generated-artifact panes
 - Added a run-overview/readiness layer to the desktop conversion panel with explicit stage, output, validation-count, artifact-count, and review-guidance summaries
 - Promoted the right-hand conversion workspace into explicit desktop tabs for run overview, review work, and generated artifacts
+- Added the first real custom-path workflow through a repo-owned `custom_session.json` adapter, desktop session loader, and direct PyNWB execution path
+- Added richer session/source detail presentation to the desktop conversion panel, including explicit pathway, source count, and selected-source details
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
 - Restructuring the desktop UI toward a finished-feeling first-pass product surface instead of a collection of functional panels
-- Custom-path and hybrid-path workflow expansion beyond the current supported-path-heavy baseline
+- Hybrid-path workflow expansion beyond the current supported-path and custom-path baseline
 - Operational hardening around persistence, recovery, reporting, and reviewability for a first serious manual-testing round
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
@@ -87,7 +89,6 @@ In progress:
 
 Next:
 - Continue restructuring the desktop UI so the shell reads like a finished desktop product rather than an engineering surface
-- Land the first real custom-path workflow slice with explicit reviewable mapping and NWB assembly
 - Land the first real hybrid-path workflow slice that combines supported and custom inputs in one session
 - Harden operational concerns around preview persistence, review history, recovery, and artifact/report navigation
 - Expand structured logging from the current core runtime services into broader persistence, review, and plugin paths
@@ -97,6 +98,7 @@ Next:
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
+- The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real workflow route is implemented yet.
@@ -119,19 +121,20 @@ Next:
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
-- The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the manifest-backed pipeline, package-management services, review service, threaded executors, and current UI models into one manual-testable application stack.
-- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real manifest-backed conversion session rather than a fake conversion executor.
-- The desktop shell can now load manifest-backed sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
+- The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the current supported/custom pipeline, package-management services, review service, threaded executors, and UI models into one manual-testable application stack.
+- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real supported or custom conversion session rather than a fake conversion executor.
+- The desktop shell can now load supported and custom sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
 - The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
 - The desktop settings path now also persists `last_open_session_path` and a bounded recent-session list, and the shell uses that state to populate `Open Recent` and to prefer the last-opened manifest on startup when no explicit path is supplied.
 - The conversion-session panel now also supports direct actions for opening a selected artifact or its containing folder, which gives immediate desktop access to validation reports and later review artifacts.
 - The shell now also has explicit session lifecycle controls for `New Session` and `Reopen Last Session`, which moves the desktop flow closer to a conventional application model instead of a launcher-only workflow.
-- The desktop settings path now also persists the last used NWB output directory, and each newly loaded manifest-backed session receives a default output path derived from that directory and the current session id.
+- The desktop settings path now also persists the last used NWB output directory, and each newly loaded supported or custom session receives a default output path derived from that directory and the current session id.
 - The conversion-session panel now also exposes dedicated validation-report and review-decision shortcuts so the most important review artifacts are directly reachable without manually selecting them from the artifact list.
 - The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
 - The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.
 - The desktop conversion surface now also summarizes current stage, output target, validation counts, artifact counts, and review guidance explicitly, so users can read session readiness before interacting with raw issue lists or artifact tables.
 - The desktop conversion surface now also uses a tabbed workspace for run overview, review work, and artifacts, which makes the right-hand side behave more like a desktop application workspace than a stacked panel.
+- The desktop conversion surface now also exposes pathway, source-count, and selected-source detail fields so supported and custom sessions read more like one intentional desktop workflow rather than a raw source list.
 
 ## First-Pass Product Priorities
 
@@ -161,6 +164,10 @@ Required direction:
 - at least one real custom-path flow must work end to end through the current desktop application
 - at least one real hybrid-path flow must work end to end through the current desktop application
 - both flows must preserve explicit provenance, validation, and user-review visibility rather than bypassing the existing workflow model
+
+Current status:
+- satisfied for the custom-path requirement by the `custom_session.json` desktop workflow baseline
+- still outstanding for the hybrid-path requirement
 
 ### Priority 3: Operational concerns for internal testing
 
@@ -200,6 +207,9 @@ The first pass is complete only when all of the following are true:
 ### Custom-path baseline
 - at least one real custom-path workflow is implemented end to end
 - custom mapping assumptions and unresolved semantics are surfaced for review rather than hidden
+
+Current status:
+- satisfied by the `custom_session.json` desktop workflow baseline
 
 ### Hybrid-path baseline
 - at least one real hybrid-path workflow is implemented end to end

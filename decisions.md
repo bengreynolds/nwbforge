@@ -862,3 +862,29 @@ Consequences:
 - `ConversionSessionWidget` now exposes explicit workspace tabs for run overview, review work, and artifacts
 - the widget now selects the most relevant tab based on current execution state, validation issues, and generated artifacts
 - future desktop UI work should continue using clearer workspace navigation patterns when they reduce visual overload
+
+### DEC-069: Use a repo-owned `custom_session.json` source as the first real custom-path workflow
+Status: Accepted
+
+Reasoning:
+- The first-pass milestone needed a real custom-path workflow before hybrid work begins.
+- A repo-owned custom source is the fastest safe way to prove the custom-path architecture without pretending that all unsupported lab formats are solved.
+- The adapter should map only the metadata that is genuinely understood and leave lab-specific concepts visible as reviewable metadata.
+
+Consequences:
+- the desktop app can now load `custom_session.json` sources through the real service stack
+- custom-path sessions now run through normalization, mapping, repository-owned PyNWB assembly, validation, provenance, and review
+- unresolved custom semantics remain visible as review issues and `DESCRIBE` mapping decisions instead of being silently coerced into standard NWB fields
+
+### DEC-070: Show explicit source details in the left side of the conversion workspace
+Status: Accepted
+
+Reasoning:
+- The session/source side of the conversion panel was still too thin for the desktop surface to feel product-like.
+- Supported, custom, and later hybrid workflows need stronger source context than a label list alone.
+- Pathway, source count, and selected-source details improve orientation without requiring a larger navigation refactor.
+
+Consequences:
+- the conversion workspace now shows pathway and source-count summaries in the session area
+- the selected source now exposes location, role, adapter, and media context directly in the UI
+- future hybrid work can build on the same source-detail area instead of inventing a second source-inspection surface
