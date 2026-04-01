@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
+from nwbforge.app.runtime.models import PipelineProgressEvent, PipelineStage, ProgressCallback
 from nwbforge.domain.contracts import (
     AssemblyService,
     MappingPlanner,
@@ -52,21 +53,69 @@ class ConversionPipelineService:
         self._validation_report_service = validation_report_service
         self._assembly_service = assembly_service
 
-    def build_preview(self, session: ConversionSession) -> ConversionPreview:
+    def build_preview(
+        self,
+        session: ConversionSession,
+        progress_callback: ProgressCallback | None = None,
+    ) -> ConversionPreview:
         working_session = session.transition(SessionStatus.INSPECTING)
-        extraction_results = tuple(
-            self._inspection_service.inspect(working_session, source_id)
-            for source_id in working_session.source_ids
+        self._emit_progress(
+            progress_callback,
+            working_session.session_id,
+            PipelineStage.INSPECTING,
+            5,
+            "Inspecting sources.",
         )
+        extraction_results = []
+        total_sources = max(len(working_session.source_ids), 1)
+        for index, source_id in enumerate(working_session.source_ids, start=1):
+            extraction_results.append(self._inspection_service.inspect(working_session, source_id))
+            inspected_percent = 5 + int((index / total_sources) * 35)
+            self._emit_progress(
+                progress_callback,
+                working_session.session_id,
+                PipelineStage.INSPECTING,
+                inspected_percent,
+                f"Inspected source {index} of {total_sources}.",
+                source_id=source_id,
+            )
+        extraction_results = tuple(extraction_results)
 
         working_session = working_session.transition(SessionStatus.NORMALIZING)
+        self._emit_progress(
+            progress_callback,
+            working_session.session_id,
+            PipelineStage.NORMALIZING,
+            50,
+            "Normalizing extracted metadata.",
+        )
         normalized_metadata = self._normalization_service.normalize(working_session, extraction_results)
 
         working_session = working_session.transition(SessionStatus.MAPPING)
+        self._emit_progress(
+            progress_callback,
+            working_session.session_id,
+            PipelineStage.MAPPING,
+            70,
+            "Building NWB mapping plan.",
+        )
         mapping_plan = self._mapping_planner.plan(working_session, normalized_metadata)
 
         review_status = SessionStatus.REVIEW if mapping_plan.requires_manual_review() else SessionStatus.READY_TO_WRITE
         working_session = working_session.transition(review_status)
+        terminal_preview_stage = (
+            PipelineStage.REVIEW if review_status == SessionStatus.REVIEW else PipelineStage.READY_TO_WRITE
+        )
+        terminal_preview_message = (
+            "Preview requires review." if terminal_preview_stage == PipelineStage.REVIEW else "Preview ready to write."
+        )
+        self._emit_progress(
+            progress_callback,
+            working_session.session_id,
+            terminal_preview_stage,
+            100,
+            terminal_preview_message,
+        )
 
         input_artifacts = tuple(
             ProvenanceArtifact(
@@ -99,8 +148,16 @@ class ConversionPipelineService:
         self,
         preview: ConversionPreview,
         output_artifacts: tuple[ProvenanceArtifact, ...],
+        progress_callback: ProgressCallback | None = None,
     ) -> ConversionExecution:
         validating_session = preview.session.transition(SessionStatus.VALIDATING)
+        self._emit_progress(
+            progress_callback,
+            validating_session.session_id,
+            PipelineStage.VALIDATING,
+            70,
+            "Validating generated outputs.",
+        )
         validation_summary = self._validation_service.validate(validating_session, output_artifacts)
         review_outcome = self._validation_policy_service.assess(validating_session, validation_summary)
         final_status = SessionStatus.FAILED if review_outcome.blocks_completion else SessionStatus.COMPLETED
@@ -132,6 +189,15 @@ class ConversionPipelineService:
                 provenance_record,
                 adapter_ids=preview.provenance_record.adapter_ids,
             )
+        self._emit_progress(
+            progress_callback,
+            final_session.session_id,
+            PipelineStage.FAILED if final_status == SessionStatus.FAILED else PipelineStage.COMPLETED,
+            100,
+            "Conversion failed during validation."
+            if final_status == SessionStatus.FAILED
+            else "Conversion completed successfully.",
+        )
 
         return ConversionExecution(
             preview=preview,
@@ -142,19 +208,38 @@ class ConversionPipelineService:
             review_outcome=review_outcome,
         )
 
-    def execute(self, preview: ConversionPreview, output_path: Path) -> ConversionExecution:
+    def execute(
+        self,
+        preview: ConversionPreview,
+        output_path: Path,
+        progress_callback: ProgressCallback | None = None,
+    ) -> ConversionExecution:
         if self._assembly_service is None:
             raise AssemblyConfigurationError(
                 "ConversionPipelineService.execute requires a configured assembly service."
             )
 
+        self._emit_progress(
+            progress_callback,
+            preview.session.session_id,
+            PipelineStage.WRITING,
+            20,
+            "Writing NWB output.",
+        )
         output_artifacts = self._assembly_service.write(
             preview.session,
             preview.normalized_metadata,
             preview.mapping_plan,
             str(output_path),
         )
-        return self.evaluate_outputs(preview, output_artifacts)
+        self._emit_progress(
+            progress_callback,
+            preview.session.session_id,
+            PipelineStage.WRITING,
+            60,
+            "Wrote NWB output artifacts.",
+        )
+        return self.evaluate_outputs(preview, output_artifacts, progress_callback=progress_callback)
 
     def _write_validation_report(
         self,
@@ -170,4 +255,26 @@ class ConversionPipelineService:
             provenance_record,
             validation_summary,
             review_outcome,
+        )
+
+    @staticmethod
+    def _emit_progress(
+        progress_callback: ProgressCallback | None,
+        session_id: str,
+        stage: PipelineStage,
+        percent_complete: int,
+        message: str,
+        *,
+        source_id: str | None = None,
+    ) -> None:
+        if progress_callback is None:
+            return
+        progress_callback(
+            PipelineProgressEvent(
+                session_id=session_id,
+                stage=stage,
+                percent_complete=percent_complete,
+                message=message,
+                source_id=source_id,
+            )
         )
