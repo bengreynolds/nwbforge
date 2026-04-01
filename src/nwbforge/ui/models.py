@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from pathlib import Path
 from typing import Callable
 
 from nwbforge.app.packages import (
@@ -15,6 +16,9 @@ from nwbforge.app.packages import (
     PackageSelection,
     RoutePackageSpec,
 )
+from nwbforge.app.runtime import PipelineProgressEvent
+from nwbforge.app.services.models import ConversionExecution, ConversionPreview
+from nwbforge.domain.models import ConversionSession, SourceReference
 
 
 class FileMenuAction(StrEnum):
@@ -64,6 +68,55 @@ class PackageInstallerState:
     last_completed_routes: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class ConversionSourceItem:
+    """A UI-facing summary of one session source."""
+
+    source_id: str
+    label: str
+    source_type: str
+    location: Path
+    adapter_hint: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ConversionSessionScreenState:
+    """State consumable by a conversion-session screen."""
+
+    session: ConversionSession | None = None
+    sources: tuple[ConversionSourceItem, ...] = ()
+    preview: ConversionPreview | None = None
+    execution: ConversionExecution | None = None
+    progress_event: PipelineProgressEvent | None = None
+    output_path: Path | None = None
+    error_message: str | None = None
+    is_preview_running: bool = False
+    is_execution_running: bool = False
+
+    @property
+    def can_run_preview(self) -> bool:
+        return self.session is not None and not self.is_preview_running and not self.is_execution_running
+
+    @property
+    def can_run_execution(self) -> bool:
+        return self.preview is not None and not self.is_preview_running and not self.is_execution_running
+
+
+def conversion_source_items(sources: tuple[SourceReference, ...]) -> tuple[ConversionSourceItem, ...]:
+    """Project domain source references into UI-facing source summaries."""
+
+    return tuple(
+        ConversionSourceItem(
+            source_id=source.source_id,
+            label=source.label,
+            source_type=source.source_type.value,
+            location=source.location,
+            adapter_hint=source.adapter_hint,
+        )
+        for source in sources
+    )
+
+
 def default_file_menu_entries() -> tuple[FileMenuEntry, ...]:
     """Return the current file-menu baseline for the desktop shell."""
 
@@ -104,3 +157,4 @@ class DesktopShellState:
 
 ShellStateListener = Callable[[DesktopShellState], None]
 PackageInstallerStateListener = Callable[[PackageInstallerState], None]
+ConversionSessionStateListener = Callable[[ConversionSessionScreenState], None]
