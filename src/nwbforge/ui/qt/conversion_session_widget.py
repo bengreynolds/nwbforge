@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSplitter,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -96,6 +97,7 @@ class ConversionSessionWidget(QWidget):
         self._execution_group = QGroupBox("Execution Status", self)
         self._review_group = QGroupBox("Validation and Review", self)
         self._artifact_group = QGroupBox("Generated Artifacts", self)
+        self._workspace_tabs = QTabWidget(self)
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
@@ -156,11 +158,26 @@ class ConversionSessionWidget(QWidget):
         artifact_layout.addLayout(artifact_button_row)
         self._artifact_group.setLayout(artifact_layout)
 
+        run_overview_page = QWidget(self)
+        run_overview_layout = QVBoxLayout(run_overview_page)
+        run_overview_layout.addWidget(self._execution_group)
+        run_overview_layout.addStretch(1)
+
+        review_page = QWidget(self)
+        review_page_layout = QVBoxLayout(review_page)
+        review_page_layout.addWidget(self._review_group)
+
+        artifact_page = QWidget(self)
+        artifact_page_layout = QVBoxLayout(artifact_page)
+        artifact_page_layout.addWidget(self._artifact_group)
+
+        self._workspace_tabs.addTab(run_overview_page, "Run Overview")
+        self._workspace_tabs.addTab(review_page, "Review Workspace")
+        self._workspace_tabs.addTab(artifact_page, "Artifacts")
+
         right_column = QWidget(self)
         right_column_layout = QVBoxLayout(right_column)
-        right_column_layout.addWidget(self._execution_group)
-        right_column_layout.addWidget(self._review_group, stretch=1)
-        right_column_layout.addWidget(self._artifact_group, stretch=1)
+        right_column_layout.addWidget(self._workspace_tabs)
 
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(self._session_summary_group)
@@ -242,6 +259,7 @@ class ConversionSessionWidget(QWidget):
         self._rationale_edit.setEnabled(state.execution is not None)
         self._reviewer_edit.setEnabled(state.execution is not None)
         self._refresh_artifact_actions()
+        self._sync_workspace_tab(state)
 
     def _sync_sources(self, state: ConversionSessionScreenState) -> None:
         self._source_list.clear()
@@ -410,6 +428,18 @@ class ConversionSessionWidget(QWidget):
         self._reveal_artifact_button.setEnabled(has_selection)
         self._open_validation_report_button.setEnabled(self._artifact_path_for_type("validation_report") is not None)
         self._open_review_artifact_button.setEnabled(self._artifact_path_for_type("review_decision") is not None)
+
+    def _sync_workspace_tab(self, state: ConversionSessionScreenState) -> None:
+        if state.execution is None:
+            self._workspace_tabs.setCurrentIndex(0)
+            return
+        if state.validation_issues:
+            self._workspace_tabs.setCurrentIndex(1)
+            return
+        if state.generated_artifacts:
+            self._workspace_tabs.setCurrentIndex(2)
+            return
+        self._workspace_tabs.setCurrentIndex(0)
 
     def _selected_artifact_path(self) -> Path | None:
         item = self._artifact_list.currentItem()
