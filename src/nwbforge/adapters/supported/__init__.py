@@ -7,7 +7,7 @@ from nwbforge.adapters.supported.behavior import (
     NeuroConvFicTracAdapter,
 )
 from nwbforge.adapters.supported.neuroconv_images import NeuroConvImageAdapter
-from nwbforge.adapters.supported.neuroconv_time_intervals import (
+from nwbforge.adapters.supported.tabular import (
     EXCEL_TIME_INTERVAL_ROUTE,
     TABULAR_TIME_INTERVAL_ROUTES,
     CSV_TIME_INTERVAL_ROUTE,

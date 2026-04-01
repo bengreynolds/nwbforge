@@ -1,4 +1,4 @@
-"""Shared NeuroConv-backed adapters for tabular time-interval sources."""
+"""Shared NeuroConv-backed adapters for tabular supported routes."""
 
 from __future__ import annotations
 
