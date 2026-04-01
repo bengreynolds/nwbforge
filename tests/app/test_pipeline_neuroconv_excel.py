@@ -5,7 +5,12 @@ import pandas as pd
 from pynwb import NWBHDF5IO
 
 from nwbforge.adapters import AdapterRegistry, NeuroConvExcelTimeIntervalsAdapter, SessionManifestAdapter
-from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService
+from nwbforge.app.services import (
+    ConversionPipelineService,
+    NeuroConvSupportedExecutionService,
+    RegistrySourceInspectionService,
+    SessionProvenanceService,
+)
 from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
 from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
@@ -39,6 +44,7 @@ def make_pipeline() -> ConversionPipelineService:
         validation_policy_service=DefaultValidationReviewPolicyService(),
         validation_report_service=JsonValidationReportService(),
         assembly_service=PyNWBAssemblyService(),
+        supported_execution_service=NeuroConvSupportedExecutionService(registry),
     )
 
 

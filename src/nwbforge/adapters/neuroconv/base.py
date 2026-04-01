@@ -4,10 +4,20 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any
 
+from pynwb import NWBFile
+
 from nwbforge.adapters.neuroconv.models import NeuroConvSourceConfig
-from nwbforge.domain.models import ExtractionResult, ReviewIssue, SourceReference
+from nwbforge.adapters.neuroconv.metadata import merge_neuroconv_metadata
+from nwbforge.domain.models import (
+    ConversionSession,
+    ExtractionResult,
+    ProvenanceArtifact,
+    ReviewIssue,
+    SourceReference,
+)
 
 
 class NeuroConvInterfaceAdapter(ABC):
@@ -109,3 +119,49 @@ class NeuroConvInterfaceAdapter(ABC):
     def _json_str_dict(source: SourceReference, key: str) -> dict[str, str]:
         parsed = NeuroConvInterfaceAdapter._json_dict(source, key)
         return {str(inner_key): str(inner_value) for inner_key, inner_value in parsed.items()}
+
+
+class NeuroConvDirectConversionAdapter(NeuroConvInterfaceAdapter):
+    """Base class for supported routes that write NWB via NeuroConv directly."""
+
+    writes_time_interval_tables = False
+    writes_acquisition_streams = False
+
+    def build_conversion_metadata(self, source: SourceReference, config: NeuroConvSourceConfig) -> dict[str, object]:
+        interface = self.build_interface(source, config)
+        metadata = interface.get_metadata()
+        if config.metadata_overrides:
+            metadata = merge_neuroconv_metadata(metadata, config.metadata_overrides)
+        return metadata
+
+    def write_conversion(
+        self,
+        *,
+        session: ConversionSession,
+        source: SourceReference,
+        output_path: str,
+        nwbfile: NWBFile,
+    ) -> tuple[ProvenanceArtifact, ...]:
+        del session
+        config = self.build_source_config(source)
+        interface = self.build_interface(source, config)
+        metadata = interface.get_metadata()
+        if config.metadata_overrides:
+            metadata = merge_neuroconv_metadata(metadata, config.metadata_overrides)
+
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        interface.run_conversion(
+            nwbfile_path=output_file,
+            nwbfile=nwbfile,
+            metadata=metadata,
+            overwrite=True,
+            **config.conversion_options,
+        )
+        return (
+            ProvenanceArtifact(
+                artifact_type="nwb",
+                location=output_file,
+                description=f"NWB file written through NeuroConv adapter '{self.adapter_id}'.",
+            ),
+        )

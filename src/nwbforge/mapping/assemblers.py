@@ -17,16 +17,15 @@ from nwbforge.domain.models import MappingPlan, NormalizedMetadataBundle, Proven
 class PyNWBAssemblyService(AssemblyService):
     """Write a minimal NWB file from normalized metadata and the current mapping plan."""
 
-    def write(
+    def build_nwbfile(
         self,
         session: ConversionSession,
         metadata: NormalizedMetadataBundle,
         mapping_plan: MappingPlan,
-        output_path: str,
-    ) -> tuple[ProvenanceArtifact, ...]:
-        output_file = Path(output_path)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-
+        *,
+        include_acquisition_streams: bool = True,
+        include_time_interval_tables: bool = True,
+    ) -> NWBFile:
         nwbfile = NWBFile(
             session_description=self._required_text(metadata.session.session_description, "session_description"),
             identifier=self._identifier(metadata, session),
@@ -47,8 +46,23 @@ class PyNWBAssemblyService(AssemblyService):
                 description=self._optional_text(device.description),
                 manufacturer=self._optional_text(device.manufacturer),
             )
-        self._write_acquisition_streams(nwbfile, metadata)
-        self._write_time_interval_tables(nwbfile, metadata)
+        if include_acquisition_streams:
+            self._write_acquisition_streams(nwbfile, metadata)
+        if include_time_interval_tables:
+            self._write_time_interval_tables(nwbfile, metadata)
+        return nwbfile
+
+    def write(
+        self,
+        session: ConversionSession,
+        metadata: NormalizedMetadataBundle,
+        mapping_plan: MappingPlan,
+        output_path: str,
+    ) -> tuple[ProvenanceArtifact, ...]:
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        nwbfile = self.build_nwbfile(session, metadata, mapping_plan)
 
         with NWBHDF5IO(path=str(output_file), mode="w") as io:
             io.write(nwbfile)

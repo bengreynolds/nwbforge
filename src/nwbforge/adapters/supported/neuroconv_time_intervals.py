@@ -10,7 +10,7 @@ from neuroconv.datainterfaces import CsvTimeIntervalsInterface, ExcelTimeInterva
 
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.neuroconv import (
-    NeuroConvInterfaceAdapter,
+    NeuroConvDirectConversionAdapter,
     NeuroConvSourceConfig,
     extracted_fields_from_dataframe,
     extracted_fields_from_mapping,
@@ -32,7 +32,7 @@ class TabularTimeIntervalsRouteConfig:
     version: str = "0.1.0"
 
 
-class NeuroConvTabularTimeIntervalsAdapter(NeuroConvInterfaceAdapter):
+class NeuroConvTabularTimeIntervalsAdapter(NeuroConvDirectConversionAdapter):
     """Shared extraction path for NeuroConv tabular interval interfaces."""
 
     source_types = (SourceType.FILE,)
@@ -40,6 +40,7 @@ class NeuroConvTabularTimeIntervalsAdapter(NeuroConvInterfaceAdapter):
         supported_pathways=(ConversionPathway.SUPPORTED,),
         supports_multi_source_sessions=True,
     )
+    writes_time_interval_tables = True
 
     def extract(
         self,

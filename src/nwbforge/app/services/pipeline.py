@@ -16,6 +16,7 @@ from nwbforge.domain.contracts import (
     ValidationReportService,
     ValidationService,
 )
+from nwbforge.domain.enums import ConversionPathway
 from nwbforge.domain.enums import SessionStatus
 from nwbforge.domain.models import (
     ConversionSession,
@@ -28,6 +29,7 @@ from nwbforge.validation import DefaultValidationReviewPolicyService
 
 from nwbforge.app.services.errors import AssemblyConfigurationError
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
+from nwbforge.app.services.supported_execution import NeuroConvSupportedExecutionService
 
 
 class ConversionPipelineService:
@@ -43,6 +45,7 @@ class ConversionPipelineService:
         validation_policy_service: ValidationPolicyService | None = None,
         validation_report_service: ValidationReportService | None = None,
         assembly_service: AssemblyService | None = None,
+        supported_execution_service: NeuroConvSupportedExecutionService | None = None,
     ) -> None:
         self._inspection_service = inspection_service
         self._normalization_service = normalization_service
@@ -52,6 +55,7 @@ class ConversionPipelineService:
         self._validation_policy_service = validation_policy_service or DefaultValidationReviewPolicyService()
         self._validation_report_service = validation_report_service
         self._assembly_service = assembly_service
+        self._supported_execution_service = supported_execution_service
 
     def build_preview(
         self,
@@ -215,9 +219,10 @@ class ConversionPipelineService:
         progress_callback: ProgressCallback | None = None,
     ) -> ConversionExecution:
         if self._assembly_service is None:
-            raise AssemblyConfigurationError(
-                "ConversionPipelineService.execute requires a configured assembly service."
-            )
+            if self._supported_execution_service is None:
+                raise AssemblyConfigurationError(
+                    "ConversionPipelineService.execute requires a configured assembly service."
+                )
 
         self._emit_progress(
             progress_callback,
@@ -226,12 +231,23 @@ class ConversionPipelineService:
             20,
             "Writing NWB output.",
         )
-        output_artifacts = self._assembly_service.write(
-            preview.session,
-            preview.normalized_metadata,
-            preview.mapping_plan,
-            str(output_path),
-        )
+        if (
+            preview.session.pathway == ConversionPathway.SUPPORTED
+            and self._supported_execution_service is not None
+            and self._supported_execution_service.can_execute(preview)
+        ):
+            output_artifacts = self._supported_execution_service.write(preview, output_path)
+        else:
+            if self._assembly_service is None:
+                raise AssemblyConfigurationError(
+                    "ConversionPipelineService.execute requires a configured assembly service."
+                )
+            output_artifacts = self._assembly_service.write(
+                preview.session,
+                preview.normalized_metadata,
+                preview.mapping_plan,
+                str(output_path),
+            )
         self._emit_progress(
             progress_callback,
             preview.session.session_id,

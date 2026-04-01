@@ -12,6 +12,7 @@ from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.pipeline import ConversionPipelineService
 from nwbforge.app.services.provenance import SessionProvenanceService
 from nwbforge.app.services.review import ExecutionReviewService
+from nwbforge.app.services.supported_execution import NeuroConvSupportedExecutionService
 
 __all__ = [
     "AdapterSelectionError",
@@ -20,6 +21,7 @@ __all__ = [
     "ConversionPipelineService",
     "ConversionPreview",
     "ExecutionReviewService",
+    "NeuroConvSupportedExecutionService",
     "RegistrySourceInspectionService",
     "ReviewDecisionError",
     "ReviewSubmission",
