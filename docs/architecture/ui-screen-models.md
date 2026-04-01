@@ -48,6 +48,7 @@ Responsibilities:
 - consume `PipelineProgressEvent` updates directly
 - surface `PipelineRuntimeError` user messages into screen state
 - project validation issues into UI-facing acknowledgement items
+- project generated provenance artifacts into UI-facing artifact items
 - capture reviewer name, rationale, override, and acknowledgement state for review submission
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
 
@@ -83,6 +84,7 @@ Responsibilities:
 ## Widget binding baseline
 
 - `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
+- the shell now also owns the first file-based session-loading step through `File -> Open Session...`, with manifest-backed session loading delegated to the desktop bootstrap helper
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
 - `src/nwbforge/ui/qt/conversion_session_widget.py` binds one conversion-session workflow into a central panel
 - `src/nwbforge/ui/qt/settings_dialog.py` binds persisted desktop settings into a modal dialog

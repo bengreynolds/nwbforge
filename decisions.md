@@ -719,3 +719,16 @@ Consequences:
 - `src/nwbforge/app/desktop.py` is now the real desktop bootstrap/composition entry point for development-time manual testing
 - `scripts/run_app.py` now loads a real manifest-backed conversion session and uses the actual desktop service stack instead of fake conversion behavior
 - future packaged entry points should build on the same composition module rather than bypassing it
+
+### DEC-058: Let the desktop shell load manifest-backed sessions and expose generated artifacts directly in the conversion screen
+Status: Accepted
+
+Reasoning:
+- The desktop application needed one more step toward real usability: loading sessions from disk should not depend solely on launcher startup behavior.
+- Generated NWB, validation-report, and review artifacts are already part of execution provenance, so hiding them from the desktop surface would weaken reviewability and make manual testing less realistic.
+- This can be added without introducing a second controller layer by keeping shell-level file selection thin and leaving session/execution state projection in the existing screen model.
+
+Consequences:
+- the Qt shell now includes `File -> Open Session...` for manifest-backed desktop sessions
+- `ConversionSessionScreenModel` now projects generated provenance artifacts into UI state
+- the conversion-session widget now displays generated artifacts alongside validation and review state

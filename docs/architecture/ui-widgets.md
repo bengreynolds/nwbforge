@@ -21,6 +21,7 @@ Responsibilities:
 - open and close the package-install dialog
 - open and close the settings dialog
 - host a manually testable real desktop composition built from the current backend services
+- open manifest-backed sessions from disk through `File -> Open Session...`
 
 ### `ConversionSessionWidget`
 
@@ -32,6 +33,7 @@ Responsibilities:
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
 - render validation-summary and review-outcome details
+- render generated execution/review artifacts from projected provenance state
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 
 ### `PackageInstallerDialog`

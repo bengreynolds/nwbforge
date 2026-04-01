@@ -59,6 +59,8 @@ Completed:
 - Added review/approval controls to the conversion-session UI plus a temporary `scripts/run_app.py` desktop launcher for manual testing
 - Added a real desktop composition/bootstrap module that wires the current shell, settings, package-management, conversion, and review services together for manual testing
 - Switched the temporary `scripts/run_app.py` launcher from demo-only conversion behavior to the real manifest-backed desktop pipeline and screen-model stack
+- Added shell-level `File -> Open Session...` wiring for manifest-backed desktop sessions
+- Added generated-artifact visibility to the conversion-session UI so review and report outputs are visible during desktop testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -111,6 +113,8 @@ Next:
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
 - The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the manifest-backed pipeline, package-management services, review service, threaded executors, and current UI models into one manual-testable application stack.
 - A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real manifest-backed conversion session rather than a fake conversion executor.
+- The desktop shell can now load manifest-backed sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
+- The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
 
 ## Project Vision and Scope
 
