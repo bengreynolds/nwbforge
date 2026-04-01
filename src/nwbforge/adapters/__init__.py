@@ -3,6 +3,7 @@
 from importlib import import_module
 
 from nwbforge.adapters.base import AdapterCapabilities, SourceAdapter
+from nwbforge.adapters.custom import CustomJsonSessionAdapter
 from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.adapters.supported import (
     NeuroConvCsvTimeIntervalsAdapter,
@@ -16,6 +17,7 @@ from nwbforge.adapters.supported import (
 __all__ = [
     "AdapterCapabilities",
     "AdapterRegistry",
+    "CustomJsonSessionAdapter",
     "NeuroConvCsvTimeIntervalsAdapter",
     "NeuroConvDeepLabCutAdapter",
     "NeuroConvExcelTimeIntervalsAdapter",

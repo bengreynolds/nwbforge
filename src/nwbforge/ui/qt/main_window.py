@@ -200,9 +200,9 @@ class MainWindow(QMainWindow):
     def _open_session_from_dialog(self) -> None:
         selected_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Session Manifest",
+            "Open Conversion Session",
             str(Path.cwd()),
-            "Session manifest (session_manifest.json);;JSON files (*.json)",
+            "Conversion sessions (session_manifest.json custom_session.json);;JSON files (*.json)",
         )
         if not selected_path:
             return
@@ -317,9 +317,9 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _default_session_loader(session_path: Path) -> ConversionSession:
-        from nwbforge.app.desktop import load_manifest_session
+        from nwbforge.app.desktop import load_desktop_session
 
-        return load_manifest_session(session_path)
+        return load_desktop_session(session_path)
 
     def _apply_shell_state(self, state) -> None:
         self._status_label.setText(state.status_bar.message)

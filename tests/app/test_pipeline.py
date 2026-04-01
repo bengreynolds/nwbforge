@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from dateutil.tz import tzlocal
-from nwbforge.adapters import AdapterRegistry, SessionManifestAdapter
+from nwbforge.adapters import AdapterRegistry, CustomJsonSessionAdapter, SessionManifestAdapter
 from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService
 from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType
 from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, SourceReference
@@ -93,6 +93,7 @@ def make_manifest_session(tmp_path: Path) -> ConversionSession:
 def make_pipeline() -> ConversionPipelineService:
     registry = AdapterRegistry()
     registry.register(SessionManifestAdapter())
+    registry.register(CustomJsonSessionAdapter())
     return ConversionPipelineService(
         inspection_service=RegistrySourceInspectionService(registry),
         normalization_service=RuleBasedNormalizationService(),
@@ -108,6 +109,74 @@ def make_pipeline() -> ConversionPipelineService:
         validation_policy_service=DefaultValidationReviewPolicyService(),
         validation_report_service=JsonValidationReportService(),
         assembly_service=PyNWBAssemblyService(),
+    )
+
+
+def make_custom_session(tmp_path: Path) -> ConversionSession:
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(
+        json.dumps(
+            {
+                "recording_context": {
+                    "recording_id": "custom-run-01",
+                    "summary": "Custom rotary encoder and notes stream",
+                    "study_description": "Custom-path workflow slice",
+                    "started_at": "2026-03-31T10:15:00-06:00",
+                    "operator_name": "Researcher, Alice",
+                    "institute_name": "Test University",
+                    "group_name": "Systems Lab",
+                },
+                "animal_profile": {
+                    "identifier": "mouse-custom-01",
+                    "species_name": "Mus musculus",
+                    "sex_code": "U",
+                    "life_stage": "P90D",
+                    "birth_date": "2025-12-31T00:00:00-07:00",
+                    "notes": "Custom workflow subject",
+                    "strain_name": "C57BL/6J",
+                },
+                "equipment": [
+                    {
+                        "device_key": "wheel-sensor",
+                        "name": "Wheel Encoder",
+                        "description": "Custom wheel rotation sensor",
+                        "manufacturer": "Custom Lab Systems",
+                    }
+                ],
+                "signal_sets": [
+                    {
+                        "stream_key": "wheel-velocity",
+                        "name": "Wheel Velocity",
+                        "modality": "behavior",
+                        "description": "Wheel velocity trace",
+                        "data": [0.0, 0.2, 0.5, 0.4],
+                        "unit": "cm/s",
+                        "rate": 20.0,
+                    }
+                ],
+                "annotations": {
+                    "keywords": ["custom", "wheel"],
+                    "task_variant": "free_running",
+                    "operator_note": "Velocity derived from custom firmware stream",
+                },
+                "analysis_context": {
+                    "sync_method": "shared_daq_clock",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = SourceReference(
+        source_id="custom-source",
+        location=custom_path,
+        source_type=SourceType.FILE,
+        label="Custom session JSON",
+        adapter_hint="custom_json_session",
+    )
+    return ConversionSession(
+        session_id="sess-custom-001",
+        pathway=ConversionPathway.CUSTOM,
+        sources=(source,),
     )
 
 
@@ -215,3 +284,26 @@ def test_pipeline_execute_writes_and_validates_nwb_output(tmp_path: Path) -> Non
     assert report_payload["session_id"] == "sess-001"
     assert report_payload["review_outcome"]["status"] == "pass"
     assert report_payload["generated_artifacts"][0]["artifact_type"] == "nwb"
+
+
+def test_pipeline_execute_custom_session_routes_through_direct_pynwb_path(tmp_path: Path) -> None:
+    pipeline = make_pipeline()
+    preview = pipeline.build_preview(make_custom_session(tmp_path))
+    output_path = tmp_path / "generated" / "custom-session.nwb"
+
+    execution = pipeline.execute(preview, output_path)
+
+    assert preview.session.pathway == ConversionPathway.CUSTOM
+    assert preview.session.status == SessionStatus.REVIEW
+    assert any(
+        decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[wheel-velocity].data"
+        for decision in preview.mapping_plan.decisions
+    )
+    assert any(issue.field == "annotations.operator_note" for issue in preview.mapping_plan.issues)
+    assert execution.session.status == SessionStatus.COMPLETED
+    assert execution.validation_summary.is_passing() is True
+    assert output_path.exists() is True
+    with NWBHDF5IO(str(output_path), "r") as io:
+        nwbfile = io.read()
+        assert "behavior" in nwbfile.acquisition
+        assert "Wheel Velocity" in nwbfile.acquisition["behavior"].time_series

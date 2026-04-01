@@ -9,8 +9,7 @@ from pathlib import Path
 from nwbforge.app.desktop import (
     build_default_log_file_path,
     build_desktop_services,
-    ensure_demo_manifest,
-    load_manifest_session,
+    load_desktop_session,
     resolve_startup_session_path,
 )
 from nwbforge.ui.qt import MainWindow, ensure_application
@@ -19,10 +18,16 @@ from nwbforge.ui.qt import MainWindow, ensure_application
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the temporary NWB Forge desktop shell.")
     parser.add_argument(
+        "--session",
+        type=Path,
+        default=None,
+        help="Path to a session_manifest.json or custom_session.json file, or a directory containing one.",
+    )
+    parser.add_argument(
         "--manifest",
         type=Path,
         default=None,
-        help="Path to a session_manifest.json file or a directory containing it.",
+        help=argparse.SUPPRESS,
     )
     return parser.parse_args()
 
@@ -31,12 +36,12 @@ def main() -> int:
     args = parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     services = build_desktop_services(repo_root)
-    manifest_path = resolve_startup_session_path(
+    session_path = resolve_startup_session_path(
         repo_root,
         services.settings_screen_model.state.applied_settings,
-        requested_manifest=args.manifest,
+        requested_manifest=args.session or args.manifest,
     )
-    session = load_manifest_session(manifest_path)
+    session = load_desktop_session(session_path)
 
     app = ensure_application()
     window = MainWindow(
@@ -50,7 +55,7 @@ def main() -> int:
     window.conversion_widget.load_session(session)
     logging.getLogger("nwbforge.desktop").info(
         "Temporary desktop launcher started.",
-        extra={"nwbforge_context": {"session_id": session.session_id, "manifest": str(manifest_path)}},
+        extra={"nwbforge_context": {"session_id": session.session_id, "session_path": str(session_path)}},
     )
     try:
         return app.exec()

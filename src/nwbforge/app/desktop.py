@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
-from nwbforge.adapters import AdapterRegistry, SessionManifestAdapter
+from nwbforge.adapters import AdapterRegistry, CustomJsonSessionAdapter, SessionManifestAdapter
 from nwbforge.app.packages import (
     PackageCommandRunner,
     PackageInstallationService,
@@ -60,6 +60,7 @@ def build_adapter_registry() -> AdapterRegistry:
 
     registry = AdapterRegistry()
     registry.register(SessionManifestAdapter())
+    registry.register(CustomJsonSessionAdapter())
 
     from nwbforge import adapters as adapters_module
 
@@ -152,7 +153,7 @@ def build_desktop_services(
 
 
 def load_manifest_session(location: Path) -> ConversionSession:
-    """Create a session object for a manifest file or directory."""
+    """Create a supported-path session object for a manifest file or directory."""
 
     if location.is_dir():
         manifest_path = location / "session_manifest.json"
@@ -179,6 +180,61 @@ def load_manifest_session(location: Path) -> ConversionSession:
                 label="Session manifest",
             ),
         ),
+    )
+
+
+def load_custom_session(location: Path) -> ConversionSession:
+    """Create a custom-path session object for a custom session file or directory."""
+
+    if location.is_dir():
+        custom_path = location / "custom_session.json"
+        if not custom_path.exists():
+            raise FileNotFoundError(f"Custom session directory does not contain custom_session.json: {location}")
+        source_type = SourceType.DIRECTORY
+        session_id = location.name
+        source_location = location
+    else:
+        if location.name.lower() != "custom_session.json":
+            raise ValueError("Custom desktop sources must use the custom_session.json filename.")
+        source_type = SourceType.FILE
+        session_id = location.parent.name or location.stem
+        source_location = location
+
+    return ConversionSession(
+        session_id=f"desktop-custom-{session_id}",
+        pathway=ConversionPathway.CUSTOM,
+        sources=(
+            SourceReference(
+                source_id="primary-source",
+                location=source_location,
+                source_type=source_type,
+                label="Custom session JSON",
+                adapter_hint="custom_json_session",
+            ),
+        ),
+    )
+
+
+def load_desktop_session(location: Path) -> ConversionSession:
+    """Create a desktop session object by dispatching to the supported or custom loader."""
+
+    if location.is_dir():
+        if (location / "session_manifest.json").exists():
+            return load_manifest_session(location)
+        if (location / "custom_session.json").exists():
+            return load_custom_session(location)
+        raise FileNotFoundError(
+            "Session directory does not contain session_manifest.json or custom_session.json: "
+            f"{location}"
+        )
+
+    name = location.name.lower()
+    if name == "session_manifest.json":
+        return load_manifest_session(location)
+    if name == "custom_session.json":
+        return load_custom_session(location)
+    raise ValueError(
+        "Desktop session loader supports session_manifest.json and custom_session.json sources only."
     )
 
 
