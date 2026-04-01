@@ -57,15 +57,17 @@ Current scope:
 - `DesktopShellModel` now gives the future UI a toolkit-agnostic shell state for File-menu actions, status-bar text, progress display, and log-viewer visibility
 - `PackageInstallerScreenModel` now gives the future setup and extension-install UI a toolkit-agnostic state model over `PackageManagementController`
 - `ConversionSessionScreenModel` now gives the future conversion-session UI a toolkit-agnostic state model over `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError`
+- `InMemoryUiLogSink` and `UiLogHandler` now provide the first shared log-viewer bridge from standard logging into UI-visible log entries
+- `DefaultUiErrorPresenter` now provides one shared translation policy for package-install and conversion runtime errors across the UI model layer
 
 Still pending:
-- a log-sink abstraction that can feed file output and an in-app viewer
+- file-backed or multi-sink log output beyond the current in-memory viewer sink
 - the actual desktop widget components that render status, progress, dialogs, and logs
 - broader structured logging coverage across persistence, review, and plugin paths
-- log-sink plumbing between backend logging and a future in-app viewer
+- shared widget-level presentation of translated user-facing errors
 
 ## Immediate follow-on work
 
-1. Add a log-sink abstraction that can feed file output and an in-app log viewer.
-2. Add explicit user-facing error translation policy on top of `PipelineRuntimeError` and package-install runtime errors.
-3. Introduce the first conversion-session UI model that consumes pipeline status/progress events directly.
+1. Add a file-backed log sink or composite sink on top of the current in-memory viewer sink.
+2. Bind translated `UserFacingError` payloads into concrete dialog/banner presentation once widget code begins.
+3. Introduce the first widget-level UI layer that renders shell, package-install, and conversion-session state.

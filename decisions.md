@@ -628,3 +628,16 @@ Consequences:
 - `ConversionSessionScreenModel` is now the UI-facing boundary for one loaded conversion session
 - future widgets should bind to screen state that already carries session, preview, execution, progress, and user-facing error state
 - later UI work can focus on presentation, log sinks, and interaction design instead of reconstructing preview/execution lifecycle rules
+
+### DEC-051: Centralize UI log capture and error translation behind shared observability helpers
+Status: Accepted
+
+Reasoning:
+- The UI layer now has multiple screen models, and each one formatting exceptions or managing log-viewer state independently would drift quickly.
+- Standard logging should remain the backend source of truth, but the UI still needs a shared bridge into viewer-friendly log entries.
+- A single error presenter keeps user-facing messages consistent across conversion and package-install flows while preserving detailed context separately.
+
+Consequences:
+- `InMemoryUiLogSink` and `UiLogHandler` are now the first shared UI log-viewer bridge
+- `DefaultUiErrorPresenter` is now the default translator for `PipelineRuntimeError`, `PackageInstallRuntimeError`, and common validation failures
+- shell and screen models should consume shared observability helpers rather than formatting logs or exceptions ad hoc

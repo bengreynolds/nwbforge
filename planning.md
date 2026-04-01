@@ -52,6 +52,7 @@ Completed:
 - Applied category-first packaging to the supported tabular family under `src/nwbforge/adapters/supported/tabular/`
 - Added the first toolkit-agnostic desktop UI model layer with a shell model and package-installer screen model
 - Added the first conversion-session screen model over `ConversionExecutor` and pipeline runtime events
+- Added a shared UI observability layer with an in-memory log sink, logging handler bridge, and shared user-facing error presenter
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -62,7 +63,7 @@ In progress:
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - First UI-facing screen/controller layer on top of the current package-management backend services
-- Log-sink and shared error-translation design on top of the new UI model layer
+- File-backed/composite log sinks and widget-level presentation on top of the new UI model layer
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -93,6 +94,7 @@ Next:
 - The route-based package layer now also has a thin `PackageManagementController`, giving the future UI one small binding point for route listing, install preview, saved-selection loading, and background install execution.
 - The repository now also includes a first toolkit-agnostic `ui/` layer: a `DesktopShellModel` for File-menu/status/log-viewer state and a `PackageInstallerScreenModel` for setup and extension-install flows over the package-management controller.
 - The `ui/` layer now also includes a `ConversionSessionScreenModel`, which consumes `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError` directly instead of duplicating preview/execution workflow logic in future widgets.
+- The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 
 ## Project Vision and Scope
 
@@ -839,6 +841,7 @@ Current status:
 - The package-management backend now also includes a thin controller layer, so the future desktop UI can consume one small binding surface instead of wiring directly to planner, service, and executor components
 - The first toolkit-agnostic UI models now exist under `src/nwbforge/ui/`, which lets the repo start desktop-shell development before choosing a concrete widget toolkit
 - The first conversion-session UI model is now in place, so the next UI work can focus on shared log/error presentation and then a concrete widget layer rather than inventing session workflow state from scratch
+- Shared log/error presentation is now partially in place at the UI-model layer, so the next UI work can move toward file-backed/composite sinks and actual widget rendering rather than backend exception formatting
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters

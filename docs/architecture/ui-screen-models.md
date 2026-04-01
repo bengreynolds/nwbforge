@@ -60,17 +60,19 @@ Current scope:
 - view/widget code should bind to these models rather than own package-planning or runtime logic directly
 - backend services remain the source of truth for package planning and execution
 - runtime executors remain the source of truth for background execution behavior
+- shared user-facing error translation should come from one presenter rather than ad hoc `str(exception)` handling in each screen
+- shared log-viewer state should be fed from a common UI log sink rather than per-screen logging logic
 - screen models may expand preset selections for display, but must preserve the backend distinction between preset-based installs and explicit custom route selection
 
 ## Current limitations
 
 - no actual desktop widget toolkit is implemented yet
-- no log-sink/viewer backend exists yet beyond shell visibility state
+- only an in-memory log-viewer sink is implemented; file-backed or composite log sinks still remain to be added
 - shell state is in-memory only and not persisted
 - the current UI layer covers package-management flows and the first conversion-session screen model, but still does not include concrete widgets or persisted view state
 
 ## Immediate follow-on work
 
-1. Add a log-sink abstraction that can feed both file logging and a future in-app log viewer.
-2. Add explicit user-facing error translation policy shared by conversion-session and package-install screens.
+1. Add file-backed or composite log sinks on top of the current in-memory UI log sink.
+2. Bind translated `UserFacingError` payloads into concrete dialog/banner behavior once widget work begins.
 3. Choose the first concrete widget toolkit layer only after the shell and screen-model contracts settle further.
