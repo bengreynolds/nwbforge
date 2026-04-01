@@ -65,9 +65,13 @@ Current service-facing models:
 - `PackageInstallRequest`
 - `PackageCompatibilityIssue`
 - `PackageInstallPreview`
+- `PackageInstallProgressEvent`
+- `PackageInstallResult`
+- `PackageInstallRuntimeError`
 
 Current service:
 - `PackageManagementService`
+- `PackageInstallationService`
 
 Current service responsibilities:
 - list available route packages
@@ -76,6 +80,8 @@ Current service responsibilities:
 - preview an install request
 - surface compatibility warnings or blocking issues
 - persist a validated selection when requested
+- execute an install command for a validated selection
+- emit install progress events and structured failure information
 
 ## Future UI expectations
 
@@ -85,6 +91,7 @@ Initial setup should:
 - validate compatibility before starting installs
 - show progress and errors during install work
 - call the backend package-management service for preview/validation rather than duplicating planner logic in UI code
+- call the backend package-install execution service when the user confirms an install
 
 Post-setup package installation should be accessible from:
 - `File -> Install Extensions / Packages`
@@ -94,3 +101,4 @@ That later flow should:
 - reuse the same route catalog and preset language
 - report progress and failures through the standard runtime/logging model
 - call the same backend package-management service boundary used by setup
+- reuse the same backend package-install execution service used by initial setup

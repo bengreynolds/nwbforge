@@ -550,3 +550,16 @@ Consequences:
 - the route-based package layer now includes explicit service-facing request, preview, and compatibility models
 - future setup and extension-install screens should call backend package-management services rather than planner helpers directly
 - setup scripts remain an execution path, not the source of truth for package-management logic
+
+### DEC-045: Keep package-install execution behind a backend service with explicit progress and failure contracts
+Status: Accepted
+
+Reasoning:
+- Future setup and `File -> Install Extensions / Packages` screens need more than planning; they need a backend execution path that can surface progress, structured logs, and user-facing failures.
+- UI code should not own subprocess command construction, logging context, or install-failure translation.
+- A dedicated execution service keeps the install workflow testable and aligned with the repository's existing runtime-contract approach.
+
+Consequences:
+- package-install execution now has explicit progress-event, result, and runtime-error models
+- future UI screens should call a backend install-execution service rather than invoking setup scripts directly
+- structured logging and failure wrapping are now part of the package-install backend contract

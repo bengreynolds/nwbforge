@@ -43,15 +43,28 @@ Responsibilities:
 
 This keeps route-based package-management logic behind a backend service boundary instead of scattering it across setup scripts and future UI components.
 
+### `PackageInstallationService`
+
+Location: `src/nwbforge/app/packages/execution.py`
+
+Responsibilities:
+- execute route-based package installs in the dedicated development environment
+- emit explicit install progress events
+- log structured install context and failures
+- wrap subprocess failures in a user-facing runtime error
+
+This keeps install execution separate from both setup-script glue and future UI components.
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
 - services remain small and deterministic
 - services should fail clearly when selection or workflow state is invalid
 - UI-adjacent package flows should depend on backend service contracts instead of reading setup-script conventions directly
+- package-install execution should expose progress and user-facing failure contracts rather than leaking raw subprocess behavior into callers
 
 ## Immediate follow-on work
 
-1. Add backend execution services for route-package installation progress and error reporting.
+1. Add runtime/executor wrappers for package-install execution so future UI screens can run installs off the UI thread.
 2. Add normalization and mapping-planner service implementations.
 3. Add validation-service implementations that wrap PyNWB validation and NWB Inspector.
