@@ -22,6 +22,7 @@ Responsibilities:
 - open and close the settings dialog
 - host a manually testable real desktop composition built from the current backend services
 - open manifest-backed sessions from disk through `File -> Open Session...`
+- rebuild the `Open Recent` submenu from persisted session-history state
 
 ### `ConversionSessionWidget`
 
@@ -34,6 +35,7 @@ Responsibilities:
 - display current status and final preview/execution result text
 - render validation-summary and review-outcome details
 - render generated execution/review artifacts from projected provenance state
+- open a selected generated artifact or its containing folder directly from the widget
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 
 ### `PackageInstallerDialog`
@@ -110,7 +112,7 @@ Responsibilities:
 
 - `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
 - it now bootstraps the real desktop service composition from `src/nwbforge/app/desktop.py`
-- it loads either a user-provided `session_manifest.json` path via `--manifest` or a generated demo manifest under `.nwbforge/demo-data/`
+- it loads either a user-provided `session_manifest.json` path via `--manifest`, the last-opened manifest from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
 - it should be treated as a development aid, not as the final application startup path
 
 ## Immediate follow-on work

@@ -61,6 +61,9 @@ Completed:
 - Switched the temporary `scripts/run_app.py` launcher from demo-only conversion behavior to the real manifest-backed desktop pipeline and screen-model stack
 - Added shell-level `File -> Open Session...` wiring for manifest-backed desktop sessions
 - Added generated-artifact visibility to the conversion-session UI so review and report outputs are visible during desktop testing
+- Added persisted last-opened-session and recent-session tracking through the desktop settings path
+- Added a dynamic `Open Recent` desktop menu backed by persisted session history
+- Added direct desktop actions for opening generated artifacts and their containing folders from the conversion panel
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -115,6 +118,8 @@ Next:
 - A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real manifest-backed conversion session rather than a fake conversion executor.
 - The desktop shell can now load manifest-backed sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
 - The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
+- The desktop settings path now also persists `last_open_session_path` and a bounded recent-session list, and the shell uses that state to populate `Open Recent` and to prefer the last-opened manifest on startup when no explicit path is supplied.
+- The conversion-session panel now also supports direct actions for opening a selected artifact or its containing folder, which gives immediate desktop access to validation reports and later review artifacts.
 
 ## Project Vision and Scope
 

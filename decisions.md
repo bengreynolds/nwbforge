@@ -732,3 +732,29 @@ Consequences:
 - the Qt shell now includes `File -> Open Session...` for manifest-backed desktop sessions
 - `ConversionSessionScreenModel` now projects generated provenance artifacts into UI state
 - the conversion-session widget now displays generated artifacts alongside validation and review state
+
+### DEC-059: Reuse desktop settings persistence for recent-session history and startup session selection
+Status: Accepted
+
+Reasoning:
+- Desktop session history is application state, but it is lightweight and user-specific enough to live with existing UI settings rather than requiring a separate persistence service at this stage.
+- The shell needed both a recent-session menu and a stable way to reopen the last manifest-backed session when the temporary launcher starts without explicit input.
+- Reusing `UiSettingsService` keeps the persistence path small and avoids introducing another JSON file or controller layer before broader shell navigation is designed.
+
+Consequences:
+- `UiSettings` now persists `last_open_session_path` and a bounded recent-session list
+- the shell's `Open Recent` menu is rebuilt from settings-backed recent-session state
+- the temporary desktop launcher now prefers an explicit manifest path first, then the last-opened session, then the generated demo manifest
+
+### DEC-060: Make generated artifacts directly actionable from the conversion-session panel
+Status: Accepted
+
+Reasoning:
+- The desktop surface already exposes generated artifacts, but manual review is still clumsy if users cannot open validation-report or review files from the UI.
+- Adding direct artifact/file-folder actions is a small desktop affordance that materially improves testability without changing the underlying provenance model.
+- This belongs in the conversion-session widget because it is a view concern over already-projected artifact state, not a new backend service.
+
+Consequences:
+- the Qt conversion-session widget now exposes actions to open the selected generated artifact or its containing folder
+- validation reports and later review artifacts become immediately reachable from the desktop UI
+- the artifact-open behavior stays generic and works across artifact types carried in execution provenance
