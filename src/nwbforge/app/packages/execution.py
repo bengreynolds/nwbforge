@@ -21,6 +21,7 @@ def package_utc_now() -> datetime:
 class PackageInstallStage(StrEnum):
     """High-level stages for package-management execution."""
 
+    QUEUED = "queued"
     VALIDATING = "validating"
     INSTALLING = "installing"
     COMPLETED = "completed"
