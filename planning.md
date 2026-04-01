@@ -28,6 +28,8 @@ Completed:
 - Added `neuroconv` as a declared project dependency
 - Implemented the first real NeuroConv-backed supported adapter via CSV time intervals
 - Implemented a shared NeuroConv interface-adapter framework for supported routes
+- Implemented concrete runtime contracts for stage/progress/error reporting plus a threaded conversion executor
+- Expanded the real supported text/tabular family to include Excel time intervals
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -38,14 +40,14 @@ Completed:
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Supported-path MVP expansion beyond the first NeuroConv-backed CSV intervals route
+- Supported-path MVP expansion beyond the initial CSV and Excel text/tabular routes
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability planning for a non-blocking desktop shell
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
-- Define UI runtime contracts for background execution, progress events, and structured logging
+- Instrument actionable runtime paths with structured logging on top of the new runtime contracts
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
 - Additional modality-specific NWB containers beyond the new behavior baseline
 - Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
@@ -54,10 +56,10 @@ Next:
 
 ### Current application baseline
 - The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
-- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus a real NeuroConv-backed CSV time-interval adapter.
+- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV and Excel time-interval adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
-- The project can write real NWB files for the manifest-backed pilot path and for combined manifest-plus-CSV trial sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
-- The project does not yet include a production UI shell, broader real acquisition-format coverage beyond the first CSV intervals route, or full multimodal NWB coverage.
+- The project can write real NWB files for the manifest-backed pilot path and for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
+- The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the text/tabular routes, or full multimodal NWB coverage.
 
 ## Project Vision and Scope
 
@@ -646,25 +648,23 @@ Important separation:
    - common interface instantiation
    - common extraction-field and issue helpers
 2. Refactor existing real NeuroConv-backed adapters onto that shared framework before adding more routes.
-3. Add the remaining text/tabular family route:
-   - Excel
-4. Add the behavior pose and trajectory family:
+3. Add the behavior pose and trajectory family:
    - DeepLabCut
    - FicTrac
    - LightningPose
    - SLEAP
    - Neuralynx NVT
-5. Add behavior task and media routes:
+4. Add behavior task and media routes:
    - MedPC
    - Audio
    - Videos
    - Image
-6. Add workflow-aware NeuroConv adapter support for combined routes and multi-interface sessions.
-7. Add ophys imaging and segmentation families.
-8. Add intracellular and fiber photometry routes.
-9. Add extracellular recording and sorting families.
-10. Add combined workflow routes such as `SpikeGLX & Phy`, `Tiff & Suite2p`, and electrophysiology-plus-behavior sessions.
-11. Introduce the desktop runtime shell with:
+5. Add workflow-aware NeuroConv adapter support for combined routes and multi-interface sessions.
+6. Add ophys imaging and segmentation families.
+7. Add intracellular and fiber photometry routes.
+8. Add extracellular recording and sorting families.
+9. Add combined workflow routes such as `SpikeGLX & Phy`, `Tiff & Suite2p`, and electrophysiology-plus-behavior sessions.
+10. Introduce the desktop runtime shell with:
    - background execution infrastructure
    - structured logging integration
    - real progress/status event handling
@@ -732,8 +732,9 @@ Current status:
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
 - `neuroconv` is now a declared project dependency and the first real supported-path route is implemented through `CsvTimeIntervalsInterface`
-- The current real supported route covers CSV interval/trial data and combines cleanly with the manifest-backed metadata pilot in a multi-source supported session
+- The current real supported text/tabular routes cover CSV and Excel interval/trial data and combine cleanly with the manifest-backed metadata pilot in multi-source supported sessions
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
+- Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
 
 ### Phase 3: Supported-path MVP
@@ -742,9 +743,9 @@ Current status:
 - Produce validation and summary artifacts
 
 Current status:
-- One end-to-end NeuroConv-backed supported workflow now exists for CSV time intervals carried into NWB trials
+- End-to-end NeuroConv-backed supported workflows now exist for CSV and Excel time intervals carried into NWB trials
 - Additional supported routes and a minimal operator-facing shell remain outstanding
-- UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit planning requirements
+- UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit and partially implemented
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow

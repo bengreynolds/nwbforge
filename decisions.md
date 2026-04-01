@@ -408,3 +408,15 @@ Consequences:
 - long-running conversion work must run through background execution infrastructure
 - progress reporting must emit real stage and percentage updates that the UI can bind to status and progress components
 - the desktop shell should include a File menu, status bar, progress bar, and optional log viewer on top of explicit runtime contracts
+
+### DEC-034: Share one NeuroConv tabular-interval adapter path across CSV and Excel
+Status: Accepted
+
+Reasoning:
+- CSV and Excel time-interval routes in NeuroConv target the same NWB trials/TimeIntervals semantics and should not diverge into duplicate adapter logic.
+- A shared tabular-interval adapter layer keeps extraction rules, warning behavior, and downstream normalization contracts aligned across the text/tabular family.
+
+Consequences:
+- CSV and Excel now share `NeuroConvTabularTimeIntervalsAdapter`
+- warning and extraction behavior for missing `stop_time` is now family-level rather than CSV-specific
+- additional text/tabular interval routes should reuse the same family contract when their NWB target is equivalent

@@ -40,16 +40,24 @@ This note captures the required runtime behaviors for the future desktop shell b
 - logging, progress reporting, and user-facing error messages should be modeled through explicit contracts
 - future desktop menu structure should include a `File` menu with settings entry and modular hooks for future tools/extensions
 
-## Expected first implementation contracts
+## Implemented contracts
 
 - `PipelineProgressEvent`
 - `PipelineStage`
 - `PipelineRuntimeError`
-- `ConversionWorker` or equivalent background-runner abstraction
-- `LogSink` abstraction that can feed file output and an optional in-app viewer
+- `ThreadedConversionExecutor`
+
+Current scope:
+- `ConversionPipelineService` now emits real stage/progress events at inspection, normalization, mapping, writing, validation, and terminal states
+- `ThreadedConversionExecutor` runs preview and execution work off the calling thread and wraps failures in `PipelineRuntimeError`
+
+Still pending:
+- structured logging instrumentation across actionable backend paths
+- a log-sink abstraction that can feed file output and an in-app viewer
+- the actual desktop UI components that render status, progress, and logs
 
 ## Immediate follow-on work
 
-1. Define domain-safe runtime event models for stage, progress, and error propagation.
-2. Define a worker/executor abstraction that the future desktop UI can consume.
-3. Define structured logging conventions before instrumenting broader backend code paths.
+1. Define structured logging conventions before instrumenting broader backend code paths.
+2. Add explicit user-facing error translation policy on top of `PipelineRuntimeError`.
+3. Introduce the first UI-facing runtime consumer for status/progress events.

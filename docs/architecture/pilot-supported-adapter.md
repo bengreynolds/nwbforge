@@ -48,6 +48,19 @@ Current role:
 - drive normalized interval-table models, mapping-plan visibility, and NWB trial writing
 - prove a truthful NeuroConv-backed supported workflow without claiming broad acquisition-system coverage yet
 
+### `NeuroConvExcelTimeIntervalsAdapter`
+
+Location: `src/nwbforge/adapters/supported/neuroconv_excel_time_intervals.py`
+
+Responsibilities:
+- inspect Excel interval sources through NeuroConv's documented `ExcelTimeIntervalsInterface`
+- reuse the shared tabular-interval adapter path for stable extracted trial rows and metadata
+- extend the real supported text/tabular family beyond CSV
+
+Current role:
+- combine with the manifest-backed pilot metadata source in multi-source supported sessions
+- prove the shared tabular-interval family contract against a second real NeuroConv interface
+
 ## Design constraints
 
 - adapter output is still extraction-only; no NWB writing happens here

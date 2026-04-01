@@ -16,7 +16,7 @@ Responsibilities:
 - normalize a conservative set of subject and session metadata fields from `ExtractionResult`
 - normalize first-pass device metadata from extracted device records
 - normalize first-pass acquisition-stream metadata from extracted stream records
-- normalize first-pass time-interval tables and interval rows from NeuroConv-backed CSV extraction
+- normalize first-pass time-interval tables and interval rows from NeuroConv-backed text/tabular extraction
 - apply declarative aliases from `NormalizationRuleSet`
 - preserve unmatched fields in `additional_metadata`
 - mark unknown and conflicting values for human review instead of silently dropping them
@@ -29,7 +29,7 @@ The initial rule set is intentionally narrow. It currently covers:
 - session id, description, experiment description, start time, experimenter, institution, lab, keywords
 - device id, name, description, manufacturer, modality for manifest-backed device records
 - acquisition stream id, name, modality, description, and writer-facing metadata such as data, unit, rate, and timestamps for manifest-backed stream records
-- interval-table name, description, row timing, and per-row metadata for CSV trial sources
+- interval-table name, description, row timing, and per-row metadata for CSV and Excel trial sources
 
 This is enough to exercise the normalization boundary without inventing broad ontology behavior too early.
 
