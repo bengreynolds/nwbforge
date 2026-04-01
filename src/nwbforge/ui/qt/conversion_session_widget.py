@@ -47,7 +47,15 @@ class ConversionSessionWidget(QWidget):
         self._output_path_selector = output_path_selector
 
         self._session_label = QLabel("No session loaded.", self)
+        self._pathway_label = QLabel("Not available.", self)
+        self._source_count_label = QLabel("0", self)
         self._source_list = QListWidget(self)
+        self._source_list.currentItemChanged.connect(self._sync_selected_source_details)
+        self._source_location_label = QLabel("No source selected.", self)
+        self._source_location_label.setWordWrap(True)
+        self._source_role_label = QLabel("Not available.", self)
+        self._source_adapter_label = QLabel("Auto-detect", self)
+        self._source_media_type_label = QLabel("Not available.", self)
         self._preview_button = QPushButton("Build Preview", self)
         self._preview_button.clicked.connect(self._screen_model.start_preview)
         self._execute_button = QPushButton("Write NWB", self)
@@ -101,8 +109,18 @@ class ConversionSessionWidget(QWidget):
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
+        form_layout.addRow("Pathway", self._pathway_label)
+        form_layout.addRow("Sources", self._source_count_label)
         form_layout.addRow("Output", self._output_path_edit)
         form_layout.addRow("Reviewer", self._reviewer_edit)
+
+        source_detail_layout = QFormLayout()
+        source_detail_layout.addRow("Location", self._source_location_label)
+        source_detail_layout.addRow("Role", self._source_role_label)
+        source_detail_layout.addRow("Adapter", self._source_adapter_label)
+        source_detail_layout.addRow("Media", self._source_media_type_label)
+        self._source_detail_group = QGroupBox("Source Details", self)
+        self._source_detail_group.setLayout(source_detail_layout)
 
         button_row = QHBoxLayout()
         button_row.addWidget(self._preview_button)
@@ -123,6 +141,7 @@ class ConversionSessionWidget(QWidget):
         session_summary_layout.addLayout(form_layout)
         session_summary_layout.addWidget(QLabel("Sources", self))
         session_summary_layout.addWidget(self._source_list, stretch=1)
+        session_summary_layout.addWidget(self._source_detail_group)
         session_summary_layout.addLayout(button_row)
         self._session_summary_group.setLayout(session_summary_layout)
 
@@ -200,8 +219,12 @@ class ConversionSessionWidget(QWidget):
     def _apply_state(self, state: ConversionSessionScreenState) -> None:
         if state.session is None:
             self._session_label.setText("No session loaded.")
+            self._pathway_label.setText("Not available.")
+            self._source_count_label.setText("0")
         else:
             self._session_label.setText(f"{state.session.session_id} ({state.session.status.value})")
+            self._pathway_label.setText(state.session.pathway.value)
+            self._source_count_label.setText(str(len(state.sources)))
 
         self._sync_sources(state)
         self._sync_validation_issues(state)
@@ -266,7 +289,38 @@ class ConversionSessionWidget(QWidget):
         for source in state.sources:
             item = QListWidgetItem(f"{source.label} [{source.source_type}]")
             item.setToolTip(str(source.location))
+            item.setData(Qt.ItemDataRole.UserRole, source.source_id)
             self._source_list.addItem(item)
+        if self._source_list.count() > 0:
+            self._source_list.setCurrentRow(0)
+        else:
+            self._sync_selected_source_details()
+
+    def _sync_selected_source_details(self, *_args) -> None:
+        selected_item = self._source_list.currentItem()
+        if selected_item is None:
+            self._source_location_label.setText("No source selected.")
+            self._source_role_label.setText("Not available.")
+            self._source_adapter_label.setText("Auto-detect")
+            self._source_media_type_label.setText("Not available.")
+            return
+
+        source_id = selected_item.data(Qt.ItemDataRole.UserRole)
+        selected_source = next(
+            (source for source in self._screen_model.state.sources if source.source_id == source_id),
+            None,
+        )
+        if selected_source is None:
+            self._source_location_label.setText("No source selected.")
+            self._source_role_label.setText("Not available.")
+            self._source_adapter_label.setText("Auto-detect")
+            self._source_media_type_label.setText("Not available.")
+            return
+
+        self._source_location_label.setText(str(selected_source.location))
+        self._source_role_label.setText(selected_source.role)
+        self._source_adapter_label.setText(selected_source.adapter_hint or "Auto-detect")
+        self._source_media_type_label.setText(selected_source.media_type or "Not available.")
 
     def _sync_validation_issues(self, state: ConversionSessionScreenState) -> None:
         existing = {

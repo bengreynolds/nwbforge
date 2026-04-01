@@ -109,6 +109,27 @@ def make_session(tmp_path: Path) -> ConversionSession:
     )
 
 
+def make_custom_session(tmp_path: Path) -> ConversionSession:
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.parent.mkdir(parents=True, exist_ok=True)
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-qt"}}), encoding="utf-8")
+    return ConversionSession(
+        session_id="custom-qt",
+        pathway=ConversionPathway.CUSTOM,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="custom",
+                location=custom_path,
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="primary",
+                adapter_hint="custom_json_session",
+            ),
+        ),
+    )
+
+
 def make_preview_and_execution(
     session: ConversionSession,
     *,
@@ -226,10 +247,15 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
     assert "sess-qt" in window.conversion_widget._session_label.text()
     assert window.conversion_widget._session_summary_group.title() == "Session Summary"
+    assert window.conversion_widget._source_detail_group.title() == "Source Details"
     assert window.conversion_widget._execution_group.title() == "Execution Status"
     assert window.conversion_widget._review_group.title() == "Validation and Review"
     assert window.conversion_widget._artifact_group.title() == "Generated Artifacts"
     assert window.conversion_widget._stage_value_label.text() == "sources_added"
+    assert window.conversion_widget._pathway_label.text() == "supported"
+    assert window.conversion_widget._source_count_label.text() == "1"
+    assert window.conversion_widget._source_role_label.text() == "primary"
+    assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
     assert window.conversion_widget._workspace_tabs.count() == 3
     assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
@@ -460,6 +486,32 @@ def test_main_window_opens_manifest_session_from_file_menu(qapp, tmp_path: Path,
     qapp.processEvents()
 
     assert "desktop-" in window.conversion_widget._session_label.text()
+    window.close()
+
+
+def test_main_window_opens_custom_session_from_file_menu(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_custom_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(session.sources[0].location), "custom_session.json"),
+    )
+
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    assert "desktop-custom-" in window.conversion_widget._session_label.text()
+    assert window.conversion_widget._pathway_label.text() == "custom"
+    assert window.conversion_widget._source_adapter_label.text() == "custom_json_session"
     window.close()
 
 

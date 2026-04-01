@@ -84,7 +84,9 @@ class ConversionSourceItem:
     label: str
     source_type: str
     location: Path
+    role: str
     adapter_hint: str | None = None
+    media_type: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,7 +180,9 @@ def conversion_source_items(sources: tuple[SourceReference, ...]) -> tuple[Conve
             label=source.label,
             source_type=source.source_type.value,
             location=source.location,
+            role=source.role,
             adapter_hint=source.adapter_hint,
+            media_type=source.media_type,
         )
         for source in sources
     )
