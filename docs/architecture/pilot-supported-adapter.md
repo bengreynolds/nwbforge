@@ -66,9 +66,23 @@ Current role:
 - write image data into NWB through NeuroConv's documented conversion API
 - broaden the supported-path proof from trials-only inputs into a second modality family
 
+### `NeuroConvAudioAdapter`
+
+Location: `src/nwbforge/adapters/supported/neuroconv_audio.py`
+
+Responsibilities:
+- inspect audio file and directory sources through NeuroConv's documented `AudioInterface`
+- prove a supported direct-conversion route that depends on a route-specific NWB extension package
+- exercise supported-path writing into the NWB stimulus side through NeuroConv rather than local writer code
+
+Current role:
+- combine with the manifest-backed pilot metadata source in supported sessions
+- write audio data into NWB through NeuroConv's documented conversion API
+- broaden the supported-path proof from images and trials into a second non-tabular media route
+
 ## Design constraints
 
-- adapter output is still extraction-only; no NWB writing happens here
+- most supported adapters remain extraction-oriented, but direct NeuroConv routes now also own their final write path through documented NeuroConv APIs
 - manifest structure stays intentionally simple and explicit
 - pilot behavior should remain easy to replace once a real supported format is chosen
 

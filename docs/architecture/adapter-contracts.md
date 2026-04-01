@@ -27,6 +27,7 @@ Implemented adapters now include:
 - `NeuroConvCsvTimeIntervalsAdapter` for real NeuroConv-backed CSV interval sources
 - `NeuroConvExcelTimeIntervalsAdapter` for real NeuroConv-backed Excel interval sources
 - `NeuroConvImageAdapter` for real NeuroConv-backed still-image sources
+- `NeuroConvAudioAdapter` for real NeuroConv-backed audio sources
 
 Near-term framework direction:
 - a shared NeuroConv interface-adapter base for single-source `DataInterface` routes
@@ -43,7 +44,7 @@ Implemented framework pieces:
 - metadata merge helpers for NeuroConv interface metadata plus repository overrides
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
-- the CSV and Excel interval adapters plus the still-image adapter now use this framework as proof cases
+- the CSV and Excel interval adapters plus the still-image and audio adapters now use this framework as proof cases
 
 Preferred tightening direction:
 - fewer route-specific modules when a route differs only by interface metadata and light sniffing behavior

@@ -471,3 +471,15 @@ Consequences:
 - the supported execution path now builds a base `NWBFile` through `PyNWBAssemblyService.build_nwbfile`
 - direct NeuroConv routes can append their supported modality into that base file
 - `PyNWBAssemblyService` remains useful for supported routes even when NeuroConv owns the final modality write path
+
+### DEC-039: Start structured logging at the runtime boundary before UI implementation
+Status: Accepted
+
+Reasoning:
+- The repository now has enough asynchronous execution and multi-path conversion behavior that failures and stage transitions need stable log context, not ad hoc message strings.
+- Logging should start at the runtime boundary where preview, execution, and direct NeuroConv handoff occur, because those are the paths the future UI log viewer and support workflows will depend on first.
+
+Consequences:
+- `ConversionPipelineService`, `NeuroConvSupportedExecutionService`, and `ThreadedConversionExecutor` now emit structured log records with stable context payloads
+- runtime observability can expand incrementally from the current core services into persistence, review, and plugin paths
+- log viewer and verbose-mode UI work can build on an existing structured logging baseline rather than inventing one later

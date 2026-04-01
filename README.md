@@ -77,14 +77,16 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Shared NeuroConv adapter framework for single-interface supported routes
 - Family-module text/tabular supported-route implementation with declarative route configs for CSV and Excel
 - NeuroConv-backed still-image route through `ImageInterface`
+- NeuroConv-backed audio route through `AudioInterface`
 - Dedicated NeuroConv workflow-adapter base for future combined gallery routes
 - Direct NeuroConv supported-execution service that can write through NeuroConv while reusing a base `NWBFile` assembled from normalized metadata
 - Shared runtime contracts for stage/progress/error reporting and threaded background execution
+- Structured runtime logging across the core preview, execution, and supported-route handoff path
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
 
-The manifest-backed supported-path pilot adapter remains a repo-native fixture source for architecture validation. In addition, the repo now includes a real NeuroConv-backed text/tabular family that carries CSV and Excel trial-style interval data into NWB trials through one shared family module plus route declarations, plus a real NeuroConv-backed still-image route through `ImageInterface`.
+The manifest-backed supported-path pilot adapter remains a repo-native fixture source for architecture validation. In addition, the repo now includes a real NeuroConv-backed text/tabular family that carries CSV and Excel trial-style interval data into NWB trials through one shared family module plus route declarations, plus real NeuroConv-backed still-image and audio routes through `ImageInterface` and `AudioInterface`.
 
 Supported-path policy is now explicit: check the NeuroConv Conversion Gallery first, use a documented NeuroConv interface when one exists, and fall back to direct PyNWB only when NeuroConv does not support the format or the direct PyNWB path is clearly simpler and more maintainable. For direct NWB writing, official PyNWB docs remain the source of truth.
 
@@ -94,9 +96,9 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
-The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, and image conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; a dedicated workflow base exists for future combined NeuroConv pipelines; and runtime contracts now exist for background execution plus stage/progress/error reporting, but broader supported-format coverage is still ahead.
+The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, and audio conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; a dedicated workflow base exists for future combined NeuroConv pipelines; and runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting, but broader supported-format coverage is still ahead.
 
-UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, while structured logging, a File menu, status bar, progress bar, and optional log viewer remain the next UI-facing layers to build.
+UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, and the core runtime path now emits structured logs with stable context payloads. A File menu, status bar, progress bar, log sinks, and an optional log viewer remain the next UI-facing layers to build.
 
 ## Local development
 
@@ -123,4 +125,4 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current behavior trace/position baseline into richer modality-specific and multimodal content.
 3. Add the next real NeuroConv-backed supported adapter family from the approved route catalog, likely starting with the behavior-pose family.
-4. Instrument actionable runtime paths with structured logging on top of the new runtime contracts.
+4. Expand structured logging beyond the current core runtime services into persistence, review, and plugin paths.
