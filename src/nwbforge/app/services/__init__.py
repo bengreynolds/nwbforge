@@ -1,5 +1,7 @@
 """Concrete application services."""
 
+from __future__ import annotations
+
 from nwbforge.app.services.errors import (
     AdapterSelectionError,
     AssemblyConfigurationError,
@@ -22,6 +24,7 @@ __all__ = [
     "ConversionPreview",
     "ExecutionReviewService",
     "NeuroConvSupportedExecutionService",
+    "PackageManagementController",
     "RegistrySourceInspectionService",
     "ReviewDecisionError",
     "ReviewSubmission",
@@ -29,3 +32,11 @@ __all__ = [
     "SessionProvenanceService",
     "SourceNotFoundError",
 ]
+
+
+def __getattr__(name: str):
+    if name == "PackageManagementController":
+        from nwbforge.app.services.package_management import PackageManagementController
+
+        return PackageManagementController
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
