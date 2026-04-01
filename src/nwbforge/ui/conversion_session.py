@@ -62,6 +62,9 @@ class ConversionSessionScreenModel:
             )
         )
 
+    def clear_session(self) -> ConversionSessionScreenState:
+        return self._set_state(ConversionSessionScreenState())
+
     def start_preview(self) -> Future[ConversionPreview]:
         session = self._require_session()
         self._set_state(
@@ -117,6 +120,16 @@ class ConversionSessionScreenModel:
             replace(
                 self._state,
                 reviewer_name=reviewer_name,
+                error_message=None,
+                user_error=None,
+            )
+        )
+
+    def set_output_path(self, output_path: Path | None) -> ConversionSessionScreenState:
+        return self._set_state(
+            replace(
+                self._state,
+                output_path=output_path,
                 error_message=None,
                 user_error=None,
             )

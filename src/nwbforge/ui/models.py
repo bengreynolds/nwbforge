@@ -28,7 +28,9 @@ from nwbforge.ui.logs import UiLogEntry
 class FileMenuAction(StrEnum):
     """Top-level file-menu actions exposed by the desktop shell."""
 
+    NEW_SESSION = "new_session"
     OPEN_SESSION = "open_session"
+    REOPEN_LAST_SESSION = "reopen_last_session"
     SETTINGS = "settings"
     INSTALL_PACKAGES = "install_packages"
     TOGGLE_LOG_VIEWER = "toggle_log_viewer"
@@ -161,6 +163,7 @@ class SettingsScreenState:
     log_file_path: str = str(UiSettings().log_file_path)
     last_open_session_path: str = ""
     recent_session_paths: tuple[str, ...] = ()
+    last_output_directory: str = ""
     has_unsaved_changes: bool = False
     status_message: str = "Ready."
     user_error: UserFacingError | None = None
@@ -186,8 +189,16 @@ def default_file_menu_entries() -> tuple[FileMenuEntry, ...]:
 
     return (
         FileMenuEntry(
+            action=FileMenuAction.NEW_SESSION,
+            label="New Session",
+        ),
+        FileMenuEntry(
             action=FileMenuAction.OPEN_SESSION,
             label="Open Session...",
+        ),
+        FileMenuEntry(
+            action=FileMenuAction.REOPEN_LAST_SESSION,
+            label="Reopen Last Session",
         ),
         FileMenuEntry(
             action=FileMenuAction.SETTINGS,

@@ -191,6 +191,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
 
     file_actions = window.file_menu.actions()
     labels = [action.text() for action in file_actions]
+    assert "New Session" in labels
     assert "Install Extensions / Packages" in labels
 
     window._toggle_log_viewer_action.trigger()
@@ -398,6 +399,65 @@ def test_main_window_opens_manifest_session_from_file_menu(qapp, tmp_path: Path,
     window.close()
 
 
+def test_main_window_new_and_reopen_session_actions(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    settings_screen = make_settings_screen(tmp_path)
+    window = MainWindow(
+        DesktopShellModel(),
+        settings_screen,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(session.sources[0].location), "session_manifest.json"),
+    )
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    assert "desktop-" in window.conversion_widget._session_label.text()
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    assert window.conversion_widget._session_label.text() == "No session loaded."
+
+    window._reopen_last_session_action.trigger()
+    qapp.processEvents()
+    assert "desktop-" in window.conversion_widget._session_label.text()
+    window.close()
+
+
+def test_main_window_applies_last_output_directory_default(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    settings_screen = make_settings_screen(tmp_path)
+    settings_screen.load()
+    settings_screen.record_output_directory(tmp_path / "exports" / "prior-output.nwb")
+    window = MainWindow(
+        DesktopShellModel(),
+        settings_screen,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(session.sources[0].location), "session_manifest.json"),
+    )
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    expected_name = "desktop-" + session.sources[0].location.parent.name + ".nwb"
+    assert window.conversion_widget._output_path_edit.text().endswith(expected_name)
+    assert "exports" in window.conversion_widget._output_path_edit.text()
+    window.close()
+
+
 def test_main_window_tracks_recent_sessions_menu(qapp, tmp_path: Path, monkeypatch) -> None:
     first = make_session(tmp_path / "first")
     second = make_session(tmp_path / "second")
@@ -510,4 +570,72 @@ def test_conversion_widget_opens_selected_artifact_and_folder(qapp, tmp_path: Pa
     qapp.processEvents()
 
     assert opened_urls == [artifact_path.as_posix(), artifact_path.parent.as_posix()]
+    window.close()
+
+
+def test_conversion_widget_opens_validation_and_review_artifacts(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    validation_report = tmp_path / "reports" / "validation-report.json"
+    issue = ValidationIssue(
+        code="nwbinspector-warning",
+        message="Review the subject metadata.",
+        severity=IssueSeverity.WARNING,
+        location="/general/subject",
+        tool="nwbinspector",
+    )
+    preview, execution = make_preview_and_execution(
+        session,
+        validation_summary=ValidationSummary(issues=(issue,)),
+        review_outcome=ValidationReviewOutcome(
+            status=ValidationReviewStatus.REVIEW,
+            blocks_completion=False,
+            requires_manual_review=True,
+            error_count=0,
+            warning_count=1,
+        ),
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=validation_report,
+                description="Validation report artifact",
+            ),
+        ),
+    )
+    opened_urls: list[str] = []
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.conversion_session_widget.QDesktopServices.openUrl",
+        lambda url: opened_urls.append(url.toLocalFile()) or True,
+    )
+    conversion_screen = ConversionSessionScreenModel(
+        FakeConversionExecutor(preview, execution),
+        review_service=ExecutionReviewService(JsonExecutionReviewArtifactService()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        conversion_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    window.conversion_widget._execute_button.click()
+    qapp.processEvents()
+    window.conversion_widget._reviewer_edit.setText("alice")
+    issue_item = window.conversion_widget._issue_list.item(0)
+    issue_item.setCheckState(Qt.CheckState.Checked)
+    qapp.processEvents()
+    window.conversion_widget._approve_button.click()
+    qapp.processEvents()
+
+    window.conversion_widget._open_validation_report_button.click()
+    window.conversion_widget._open_review_artifact_button.click()
+    qapp.processEvents()
+
+    assert opened_urls[0] == validation_report.as_posix()
+    assert opened_urls[1].endswith("review-decision.json")
     window.close()

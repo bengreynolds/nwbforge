@@ -69,6 +69,10 @@ class ConversionSessionWidget(QWidget):
         self._open_artifact_button.clicked.connect(self._open_selected_artifact)
         self._reveal_artifact_button = QPushButton("Open Artifact Folder", self)
         self._reveal_artifact_button.clicked.connect(self._reveal_selected_artifact)
+        self._open_validation_report_button = QPushButton("Open Validation Report", self)
+        self._open_validation_report_button.clicked.connect(lambda: self._open_artifact_by_type("validation_report"))
+        self._open_review_artifact_button = QPushButton("Open Review Decision", self)
+        self._open_review_artifact_button.clicked.connect(lambda: self._open_artifact_by_type("review_decision"))
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
@@ -86,6 +90,8 @@ class ConversionSessionWidget(QWidget):
         artifact_button_row = QHBoxLayout()
         artifact_button_row.addWidget(self._open_artifact_button)
         artifact_button_row.addWidget(self._reveal_artifact_button)
+        artifact_button_row.addWidget(self._open_validation_report_button)
+        artifact_button_row.addWidget(self._open_review_artifact_button)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form_layout)
@@ -277,6 +283,8 @@ class ConversionSessionWidget(QWidget):
         has_selection = self._selected_artifact_path() is not None
         self._open_artifact_button.setEnabled(has_selection)
         self._reveal_artifact_button.setEnabled(has_selection)
+        self._open_validation_report_button.setEnabled(self._artifact_path_for_type("validation_report") is not None)
+        self._open_review_artifact_button.setEnabled(self._artifact_path_for_type("review_decision") is not None)
 
     def _selected_artifact_path(self) -> Path | None:
         item = self._artifact_list.currentItem()
@@ -296,3 +304,17 @@ class ConversionSessionWidget(QWidget):
         if path is None:
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
+
+    def _artifact_path_for_type(self, artifact_type: str) -> Path | None:
+        for index in range(self._artifact_list.count()):
+            item = self._artifact_list.item(index)
+            path_text = item.data(Qt.ItemDataRole.UserRole)
+            if item.text().startswith(f"[{artifact_type}]") and path_text:
+                return Path(path_text)
+        return None
+
+    def _open_artifact_by_type(self, artifact_type: str) -> None:
+        path = self._artifact_path_for_type(artifact_type)
+        if path is None:
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))

@@ -180,6 +180,18 @@ def test_conversion_session_screen_model_loads_and_runs_preview() -> None:
     assert screen.state.can_run_execution is True
 
 
+def test_conversion_session_screen_model_can_clear_session() -> None:
+    session = make_session()
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=make_preview(session)))
+
+    screen.load_session(session)
+    state = screen.clear_session()
+
+    assert state.session is None
+    assert state.preview is None
+    assert state.execution is None
+
+
 def test_conversion_session_screen_model_runs_execution_after_preview() -> None:
     session = make_session()
     preview = make_preview(session)

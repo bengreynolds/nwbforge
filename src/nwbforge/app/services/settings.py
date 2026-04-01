@@ -16,6 +16,7 @@ class UiSettings:
     log_file_path: Path = Path(".nwbforge/logs/nwbforge-ui.jsonl")
     last_open_session_path: Path | None = None
     recent_session_paths: tuple[Path, ...] = ()
+    last_output_directory: Path | None = None
 
 
 class UiSettingsService:
@@ -41,6 +42,7 @@ class UiSettingsService:
             log_file_path=Path(payload.get("log_file_path", UiSettings().log_file_path)),
             last_open_session_path=Path(last_path) if last_path else None,
             recent_session_paths=recent_paths,
+            last_output_directory=Path(payload["last_output_directory"]) if payload.get("last_output_directory") else None,
         )
 
     def save(self, settings: UiSettings) -> UiSettings:
@@ -50,6 +52,9 @@ class UiSettingsService:
             str(settings.last_open_session_path) if settings.last_open_session_path is not None else None
         )
         payload["recent_session_paths"] = [str(path) for path in settings.recent_session_paths]
+        payload["last_output_directory"] = (
+            str(settings.last_output_directory) if settings.last_output_directory is not None else None
+        )
         self._settings_path.parent.mkdir(parents=True, exist_ok=True)
         self._settings_path.write_text(
             json.dumps(payload, indent=2, sort_keys=True),
@@ -69,5 +74,20 @@ class UiSettingsService:
                 log_file_path=current.log_file_path,
                 last_open_session_path=normalized,
                 recent_session_paths=tuple(recent[:limit]),
+                last_output_directory=current.last_output_directory,
+            )
+        )
+
+    def record_output_directory(self, output_path: Path) -> UiSettings:
+        current = self.load()
+        directory = output_path.resolve().parent
+        return self.save(
+            UiSettings(
+                verbose_logging_enabled=current.verbose_logging_enabled,
+                file_logging_enabled=current.file_logging_enabled,
+                log_file_path=current.log_file_path,
+                last_open_session_path=current.last_open_session_path,
+                recent_session_paths=current.recent_session_paths,
+                last_output_directory=directory,
             )
         )

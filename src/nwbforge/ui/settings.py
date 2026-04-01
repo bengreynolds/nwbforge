@@ -74,6 +74,10 @@ class SettingsScreenModel:
         saved = self._settings_service.record_recent_session(session_path)
         return self._set_state(self._state_from_settings(saved, status_message="Session opened."))
 
+    def record_output_directory(self, output_path: Path) -> SettingsScreenState:
+        saved = self._settings_service.record_output_directory(output_path)
+        return self._set_state(self._state_from_settings(saved, status_message="Output directory updated."))
+
     def _build_settings(self) -> UiSettings:
         path_text = self._state.log_file_path.strip()
         if self._state.file_logging_enabled and not path_text:
@@ -104,6 +108,7 @@ class SettingsScreenModel:
             log_file_path=str(settings.log_file_path),
             last_open_session_path=str(settings.last_open_session_path) if settings.last_open_session_path else "",
             recent_session_paths=tuple(str(path) for path in settings.recent_session_paths),
+            last_output_directory=str(settings.last_output_directory) if settings.last_output_directory else "",
             has_unsaved_changes=False,
             status_message=status_message,
             user_error=None,

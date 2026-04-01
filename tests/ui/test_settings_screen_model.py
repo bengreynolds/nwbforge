@@ -56,3 +56,12 @@ def test_settings_screen_model_records_recent_session(tmp_path: Path) -> None:
 
     assert state.last_open_session_path.endswith("session_manifest.json")
     assert len(state.recent_session_paths) == 1
+
+
+def test_settings_screen_model_records_output_directory(tmp_path: Path) -> None:
+    screen = make_screen_model(tmp_path)
+    screen.load()
+
+    state = screen.record_output_directory(tmp_path / "outputs" / "result.nwb")
+
+    assert state.last_output_directory.endswith("outputs")

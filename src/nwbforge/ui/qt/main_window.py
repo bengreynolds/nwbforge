@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
         self._conversion_screen_model = conversion_screen_model
         self._session_loader = session_loader or self._default_session_loader
         self._recent_session_actions: list[QAction] = []
+        self._last_recorded_output_directory: Path | None = None
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
         self._viewer_log_sink = log_sink or InMemoryUiLogSink()
         self._log_handler: UiLogHandler | None = None
@@ -148,9 +149,17 @@ class MainWindow(QMainWindow):
     def _build_file_menu(self) -> None:
         self._file_menu = self.menuBar().addMenu("&File")
 
+        self._new_session_action = QAction("New Session", self)
+        self._new_session_action.triggered.connect(self._new_session)
+        self._file_menu.addAction(self._new_session_action)
+
         self._open_session_action = QAction("Open Session...", self)
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
         self._file_menu.addAction(self._open_session_action)
+
+        self._reopen_last_session_action = QAction("Reopen Last Session", self)
+        self._reopen_last_session_action.triggered.connect(self._reopen_last_session)
+        self._file_menu.addAction(self._reopen_last_session_action)
 
         self._recent_sessions_menu = self._file_menu.addMenu("Open Recent")
         self._recent_sessions_menu.setEnabled(False)
@@ -196,6 +205,39 @@ class MainWindow(QMainWindow):
 
         self._load_session(Path(selected_path))
 
+    def _new_session(self) -> None:
+        self._conversion_screen_model.clear_session()
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="session:new",
+                message="Started a new session.",
+                percent_complete=0,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+
+    def _reopen_last_session(self) -> None:
+        last_path = self._settings_screen_model.state.applied_settings.last_open_session_path
+        if last_path is None or not last_path.exists():
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:reopen:error",
+                    message="No recent session is available to reopen.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                ),
+                user_error=UserFacingError(
+                    title="Reopen Session Error",
+                    message="No recent session is available to reopen.",
+                    category="session",
+                ),
+            )
+            return
+
+        self._load_session(last_path)
+
     def _load_session(self, session_path: Path) -> None:
         try:
             session = self._session_loader(session_path)
@@ -219,6 +261,8 @@ class MainWindow(QMainWindow):
 
         self._settings_screen_model.record_recent_session(session_path)
         self._conversion_widget.load_session(session)
+        default_output_path = self._default_output_path_for_session(session)
+        self._conversion_screen_model.set_output_path(default_output_path)
         self._shell_model.set_status_bar(
             StatusBarState(
                 stage_key="session:loaded",
@@ -228,6 +272,12 @@ class MainWindow(QMainWindow):
                 is_error=False,
             )
         )
+
+    def _default_output_path_for_session(self, session: ConversionSession) -> Path:
+        output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
+        if output_directory is None:
+            output_directory = Path.cwd()
+        return output_directory / f"{session.session_id}.nwb"
 
     def _rebuild_recent_sessions_menu(self, recent_paths: tuple[str, ...]) -> None:
         self._recent_sessions_menu.clear()
@@ -290,6 +340,7 @@ class MainWindow(QMainWindow):
 
     def _apply_settings_state(self, state: SettingsScreenState) -> None:
         self._rebuild_recent_sessions_menu(state.recent_session_paths)
+        self._reopen_last_session_action.setEnabled(bool(state.last_open_session_path))
         if state.applied_settings != self._applied_settings:
             self._applied_settings = state.applied_settings
             self._configure_logging(state.applied_settings)
@@ -343,6 +394,12 @@ class MainWindow(QMainWindow):
             )
 
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
+        if state.output_path is not None:
+            candidate_directory = state.output_path.parent.resolve()
+            if candidate_directory != self._last_recorded_output_directory:
+                self._last_recorded_output_directory = candidate_directory
+                self._settings_screen_model.record_output_directory(state.output_path)
+
         if state.user_error is not None:
             self._shell_model.set_status_bar(
                 StatusBarState(

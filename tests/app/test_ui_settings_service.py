@@ -41,3 +41,11 @@ def test_ui_settings_service_records_recent_sessions(tmp_path: Path) -> None:
     assert second.last_open_session_path == (tmp_path / "b" / "session_manifest.json").resolve()
     assert third.recent_session_paths[0] == (tmp_path / "a" / "session_manifest.json").resolve()
     assert third.recent_session_paths[1] == (tmp_path / "b" / "session_manifest.json").resolve()
+
+
+def test_ui_settings_service_records_output_directory(tmp_path: Path) -> None:
+    service = UiSettingsService(tmp_path / "ui-settings.json")
+
+    saved = service.record_output_directory(tmp_path / "outputs" / "result.nwb")
+
+    assert saved.last_output_directory == (tmp_path / "outputs").resolve()
