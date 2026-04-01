@@ -29,8 +29,10 @@ Completed:
 - Implemented the first real NeuroConv-backed supported adapter via CSV time intervals
 - Implemented a shared NeuroConv interface-adapter framework for supported routes
 - Added a dedicated NeuroConv workflow-adapter base for future combined gallery routes
+- Added a direct NeuroConv execution service for supported routes backed by base-`NWBFile` assembly plus NeuroConv append/conversion
 - Implemented concrete runtime contracts for stage/progress/error reporting plus a threaded conversion executor
 - Expanded the real supported text/tabular family to include Excel time intervals
+- Added a NeuroConv-backed still-image route using `ImageInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -42,6 +44,7 @@ Completed:
 
 In progress:
 - Supported-path MVP expansion beyond the initial CSV and Excel text/tabular routes
+- Continued expansion of direct NeuroConv-backed supported routes beyond the initial text/tabular family
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability planning for a non-blocking desktop shell
@@ -57,10 +60,11 @@ Next:
 
 ### Current application baseline
 - The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
-- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV and Excel time-interval adapters.
+- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, and still-image adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real workflow route is implemented yet.
-- The project can write real NWB files for the manifest-backed pilot path and for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
+- The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for manifest-plus-image supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
+- Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the text/tabular routes, or full multimodal NWB coverage.
 
 ## Project Vision and Scope
@@ -149,6 +153,7 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - For supported proprietary and acquisition-system routes, direct NeuroConv conversion APIs should be the primary execution path rather than custom low-level NWB writing.
 - UI-collected metadata, timezone handling, channel/plane selections, and similar user inputs should parameterize documented NeuroConv interfaces and workflows rather than duplicating their conversion logic in custom code.
 - Direct PyNWB construction is the fallback path when NeuroConv does not support the format, the dataset is unusually custom, or the direct PyNWB route is clearly simpler and more maintainable.
+- When a supported session also contributes repo-owned normalized metadata, devices, or other assembled content, build the base `NWBFile` in PyNWB and let NeuroConv append its supported modality into that file when the documented API allows it.
 - Custom HDF5-level writing should be avoided when documented PyNWB APIs provide a schema-compliant path.
 
 ## Department-Wide Requirements and Constraints
@@ -760,7 +765,7 @@ Current status:
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
 - Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
-- The next supported proprietary/acquisition routes should move from inspection-oriented use of NeuroConv toward direct NeuroConv-driven conversion execution, with repository-owned PyNWB assembly reserved for fallback, custom, and hybrid paths
+- Supported CSV, Excel, and image routes can now execute through direct NeuroConv conversion, with repository-owned PyNWB assembly providing the base `NWBFile` and remaining the fallback, custom, and hybrid path
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -768,7 +773,7 @@ Current status:
 - Produce validation and summary artifacts
 
 Current status:
-- End-to-end NeuroConv-backed supported workflows now exist for CSV and Excel time intervals carried into NWB trials
+- End-to-end NeuroConv-backed supported workflows now exist for CSV and Excel time intervals carried into NWB trials plus still-image conversion through `ImageInterface`
 - Additional supported routes and a minimal operator-facing shell remain outstanding
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit and partially implemented
 

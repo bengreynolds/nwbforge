@@ -17,6 +17,7 @@ Responsibilities:
 - write the resulting file via `NWBHDF5IO`
 - emit a generated `ProvenanceArtifact` for the output NWB file
 - fit directly into the execution path of `ConversionPipelineService`
+- provide a reusable base-`NWBFile` builder for direct NeuroConv-supported execution paths
 
 ## Current scope
 
@@ -49,6 +50,7 @@ This is enough to prove a real NWB file can be written from the current preview 
 - acquisition streams currently require inline `data`, `unit`, and either `rate` or `timestamps`
 - direct writer code should follow official PyNWB APIs and prefer built-in container classes over custom HDF5-level logic
 - `pynwb.file` objects such as `NWBFile` and `Subject` remain the default path for file-level metadata
+- supported NeuroConv routes can now reuse `build_nwbfile(...)` to create the base file that NeuroConv appends to, instead of bypassing the repository's normalized metadata pipeline
 
 ## Immediate follow-on work
 

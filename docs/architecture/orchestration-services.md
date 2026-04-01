@@ -17,6 +17,7 @@ Responsibilities:
 - normalize extracted metadata
 - build a mapping plan
 - assemble a provenance record for preview
+- choose between repository-owned assembly and direct NeuroConv-supported execution for compatible supported routes
 - evaluate generated artifacts with the validation service
 - derive an explicit validation review outcome for workflow consumers
 - emit a machine-readable validation report artifact during execution evaluation
@@ -33,6 +34,7 @@ Responsibilities:
 - move the session into `review` or `ready_to_write`
 
 ### Execution evaluation
+- write outputs either through the local assembly service or the direct NeuroConv supported-execution service
 - validate generated artifacts
 - derive `pass`, `review`, or `blocked` outcome from the validation summary
 - write a validation report artifact
@@ -46,6 +48,7 @@ Responsibilities:
 - validation policy is integrated as a separate service rather than being embedded in validators or the UI
 - report generation is integrated as a separate service rather than being embedded in validation
 - session transitions remain visible and testable
+- supported-route execution can hand the final write path to NeuroConv while preserving the same preview and validation flow
 
 ## Immediate follow-on work
 

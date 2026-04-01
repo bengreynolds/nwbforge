@@ -52,6 +52,20 @@ Current role:
 - drive normalized interval-table models, mapping-plan visibility, and NWB trial writing
 - prove the family-module approach for supported routes that differ mostly by interface class and source sniffing
 
+### `NeuroConvImageAdapter`
+
+Location: `src/nwbforge/adapters/supported/neuroconv_images.py`
+
+Responsibilities:
+- inspect still-image file and folder sources through NeuroConv's documented `ImageInterface`
+- provide the first non-tabular direct NeuroConv-supported route in the repository
+- prove that supported-route execution can hand final writing to NeuroConv while reusing a base `NWBFile` built from normalized metadata
+
+Current role:
+- combine with the manifest-backed pilot metadata source in supported sessions
+- write image data into NWB through NeuroConv's documented conversion API
+- broaden the supported-path proof from trials-only inputs into a second modality family
+
 ## Design constraints
 
 - adapter output is still extraction-only; no NWB writing happens here

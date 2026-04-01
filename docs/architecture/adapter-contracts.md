@@ -26,6 +26,7 @@ Implemented adapters now include:
 - `SessionManifestAdapter` for the repo-native fixture path
 - `NeuroConvCsvTimeIntervalsAdapter` for real NeuroConv-backed CSV interval sources
 - `NeuroConvExcelTimeIntervalsAdapter` for real NeuroConv-backed Excel interval sources
+- `NeuroConvImageAdapter` for real NeuroConv-backed still-image sources
 
 Near-term framework direction:
 - a shared NeuroConv interface-adapter base for single-source `DataInterface` routes
@@ -35,12 +36,14 @@ Near-term framework direction:
 
 Implemented framework pieces:
 - `NeuroConvInterfaceAdapter` for common source-config parsing, interface construction, and `ExtractionResult` assembly
+- `NeuroConvDirectConversionAdapter` for supported routes that should hand final writing to NeuroConv directly
 - `NeuroConvWorkflowAdapter` for future combined NeuroConv gallery workflows and multi-source matching
 - `NeuroConvWorkflowRouteConfig` and `WorkflowSourceRequirement` for declarative workflow route matching
 - `NeuroConvSourceConfig` for parsed NeuroConv-specific source settings
+- metadata merge helpers for NeuroConv interface metadata plus repository overrides
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
-- the CSV and Excel interval adapters now use this framework as the first proof cases
+- the CSV and Excel interval adapters plus the still-image adapter now use this framework as proof cases
 
 Preferred tightening direction:
 - fewer route-specific modules when a route differs only by interface metadata and light sniffing behavior
@@ -59,7 +62,7 @@ These protocols define what higher-level services must do without choosing concr
 
 ## Design constraints
 
-- Adapters only inspect and extract; they do not write NWB
+- Most adapters remain inspection/extraction-only; direct-conversion supported adapters are the exception and delegate final writing to documented NeuroConv APIs
 - Registry logic remains small and deterministic
 - Service protocols depend on canonical domain models, not raw dict payloads
 - Extraction remains separate from normalization so source-specific naming does not leak downstream

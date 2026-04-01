@@ -458,3 +458,16 @@ Consequences:
 - supported proprietary and acquisition-system routes should prefer direct NeuroConv execution over custom writer implementations
 - adapter and orchestration work for supported routes should focus on route detection, parameter collection, metadata overrides, and workflow handoff into NeuroConv
 - repository-owned PyNWB assembly remains the primary path for custom and hybrid workflows and the fallback when NeuroConv does not cover the route cleanly
+
+### DEC-038: Build a base `NWBFile` in PyNWB, then let NeuroConv append supported route content
+Status: Accepted
+
+Reasoning:
+- Supported sessions may still include normalized metadata and repo-owned assembled content that should not be discarded when the primary modality is written by NeuroConv.
+- NeuroConv's documented conversion APIs accept an `nwbfile` argument, which provides a clean bridge between the repository's canonical metadata pipeline and NeuroConv's supported writer logic.
+- This is simpler and more maintainable than trying to reimplement supported modality writing locally or splitting supported sessions into disjoint outputs.
+
+Consequences:
+- the supported execution path now builds a base `NWBFile` through `PyNWBAssemblyService.build_nwbfile`
+- direct NeuroConv routes can append their supported modality into that base file
+- `PyNWBAssemblyService` remains useful for supported routes even when NeuroConv owns the final modality write path
