@@ -68,6 +68,7 @@ Completed:
 - Added persisted last-output-directory tracking plus per-session default NWB output paths in the desktop shell
 - Added dedicated desktop shortcuts for validation-report and review-decision artifacts on top of the generic generated-artifact list
 - Added a real desktop output-path chooser dialog for NWB save targets instead of relying only on manual path entry
+- Refactored the desktop conversion panel into explicit session-summary, execution-status, validation/review, and generated-artifact panes
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -128,6 +129,7 @@ Next:
 - The desktop settings path now also persists the last used NWB output directory, and each newly loaded manifest-backed session receives a default output path derived from that directory and the current session id.
 - The conversion-session panel now also exposes dedicated validation-report and review-decision shortcuts so the most important review artifacts are directly reachable without manually selecting them from the artifact list.
 - The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
+- The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.
 
 ## Project Vision and Scope
 

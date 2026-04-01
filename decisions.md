@@ -810,3 +810,16 @@ Consequences:
 - `ConversionSessionWidget` now delegates output-path selection to a shell-provided callback
 - `MainWindow` owns the `QFileDialog.getSaveFileName` path chooser and seeds it from the current output path or persisted last-used output directory
 - the conversion-session panel now supports both direct path editing and dialog-based output-path selection
+
+### DEC-065: Structure the conversion panel as explicit workflow sections instead of one stacked form
+Status: Accepted
+
+Reasoning:
+- The conversion panel had accumulated enough controls that a single vertical stack was starting to read like an internal tool rather than a usable desktop workflow.
+- Session summary, execution state, validation/review actions, and generated artifacts are distinct user tasks and should be visually separated accordingly.
+- This improves the current desktop surface without changing the underlying screen-model or runtime contracts.
+
+Consequences:
+- `ConversionSessionWidget` now uses dedicated section containers for session summary, execution status, validation/review, and generated artifacts
+- widget tests now treat those section boundaries as part of the expected desktop structure
+- future desktop UI work should preserve or improve this sectioned workflow layout instead of collapsing it back into one stacked column

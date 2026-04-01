@@ -32,6 +32,7 @@ Location: `src/nwbforge/ui/qt/conversion_session_widget.py`
 Responsibilities:
 - render one loaded conversion session
 - show source summaries and output-path entry
+- separate the session workflow into dedicated summary, execution, review, and artifact panes
 - open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
@@ -91,6 +92,7 @@ Responsibilities:
 - Background execution remains owned by runtime executors and backend services, not by widgets.
 - Logging still flows through standard logging plus `UiLogHandler`; widgets only render captured entries.
 - The shell may mirror logs through `CompositeUiLogSink` so the docked log viewer and a file-backed JSON-lines sink receive the same entries.
+- The conversion-session widget should preserve clear workflow sections instead of collapsing status, review, and artifacts into one undifferentiated stacked form.
 
 ## Testing baseline
 
@@ -101,6 +103,7 @@ Responsibilities:
   - log-dock visibility and log capture
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
+  - conversion-session section layout for summary, execution, review, and artifacts
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
 
@@ -120,6 +123,6 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Add concrete widget-level presentation for `UserFacingError` payloads.
-2. Add file-backed or composite log sinks and expose them through the log viewer.
-3. Add additional screens and navigation while keeping the current model-first boundary intact.
+1. Add additional screens and navigation while keeping the current model-first boundary intact.
+2. Add a more intentional session-summary/review presentation beyond the current sectioned baseline.
+3. Add persisted window/layout state once the core desktop information architecture settles.
