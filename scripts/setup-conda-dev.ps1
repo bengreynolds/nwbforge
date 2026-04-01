@@ -1,5 +1,13 @@
 param(
-    [string]$EnvName = "nwbforge-dev"
+    [string]$EnvName = "nwbforge-dev",
+    [ValidateSet("minimal", "selected", "full")]
+    [string]$InstallMode = "selected",
+    [ValidateSet("minimal", "common", "full", "custom")]
+    [string]$Preset = "common",
+    [string[]]$Routes = @(),
+    [string]$SelectionPath = ".nwbforge/install-selection.json",
+    [switch]$UseSavedSelection,
+    [switch]$PersistSelection
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,4 +20,26 @@ if ($existing) {
     conda env create -n $EnvName --file environment.yml
 }
 
-conda run -n $EnvName python -m pip install -e .
+$resolveArgs = @(
+    "scripts/resolve_dev_install.py",
+    "--mode", $InstallMode,
+    "--preset", $Preset,
+    "--state-path", $SelectionPath
+)
+
+foreach ($route in $Routes) {
+    $resolveArgs += @("--route", $route)
+}
+
+if ($UseSavedSelection) {
+    $resolveArgs += "--use-persisted"
+}
+
+if ($PersistSelection) {
+    $resolveArgs += "--persist"
+}
+
+$planJson = conda run -n $EnvName python @resolveArgs
+$plan = $planJson | ConvertFrom-Json
+
+conda run -n $EnvName python -m pip install -e "$($plan.editable_requirement)"

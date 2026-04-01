@@ -13,13 +13,26 @@ authors = [
 ]
 dependencies = [
   "neuroconv>=0.9,<0.10",
-  "ndx-pose>=0.2,<0.3",
-  "ndx-sound>=0.2,<0.3",
   "nwbinspector>=0.7,<0.8",
-  "openpyxl>=3.1,<4",
-  "pillow>=10,<12",
   "pynwb>=3.1,<4",
+]
+
+[project.optional-dependencies]
+audio = [
+  "ndx-sound>=0.2,<0.3",
   "scipy>=1.13,<2",
+]
+deeplabcut = [
+  "ndx-pose>=0.2,<0.3",
+]
+excel = [
+  "openpyxl>=3.1,<4",
+]
+image = [
+  "pillow>=10,<12",
+]
+scanimage = [
+  "neuroconv[scanimage]>=0.9,<0.10",
 ]
 
 [tool.setuptools]
