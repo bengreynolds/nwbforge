@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
 Last updated: 2026-04-01
-Status: Late Phase 2 / entering Phase 3 supported-path MVP
+Status: Late Phase 2 / entering first-pass desktop product milestone
 
 ## Current Execution Status
 
@@ -73,27 +73,25 @@ Completed:
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Supported-path MVP expansion beyond the initial text/tabular, image, audio, and first behavior routes
-- Continued expansion of direct NeuroConv-backed supported routes beyond the initial text/tabular family
+- Restructuring the desktop UI toward a finished-feeling first-pass product surface instead of a collection of functional panels
+- Custom-path and hybrid-path workflow expansion beyond the current supported-path-heavy baseline
+- Operational hardening around persistence, recovery, reporting, and reviewability for a first serious manual-testing round
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
-- First UI-facing screen/controller layer on top of the current package-management backend services
-- File-backed/composite log sinks and widget-level presentation on top of the new UI model layer
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
-- File-backed/composite desktop logging expansion beyond the current opt-in shell log-file path
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Transition from the temporary manual-test launcher to a packaged desktop entry point later in the release pipeline
+- Transition from the temporary manual-test launcher to a more realistic app startup path for internal testing
 
 Next:
-- Add another real NeuroConv-backed supported adapter from the approved route catalog
-- Richer multimodal assembly beyond the current generic acquisition-stream baseline
-- Additional modality-specific NWB containers beyond the new behavior baseline
-- Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
+- Continue restructuring the desktop UI so the shell reads like a finished desktop product rather than an engineering surface
+- Land the first real custom-path workflow slice with explicit reviewable mapping and NWB assembly
+- Land the first real hybrid-path workflow slice that combines supported and custom inputs in one session
+- Harden operational concerns around preview persistence, review history, recovery, and artifact/report navigation
 - Expand structured logging from the current core runtime services into broader persistence, review, and plugin paths
-- Preview-state persistence and review history beyond the current latest-snapshot baseline
-- Longer-term persistence backend decision beyond the current JSON snapshot store
+- Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
+- Keep release engineering planned but defer implementation until after first-pass manual testing
 
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
@@ -132,6 +130,93 @@ Next:
 - The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
 - The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.
 - The desktop conversion surface now also summarizes current stage, output target, validation counts, artifact counts, and review guidance explicitly, so users can read session readiness before interacting with raw issue lists or artifact tables.
+
+## First-Pass Product Priorities
+
+The current first-pass priority order is:
+1. Structure the UI like a finished desktop product.
+2. Reach real custom-path and hybrid-path workflow coverage.
+3. Harden operational concerns needed for serious internal testing.
+4. Grow supported-format coverage only as needed to unblock first-pass workflows.
+5. Keep release engineering planned, but defer implementation until after first-pass testing.
+
+Interpretation:
+- The first pass is not defined by broad NeuroConv route coverage or installer readiness.
+- The first pass is defined by whether the application feels coherent and testable as a desktop product across supported, custom, and hybrid workflows.
+- Additional supported-route growth and formal packaging remain important, but they are post-first-pass priorities unless they directly block realistic workflow testing.
+
+### Priority 1: Finished-feeling desktop product surface
+
+Required direction:
+- desktop shell should feel like one application, not a set of disconnected development panels
+- session loading, navigation, output selection, review, validation, settings, and logs should be reachable through clear product-level workflows
+- major conversion surfaces should present summary, status, review, and artifact information intentionally rather than as stacked debug fields
+
+### Priority 2: Custom and hybrid workflows
+
+Required direction:
+- at least one real custom-path flow must work end to end through the current desktop application
+- at least one real hybrid-path flow must work end to end through the current desktop application
+- both flows must preserve explicit provenance, validation, and user-review visibility rather than bypassing the existing workflow model
+
+### Priority 3: Operational concerns for internal testing
+
+Required direction:
+- session state should be resumable enough for realistic testing
+- logs, reports, validation output, and review artifacts should be inspectable from the application
+- background execution, progress, and user-facing error handling should be reliable enough for repeated internal use
+- the temporary desktop launcher should remain sufficient for manual testing until formal packaging begins
+
+### Priority 4: Supported-format growth
+
+Expectation for first pass:
+- do not treat broad NeuroConv catalog coverage as a first-pass completion requirement
+- add supported routes only when they materially improve representative testing coverage
+- keep architecture ready for later route growth, but do not delay first-pass readiness on “all required formats”
+
+### Priority 5: Release engineering
+
+Expectation for first pass:
+- keep PyInstaller/native-installer/updater planning current
+- do not block first-pass completion on installer implementation, updater implementation, or production packaging validation
+- formal release engineering starts after internal first-pass testing confirms the product/workflow direction
+
+## First-Pass Completion Gate
+
+The first pass is complete only when all of the following are true:
+
+### Desktop product baseline
+- the desktop UI has a coherent main workflow suitable for internal users, including session open/new/reopen flows, output-path selection, settings, logs, validation visibility, review actions, and artifact access
+- the main conversion surface is organized as an intentional desktop workspace rather than a stacked development form
+- the temporary app launcher can start the real desktop composition for repeatable manual testing
+
+### Supported-path baseline
+- at least one real supported-path workflow remains working end to end through the desktop application
+- supported-path execution, validation, provenance, and artifact visibility remain intact while the UI is being matured
+
+### Custom-path baseline
+- at least one real custom-path workflow is implemented end to end
+- custom mapping assumptions and unresolved semantics are surfaced for review rather than hidden
+
+### Hybrid-path baseline
+- at least one real hybrid-path workflow is implemented end to end
+- hybrid sessions can combine supported and custom inputs with visible provenance and validation
+
+### Operational baseline
+- session state, review state, and key artifacts are persisted well enough for repeated manual testing
+- user-facing error handling, structured logging, and progress reporting are reliable across the core desktop workflow
+- validation reports and review artifacts are accessible from the application
+
+### Testing baseline for first-pass handoff
+- automated tests covering the current desktop workflow and the representative supported/custom/hybrid paths are green
+- the application is ready for manual internal testing in the dedicated Conda environment
+- release packaging and broad supported-format expansion may remain incomplete at this point
+
+When these conditions are met, the repository should explicitly report:
+- first pass complete
+- ready for internal testing
+
+Only after that milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
 
 ## Project Vision and Scope
 
@@ -901,22 +986,34 @@ Current status:
 - End-to-end NeuroConv-backed supported workflows now exist for CSV and Excel time intervals carried into NWB trials plus still-image and audio conversion through documented NeuroConv interfaces
 - Additional supported routes and a minimal operator-facing shell remain outstanding
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
+- This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
 - Support manual metadata mapping and persistent templates
 - Write custom-path NWB assembly with explicit review gates
 
+Current status:
+- This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
+- The current repo has strong contract scaffolding for custom workflows, but does not yet have a representative end-to-end custom-path desktop workflow slice
+
 ### Phase 5: Hybrid-path MVP
 - Support multi-input conversion sessions
 - Implement merge planning and combined provenance reporting
 - Validate merged outputs with representative datasets
+
+Current status:
+- This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
+- The current repo can combine some supported sources and manifest metadata, but it does not yet have a representative end-to-end hybrid desktop workflow that proves supported-plus-custom composition honestly
 
 ### Phase 6: Department rollout
 - Add lab profiles
 - Harden plugin contracts
 - Expand adapter coverage
 - Add onboarding docs, sample datasets, and governance guidance
+
+Current status:
+- Formal release engineering, broader supported-route growth, and production distribution remain post-first-pass work unless a specific testing blocker emerges
 
 ## Open Questions
 

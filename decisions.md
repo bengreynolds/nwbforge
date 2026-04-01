@@ -836,3 +836,16 @@ Consequences:
 - the execution section now includes explicit stage, output-target, validation-count, and artifact-count summaries
 - the review section now includes review-guidance and acknowledgement-summary text above the detailed issue checklist
 - future UI work should preserve this summary-first approach before adding richer desktop navigation or visual styling
+
+### DEC-067: Define first-pass completion around desktop product coherence, custom/hybrid workflows, and operational readiness
+Status: Accepted
+
+Reasoning:
+- The project had drifted toward measuring progress primarily through supported-route growth and long-term release planning.
+- For the first serious internal testing round, the more important question is whether the application behaves like a coherent desktop product across supported, custom, and hybrid workflows.
+- Broad NeuroConv route coverage and formal release engineering are still required later, but they are not the right gate for first-pass readiness.
+
+Consequences:
+- first-pass completion is now gated primarily by desktop UI coherence, representative custom/hybrid workflow coverage, and operational readiness for internal testing
+- supported-format growth is now a first-pass enabler only when it unblocks representative testing coverage
+- release engineering remains planned and mandatory later, but it no longer blocks the first-pass internal-testing milestone
