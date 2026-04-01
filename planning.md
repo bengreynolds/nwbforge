@@ -48,6 +48,8 @@ Completed:
 - Added backend package-management service contracts for future setup and extension-install UI flows
 - Added backend package-install execution service with progress, logging, and user-facing failure wrapping
 - Added a threaded runtime executor for package-install execution
+- Added a thin package-management controller as the first UI-facing consumer of the package-management backend
+- Applied category-first packaging to the supported tabular family under `src/nwbforge/adapters/supported/tabular/`
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -57,6 +59,7 @@ In progress:
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
+- First UI-facing screen/controller layer on top of the current package-management backend services
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -78,12 +81,13 @@ Next:
 - Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, and threaded executor.
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
 - Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
-- The first concrete category-first package refactor is now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/`, which is the intended direction for future supported families.
+- The first concrete category-first package refactors are now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/` and the text/tabular family under `src/nwbforge/adapters/supported/tabular/`.
 - Development workflow now also requires explicit Codex subagent orchestration guidance: use at most three concurrent subagents, keep state isolated, collate results deterministically, and fall back to sequential handling on failure.
 - Package-management work is now split between developer bootstrap and future UI flows: setup remains tied to the dedicated Conda environment, while the future UI should expose route-name package selection and post-setup installs without forcing a full reinstall.
 - The route-based package layer now includes a service boundary for future UI consumers: screens should call backend package-management services for route listing, install preview, persisted selection loading, and compatibility validation rather than reaching directly into setup scripts.
 - The route-based package layer now also includes an install-execution service so future setup and extension-install screens can run installs, surface progress, log context, and present user-facing errors without owning subprocess logic.
 - The route-based package layer now also has a threaded runtime executor, so future setup and extension-install screens can run installs off the UI thread while preserving queued, progress, completion, and failure events.
+- The route-based package layer now also has a thin `PackageManagementController`, giving the future UI one small binding point for route listing, install preview, saved-selection loading, and background install execution.
 
 ## Project Vision and Scope
 
@@ -694,6 +698,7 @@ Recommended concepts:
 - Registry-based discovery for supported adapters
 - NeuroConv-backed adapter implementations for officially supported source systems
 - Family registries and route configuration declarations for supported routes that differ mostly by metadata, interface class, or light sniffing behavior
+- Category-first family packages for supported route groups such as `behavior/` and `tabular/`
 - Plugin package contract for lab-specific parsers and mapping presets
 - Lab profile package for naming conventions, metadata aliases, defaults, and review policies
 - Route-name package catalog that maps supported software/workflow names to optional dependency groups for developer setup and future UI package installation
@@ -716,6 +721,7 @@ Important separation:
 - Use one shared NeuroConv core for common interface construction, source-config parsing, and extraction assembly.
 - For real proprietary/acquisition formats with documented NeuroConv support, prefer a thin orchestration layer around NeuroConv `DataInterface` or workflow execution instead of reimplementing conversion in custom PyNWB code.
 - Prefer family modules plus route configuration declarations when multiple supported entries target the same semantic NWB shape.
+- Prefer category-first family packages before software-named top-level modules when those supported routes share the same semantic layer.
 - Use smaller numbers of truly distinct route modules only when a route needs meaningfully different source sniffing, normalization bridging, mapping behavior, or NWB targets.
 - Reserve dedicated workflow adapters for combined NeuroConv pipelines and multi-interface conversions rather than forcing them into single-source wrappers.
 
@@ -817,12 +823,14 @@ Current status:
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
 - `neuroconv` is now a declared project dependency and the first real supported-path route is implemented through `CsvTimeIntervalsInterface`
 - The current real supported text/tabular routes cover CSV and Excel interval/trial data and combine cleanly with the manifest-backed metadata pilot in multi-source supported sessions
+- The current real supported text/tabular family now lives under `src/nwbforge/adapters/supported/tabular/`, aligning it with the category-first packaging direction already used for `supported/behavior/`
 - Combined NeuroConv workflows now have a dedicated adapter base and matching contract, but no real workflow-backed route has been implemented yet
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
 - Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
 - Structured logging is now instrumented across the core runtime path, including `ConversionPipelineService`, `NeuroConvSupportedExecutionService`, and `ThreadedConversionExecutor`
 - Supported CSV, Excel, image, and audio routes can now execute through direct NeuroConv conversion, with repository-owned PyNWB assembly providing the base `NWBFile` and remaining the fallback, custom, and hybrid path
+- The package-management backend now also includes a thin controller layer, so the future desktop UI can consume one small binding surface instead of wiring directly to planner, service, and executor components
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters

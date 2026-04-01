@@ -576,3 +576,29 @@ Consequences:
 - package installs now have a threaded runtime executor alongside the conversion executor
 - future setup and `File -> Install Extensions / Packages` screens should run installs through the package runtime executor, not directly on the UI thread
 - queued, progress, completion, and failure behaviors for installs now follow the same general runtime pattern as conversion work
+
+### DEC-047: Put a thin controller layer in front of package-management services for future UI screens
+Status: Accepted
+
+Reasoning:
+- The desktop UI should not own wiring between install planning, saved-selection loading, and background install execution.
+- A thin controller boundary keeps UI code small while preserving the existing backend separation between planning, execution, and runtime threading.
+- This provides a concrete first pattern for UI-facing screen logic without forcing widget code into the repository yet.
+
+Consequences:
+- package-management UI work should call `PackageManagementController` instead of directly composing package services and executors in screen code
+- controller logic should stay thin and defer business rules to the existing package services
+- future setup and `File -> Install Extensions / Packages` screens now have one small backend entry point for route listing, preview, selection loading, and install submission
+
+### DEC-048: Apply category-first packaging to the supported tabular family
+Status: Accepted
+
+Reasoning:
+- The category-first structure already established for supported behavior routes should also apply to the text/tabular family so the internal adapter layout stays semantically organized.
+- Leaving tabular routes in a top-level software-oriented module would keep the repo in a half-migrated state and weaken the family-module direction.
+- CSV and Excel interval routes share one semantic implementation path, so the family belongs under a category package rather than a standalone top-level module.
+
+Consequences:
+- the shared CSV/Excel interval family now lives under `src/nwbforge/adapters/supported/tabular/`
+- future supported families should continue to migrate toward category-first packages before adding more top-level route files
+- public exports stay stable while the internal supported-adapter layout becomes more consistent

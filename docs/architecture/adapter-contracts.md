@@ -34,6 +34,7 @@ Implemented adapters now include:
 Current package direction:
 - category-first supported packages should hold family modules and route declarations
 - the first concrete example is `src/nwbforge/adapters/supported/behavior/`
+- the text/tabular family now also follows this shape under `src/nwbforge/adapters/supported/tabular/`
 - public exports from `nwbforge.adapters` and `nwbforge.adapters.supported` should stay stable while internal layout evolves
 
 Near-term framework direction:
@@ -52,6 +53,7 @@ Implemented framework pieces:
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
+- the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:
 - fewer route-specific modules when a route differs only by interface metadata and light sniffing behavior

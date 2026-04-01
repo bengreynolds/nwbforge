@@ -55,6 +55,19 @@ Responsibilities:
 
 This keeps install execution separate from both setup-script glue and future UI components.
 
+### `PackageManagementController`
+
+Location: `src/nwbforge/app/services/package_management.py`
+
+Responsibilities:
+- expose a thin UI-facing boundary over package preview and install execution
+- list available route packages and preset groupings for setup and extension-install screens
+- load the persisted package selection for setup defaults
+- delegate install preview to `PackageManagementService`
+- delegate background install execution to the threaded package-install executor
+
+This keeps the future UI shell dependent on small controller-level operations instead of reaching directly into planner helpers, setup scripts, or subprocess orchestration.
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
@@ -62,9 +75,10 @@ This keeps install execution separate from both setup-script glue and future UI 
 - services should fail clearly when selection or workflow state is invalid
 - UI-adjacent package flows should depend on backend service contracts instead of reading setup-script conventions directly
 - package-install execution should expose progress and user-facing failure contracts rather than leaking raw subprocess behavior into callers
+- future UI setup and package-management screens should use thin controller bindings over backend services instead of embedding planning or runtime wiring in widgets
 
 ## Immediate follow-on work
 
-1. Add runtime/executor wrappers for package-install execution so future UI screens can run installs off the UI thread.
+1. Build the first concrete UI screen model on top of `PackageManagementController`.
 2. Add normalization and mapping-planner service implementations.
 3. Add validation-service implementations that wrap PyNWB validation and NWB Inspector.

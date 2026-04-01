@@ -77,6 +77,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Interval-table normalization, mapping, and NWB trial assembly
 - Shared NeuroConv adapter framework for single-interface supported routes
 - Category-first supported adapter packaging beginning with `supported/behavior/`
+- Category-first supported adapter packaging now in place for `supported/behavior/` and `supported/tabular/`
 - Family-module text/tabular supported-route implementation with declarative route configs for CSV and Excel
 - NeuroConv-backed still-image route through `ImageInterface`
 - NeuroConv-backed audio route through `AudioInterface`
@@ -90,6 +91,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Backend package-management service contracts for future setup and extension-install screens
 - Backend package-install execution service with progress, logging, and failure wrapping
 - Threaded runtime executor for package-install work
+- Thin `PackageManagementController` binding for future setup and extension-install screens
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
@@ -104,7 +106,7 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
-The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, audio, FicTrac, and DeepLabCut conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; supported-route packaging is beginning to migrate toward category-first modules such as `supported/behavior/`; a dedicated workflow base exists for future combined NeuroConv pipelines; runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting; developer setup now has a route-based package planning layer with `minimal`, `selected`, and `full` install modes; and future setup/package-install UI work now has backend `PackageManagementService`, `PackageInstallationService`, and `ThreadedPackageInstallationExecutor` boundaries to call, but broader supported-format coverage and the actual UI are still ahead.
+The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, audio, FicTrac, and DeepLabCut conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; supported-route packaging now uses category-first modules for both `supported/behavior/` and `supported/tabular/`; a dedicated workflow base exists for future combined NeuroConv pipelines; runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting; developer setup now has a route-based package planning layer with `minimal`, `selected`, and `full` install modes; and future setup/package-install UI work now has backend `PackageManagementService`, `PackageInstallationService`, `ThreadedPackageInstallationExecutor`, and `PackageManagementController` boundaries to call, but broader supported-format coverage and the actual UI are still ahead.
 
 UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, and the core runtime path now emits structured logs with stable context payloads. A File menu, status bar, progress bar, log sinks, and an optional log viewer remain the next UI-facing layers to build.
 
@@ -141,4 +143,4 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current behavior trace/position baseline into richer modality-specific and multimodal content.
 3. Add the next real NeuroConv-backed supported adapter family from the approved route catalog, likely continuing the behavior family or moving into the first combined workflow route.
-4. Build the first UI-facing consumer for package-install preview/execution on top of the existing package services and threaded runtime executor.
+4. Build the first concrete UI screen model on top of `PackageManagementController` and the existing package-install runtime path.

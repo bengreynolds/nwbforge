@@ -36,7 +36,7 @@ Still used as the repo-native metadata and inline-stream fixture path for archit
 
 ### `NeuroConvTabularTimeIntervalsAdapter` family
 
-Location: `src/nwbforge/adapters/supported/neuroconv_time_intervals.py`
+Location: `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Responsibilities:
 - provide the shared family-level extraction path for NeuroConv tabular interval interfaces
@@ -114,7 +114,7 @@ Current role:
 - manifest structure stays intentionally simple and explicit
 - pilot behavior should remain easy to replace once a real supported format is chosen
 - route-specific interface parameters for supported NeuroConv behavior routes should be treated as UI/orchestration inputs rather than hard-coded conversion logic
-- supported families should prefer category-first packaging; the current behavior routes are the first family moved under that structure
+- supported families should prefer category-first packaging; the current behavior and tabular routes now follow that structure
 
 ## Immediate follow-on work
 

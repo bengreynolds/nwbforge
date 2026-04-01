@@ -72,6 +72,7 @@ Current service-facing models:
 Current service:
 - `PackageManagementService`
 - `PackageInstallationService`
+- `PackageManagementController`
 - `ThreadedPackageInstallationExecutor`
 
 Current service responsibilities:
@@ -83,6 +84,7 @@ Current service responsibilities:
 - persist a validated selection when requested
 - execute an install command for a validated selection
 - emit install progress events and structured failure information
+- expose one thin UI-facing binding for route listing, preview, saved selection loading, and background install submission
 - run install execution off the UI thread for future setup and extension-install screens
 
 ## Future UI expectations
@@ -93,7 +95,7 @@ Initial setup should:
 - validate compatibility before starting installs
 - show progress and errors during install work
 - call the backend package-management service for preview/validation rather than duplicating planner logic in UI code
-- call the backend package-install execution service when the user confirms an install
+- call the backend package-management controller so the screen does not own service/executor wiring
 
 Post-setup package installation should be accessible from:
 - `File -> Install Extensions / Packages`
@@ -103,5 +105,5 @@ That later flow should:
 - reuse the same route catalog and preset language
 - report progress and failures through the standard runtime/logging model
 - call the same backend package-management service boundary used by setup
-- reuse the same backend package-install execution service used by initial setup
+- reuse the same backend package-install execution service used by initial setup through the controller boundary
 - run the actual install through the threaded package runtime executor rather than directly on the UI thread
