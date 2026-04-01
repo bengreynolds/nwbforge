@@ -2,6 +2,12 @@
 
 from nwbforge.adapters.base import AdapterCapabilities, SourceAdapter
 from nwbforge.adapters.registry import AdapterRegistry
-from nwbforge.adapters.supported import SessionManifestAdapter
+from nwbforge.adapters.supported import NeuroConvCsvTimeIntervalsAdapter, SessionManifestAdapter
 
-__all__ = ["AdapterCapabilities", "AdapterRegistry", "SessionManifestAdapter", "SourceAdapter"]
+__all__ = [
+    "AdapterCapabilities",
+    "AdapterRegistry",
+    "NeuroConvCsvTimeIntervalsAdapter",
+    "SessionManifestAdapter",
+    "SourceAdapter",
+]
