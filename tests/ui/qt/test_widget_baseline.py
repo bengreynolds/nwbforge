@@ -130,6 +130,35 @@ def make_custom_session(tmp_path: Path) -> ConversionSession:
     )
 
 
+def make_hybrid_session(tmp_path: Path) -> ConversionSession:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps({"session": {"session_id": "hybrid-qt"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"signal_sets": []}), encoding="utf-8")
+    return ConversionSession(
+        session_id="hybrid-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=manifest_path,
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=custom_path,
+                source_type=SourceType.FILE,
+                label="Custom supplemental source",
+                role="supplemental",
+                adapter_hint="custom_json_session",
+            ),
+        ),
+    )
+
+
 def make_preview_and_execution(
     session: ConversionSession,
     *,
@@ -512,6 +541,51 @@ def test_main_window_opens_custom_session_from_file_menu(qapp, tmp_path: Path, m
     assert "desktop-custom-" in window.conversion_widget._session_label.text()
     assert window.conversion_widget._pathway_label.text() == "custom"
     assert window.conversion_widget._source_adapter_label.text() == "custom_json_session"
+    window.close()
+
+
+def test_main_window_opens_hybrid_session_from_file_menu(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_hybrid_session(tmp_path)
+    hybrid_path = tmp_path / "hybrid_session.json"
+    hybrid_path.write_text(
+        json.dumps(
+            {
+                "session_id": "desktop-hybrid-qt",
+                "sources": [
+                    {"source_id": "manifest", "location": "session_manifest.json", "label": "Structured session manifest"},
+                    {
+                        "source_id": "custom",
+                        "location": "custom_session.json",
+                        "label": "Custom supplemental source",
+                        "adapter_hint": "custom_json_session",
+                        "role": "supplemental",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(hybrid_path), "hybrid_session.json"),
+    )
+
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    assert window.conversion_widget._pathway_label.text() == "hybrid"
+    assert window.conversion_widget._source_count_label.text() == "2"
+    assert "desktop-hybrid-qt" in window.conversion_widget._session_label.text()
     window.close()
 
 

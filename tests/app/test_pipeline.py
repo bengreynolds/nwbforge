@@ -180,6 +180,97 @@ def make_custom_session(tmp_path: Path) -> ConversionSession:
     )
 
 
+def make_hybrid_session(tmp_path: Path) -> ConversionSession:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "session": {
+                    "session_id": "hybrid-session-01",
+                    "description": "Hybrid manifest metadata",
+                    "experiment_description": "Supported plus custom merge",
+                    "start_time": "2026-03-31T10:15:00-06:00",
+                    "experimenter": "Researcher, Alice",
+                    "institution": "Test University",
+                },
+                "subject": {
+                    "subject_id": "mouse-hybrid-01",
+                    "species": "Mus musculus",
+                    "sex": "U",
+                    "age": "P90D",
+                    "description": "Hybrid test subject",
+                },
+                "devices": [
+                    {
+                        "device_id": "camera-1",
+                        "name": "Camera One",
+                        "description": "Behavior camera",
+                        "manufacturer": "Acme Imaging",
+                    }
+                ],
+                "acquisition_streams": [
+                    {
+                        "stream_id": "lick-trace",
+                        "name": "Lick Trace",
+                        "modality": "behavior",
+                        "description": "Example lick signal",
+                        "data": [0.1, 0.2, 0.3],
+                        "unit": "a.u.",
+                        "rate": 10.0,
+                    }
+                ],
+                "keywords": ["supported", "hybrid"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(
+        json.dumps(
+            {
+                "signal_sets": [
+                    {
+                        "stream_key": "wheel-velocity",
+                        "name": "Wheel Velocity",
+                        "modality": "behavior",
+                        "description": "Custom wheel velocity",
+                        "data": [0.0, 0.2, 0.5, 0.4],
+                        "unit": "cm/s",
+                        "rate": 20.0,
+                    }
+                ],
+                "annotations": {
+                    "operator_note": "Hybrid custom annotation",
+                },
+                "analysis_context": {
+                    "sync_method": "shared_daq_clock",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return ConversionSession(
+        session_id="sess-hybrid-001",
+        pathway=ConversionPathway.HYBRID,
+        sources=(
+            SourceReference(
+                source_id="manifest-source",
+                location=manifest_path,
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+            ),
+            SourceReference(
+                source_id="custom-source",
+                location=custom_path,
+                source_type=SourceType.FILE,
+                label="Custom supplemental source",
+                role="supplemental",
+                adapter_hint="custom_json_session",
+            ),
+        ),
+    )
+
+
 def write_valid_nwb(path: Path) -> None:
     nwbfile = NWBFile(
         session_description="Validation test session",
@@ -307,3 +398,34 @@ def test_pipeline_execute_custom_session_routes_through_direct_pynwb_path(tmp_pa
         nwbfile = io.read()
         assert "behavior" in nwbfile.acquisition
         assert "Wheel Velocity" in nwbfile.acquisition["behavior"].time_series
+
+
+def test_pipeline_execute_hybrid_session_combines_supported_and_custom_sources(tmp_path: Path) -> None:
+    pipeline = make_pipeline()
+    preview = pipeline.build_preview(make_hybrid_session(tmp_path))
+    output_path = tmp_path / "generated" / "hybrid-session.nwb"
+
+    execution = pipeline.execute(preview, output_path)
+
+    assert preview.session.pathway == ConversionPathway.HYBRID
+    assert preview.session.status == SessionStatus.REVIEW
+    assert preview.provenance_record.adapter_ids == ("custom_json_session", "session_manifest")
+    assert len(preview.normalized_metadata.acquisition_streams) == 2
+    assert any(
+        decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data"
+        for decision in preview.mapping_plan.decisions
+    )
+    assert any(
+        decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[wheel-velocity].data"
+        for decision in preview.mapping_plan.decisions
+    )
+    assert any(issue.field == "analysis_context.sync_method" for issue in preview.mapping_plan.issues)
+    assert execution.session.status == SessionStatus.COMPLETED
+    assert execution.validation_summary.is_passing() is True
+    assert output_path.exists() is True
+    with NWBHDF5IO(str(output_path), "r") as io:
+        nwbfile = io.read()
+        assert "behavior" in nwbfile.acquisition
+        behavior = nwbfile.acquisition["behavior"]
+        assert "Lick Trace" in behavior.time_series
+        assert "Wheel Velocity" in behavior.time_series

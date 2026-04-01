@@ -202,7 +202,7 @@ class MainWindow(QMainWindow):
             self,
             "Open Conversion Session",
             str(Path.cwd()),
-            "Conversion sessions (session_manifest.json custom_session.json);;JSON files (*.json)",
+            "Conversion sessions (session_manifest.json custom_session.json hybrid_session.json);;JSON files (*.json)",
         )
         if not selected_path:
             return

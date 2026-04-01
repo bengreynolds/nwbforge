@@ -215,6 +215,61 @@ def load_custom_session(location: Path) -> ConversionSession:
     )
 
 
+def load_hybrid_session(location: Path) -> ConversionSession:
+    """Create a hybrid-path session object from a desktop session descriptor."""
+
+    if location.is_dir():
+        descriptor_path = location / "hybrid_session.json"
+        if not descriptor_path.exists():
+            raise FileNotFoundError(f"Hybrid session directory does not contain hybrid_session.json: {location}")
+    else:
+        if location.name.lower() != "hybrid_session.json":
+            raise ValueError("Hybrid desktop sources must use the hybrid_session.json filename.")
+        descriptor_path = location
+
+    payload = json.loads(descriptor_path.read_text(encoding="utf-8"))
+    source_payloads = payload.get("sources")
+    if not isinstance(source_payloads, list) or not source_payloads:
+        raise ValueError("Hybrid session descriptor must define at least one source.")
+
+    source_references: list[SourceReference] = []
+    for index, source_payload in enumerate(source_payloads, start=1):
+        if not isinstance(source_payload, dict):
+            raise ValueError("Hybrid session source entries must be objects.")
+
+        relative_location = source_payload.get("location")
+        if not relative_location:
+            raise ValueError("Hybrid session source entries must include a location.")
+
+        resolved_location = (descriptor_path.parent / str(relative_location)).resolve()
+        if not resolved_location.exists():
+            raise FileNotFoundError(f"Hybrid session source does not exist: {resolved_location}")
+
+        source_references.append(
+            SourceReference(
+                source_id=str(source_payload.get("source_id") or f"source-{index}"),
+                location=resolved_location,
+                source_type=SourceType.DIRECTORY if resolved_location.is_dir() else SourceType.FILE,
+                label=str(source_payload.get("label") or resolved_location.name),
+                role=str(source_payload.get("role") or "primary"),
+                media_type=source_payload.get("media_type"),
+                adapter_hint=source_payload.get("adapter_hint"),
+            )
+        )
+
+    session_id = str(payload.get("session_id") or f"desktop-hybrid-{descriptor_path.parent.name or descriptor_path.stem}")
+    notes_payload = payload.get("notes", ())
+    notes = tuple(str(note) for note in notes_payload) if isinstance(notes_payload, list) else ()
+
+    return ConversionSession(
+        session_id=session_id,
+        pathway=ConversionPathway.HYBRID,
+        sources=tuple(source_references),
+        title=payload.get("title"),
+        notes=notes,
+    )
+
+
 def load_desktop_session(location: Path) -> ConversionSession:
     """Create a desktop session object by dispatching to the supported or custom loader."""
 
@@ -223,8 +278,10 @@ def load_desktop_session(location: Path) -> ConversionSession:
             return load_manifest_session(location)
         if (location / "custom_session.json").exists():
             return load_custom_session(location)
+        if (location / "hybrid_session.json").exists():
+            return load_hybrid_session(location)
         raise FileNotFoundError(
-            "Session directory does not contain session_manifest.json or custom_session.json: "
+            "Session directory does not contain session_manifest.json, custom_session.json, or hybrid_session.json: "
             f"{location}"
         )
 
@@ -233,8 +290,10 @@ def load_desktop_session(location: Path) -> ConversionSession:
         return load_manifest_session(location)
     if name == "custom_session.json":
         return load_custom_session(location)
+    if name == "hybrid_session.json":
+        return load_hybrid_session(location)
     raise ValueError(
-        "Desktop session loader supports session_manifest.json and custom_session.json sources only."
+        "Desktop session loader supports session_manifest.json, custom_session.json, and hybrid_session.json sources only."
     )
 
 

@@ -9,6 +9,7 @@ from nwbforge.app.desktop import (
     ensure_demo_manifest,
     load_custom_session,
     load_desktop_session,
+    load_hybrid_session,
     load_manifest_session,
     resolve_startup_session_path,
 )
@@ -105,15 +106,121 @@ def test_desktop_services_run_real_custom_preview_and_execution(tmp_path: Path) 
 
 
 def test_load_desktop_session_dispatches_between_supported_and_custom(tmp_path: Path) -> None:
-    manifest_path = ensure_demo_manifest(tmp_path)
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text('{"session": {"session_id": "supported-01"}}', encoding="utf-8")
     custom_path = tmp_path / "custom_session.json"
     custom_path.write_text('{"recording_context": {"recording_id": "custom-01"}}', encoding="utf-8")
+    hybrid_path = tmp_path / "hybrid_session.json"
+    hybrid_path.write_text(
+        """
+        {
+          "session_id": "desktop-hybrid-01",
+          "sources": [
+            {"source_id": "manifest", "location": "session_manifest.json", "label": "Session manifest"},
+            {"source_id": "custom", "location": "custom_session.json", "label": "Custom session JSON", "adapter_hint": "custom_json_session", "role": "supplemental"}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
 
     supported_session = load_desktop_session(manifest_path)
     custom_session = load_desktop_session(custom_path)
+    hybrid_session = load_desktop_session(hybrid_path)
 
     assert supported_session.pathway.value == "supported"
     assert custom_session.pathway.value == "custom"
+    assert hybrid_session.pathway.value == "hybrid"
+
+
+def test_desktop_services_run_real_hybrid_preview_and_execution(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(
+        """
+        {
+          "session": {
+            "session_id": "desktop-hybrid-manifest-01",
+            "description": "Hybrid desktop manifest metadata",
+            "experiment_description": "Hybrid desktop workflow test",
+            "start_time": "2026-04-01T09:00:00-06:00",
+            "experimenter": "NWB Forge Demo",
+            "institution": "Test Lab"
+          },
+          "subject": {
+            "subject_id": "desktop-hybrid-mouse-01",
+            "species": "Mus musculus",
+            "sex": "U",
+            "age": "P90D",
+            "description": "Hybrid desktop subject"
+          },
+          "acquisition_streams": [
+            {
+              "stream_id": "lick-trace",
+              "name": "Lick Trace",
+              "modality": "behavior",
+              "description": "Example lick signal",
+              "data": [0.1, 0.2, 0.3],
+              "unit": "a.u.",
+              "rate": 10.0
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(
+        """
+        {
+          "signal_sets": [
+            {
+              "stream_key": "wheel-velocity",
+              "name": "Wheel Velocity",
+              "modality": "behavior",
+              "description": "Custom wheel trace",
+              "data": [0.0, 0.3, 0.1],
+              "unit": "cm/s",
+              "rate": 20.0
+            }
+          ],
+          "annotations": {
+            "operator_note": "Review the custom hybrid context."
+          }
+        }
+        """,
+        encoding="utf-8",
+    )
+    hybrid_path = tmp_path / "hybrid_session.json"
+    hybrid_path.write_text(
+        """
+        {
+          "session_id": "desktop-hybrid-01",
+          "title": "Hybrid desktop workflow test",
+          "sources": [
+            {"source_id": "manifest", "location": "session_manifest.json", "label": "Session manifest"},
+            {"source_id": "custom", "location": "custom_session.json", "label": "Custom supplemental source", "adapter_hint": "custom_json_session", "role": "supplemental"}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    session = load_hybrid_session(hybrid_path)
+    services = build_desktop_services(tmp_path, package_command_runner=FakeRunner())
+
+    services.conversion_screen_model.load_session(session)
+    preview = services.conversion_screen_model.start_preview().result(timeout=10)
+    output_path = tmp_path / "outputs" / "hybrid-session.nwb"
+    execution = services.conversion_screen_model.start_execution(output_path).result(timeout=20)
+
+    assert preview.session.pathway.value == "hybrid"
+    assert preview.session.status.value == "review"
+    assert preview.provenance_record.adapter_ids == ("custom_json_session", "session_manifest")
+    assert execution.session.status.value == "completed"
+    assert output_path.exists() is True
+    assert execution.validation_summary.is_passing() is True
+
+    services.conversion_screen_model.shutdown(wait=False)
+    services.package_screen_model.shutdown(wait=False)
 
 
 def test_resolve_startup_session_path_prefers_requested_then_saved_then_demo(tmp_path: Path) -> None:
