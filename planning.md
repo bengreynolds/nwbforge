@@ -53,6 +53,7 @@ Completed:
 - Added the first toolkit-agnostic desktop UI model layer with a shell model and package-installer screen model
 - Added the first conversion-session screen model over `ConversionExecutor` and pipeline runtime events
 - Added a shared UI observability layer with an in-memory log sink, logging handler bridge, and shared user-facing error presenter
+- Added the first concrete PySide6 widget baseline over the existing shell, package-install, and conversion-session UI models
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -64,6 +65,7 @@ In progress:
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - First UI-facing screen/controller layer on top of the current package-management backend services
 - File-backed/composite log sinks and widget-level presentation on top of the new UI model layer
+- Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -95,6 +97,7 @@ Next:
 - The repository now also includes a first toolkit-agnostic `ui/` layer: a `DesktopShellModel` for File-menu/status/log-viewer state and a `PackageInstallerScreenModel` for setup and extension-install flows over the package-management controller.
 - The `ui/` layer now also includes a `ConversionSessionScreenModel`, which consumes `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError` directly instead of duplicating preview/execution workflow logic in future widgets.
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
+- The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 
 ## Project Vision and Scope
 
@@ -484,6 +487,18 @@ Critical UX principles:
 - Progress bar driven by backend-reported percentage updates
 - Toggleable verbose log viewer for troubleshooting and review
 - Clear separation between view state, background worker state, and conversion domain state
+
+### Desktop toolkit baseline
+- The first concrete widget layer should use `PySide6` as the desktop toolkit.
+- Widget code should live under `src/nwbforge/ui/qt/` and bind to the existing toolkit-agnostic UI models rather than replacing them.
+- The first widget slice should stay narrow:
+  - `QMainWindow` shell
+  - File menu actions wired to the shell model
+  - status bar plus progress bar
+  - docked log viewer fed by the shared UI log sink
+  - package-install dialog over `PackageInstallerScreenModel`
+  - conversion-session central widget over `ConversionSessionScreenModel`
+- Widget tests should run headless in offscreen mode and avoid dependence on broader GUI test frameworks until the widget layer settles.
 
 ### Planned setup and package-install behaviors
 - Initial setup should support install modes:

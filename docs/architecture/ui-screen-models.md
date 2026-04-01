@@ -4,7 +4,7 @@ Last updated: 2026-04-01
 
 ## Purpose
 
-This note captures the first toolkit-agnostic UI layer in the repository. The goal is to begin desktop-UI development without locking the project to widget code too early.
+This note captures the first toolkit-agnostic UI layer in the repository and how the current Qt widget baseline binds to it.
 
 ## Implemented pieces
 
@@ -64,15 +64,28 @@ Current scope:
 - shared log-viewer state should be fed from a common UI log sink rather than per-screen logging logic
 - screen models may expand preset selections for display, but must preserve the backend distinction between preset-based installs and explicit custom route selection
 
+## Widget binding baseline
+
+- `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
+- `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
+- `src/nwbforge/ui/qt/conversion_session_widget.py` binds one conversion-session workflow into a central panel
+- `src/nwbforge/ui/qt/log_viewer.py` exposes the current in-memory UI log sink through a docked log viewer
+- `src/nwbforge/ui/qt/bridge.py` provides a minimal QObject signal bridge so model callbacks can safely update Qt widgets
+
+The current Qt layer is intentionally thin:
+- widgets do not reimplement package planning or conversion lifecycle logic
+- widgets render model state and invoke model/controller actions
+- the toolkit-agnostic models remain the primary UI-state contracts for the application
+
 ## Current limitations
 
-- no actual desktop widget toolkit is implemented yet
 - only an in-memory log-viewer sink is implemented; file-backed or composite log sinks still remain to be added
 - shell state is in-memory only and not persisted
-- the current UI layer covers package-management flows and the first conversion-session screen model, but still does not include concrete widgets or persisted view state
+- the current Qt widget layer is a baseline shell and does not yet include richer layout, navigation, or persisted view state
+- settings is still a placeholder action rather than a real screen
 
 ## Immediate follow-on work
 
 1. Add file-backed or composite log sinks on top of the current in-memory UI log sink.
-2. Bind translated `UserFacingError` payloads into concrete dialog/banner behavior once widget work begins.
-3. Choose the first concrete widget toolkit layer only after the shell and screen-model contracts settle further.
+2. Bind translated `UserFacingError` payloads into concrete dialog/banner behavior on top of the current widget baseline.
+3. Expand the Qt layer with additional screens while preserving the current model-first architecture.

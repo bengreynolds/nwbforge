@@ -641,3 +641,29 @@ Consequences:
 - `InMemoryUiLogSink` and `UiLogHandler` are now the first shared UI log-viewer bridge
 - `DefaultUiErrorPresenter` is now the default translator for `PipelineRuntimeError`, `PackageInstallRuntimeError`, and common validation failures
 - shell and screen models should consume shared observability helpers rather than formatting logs or exceptions ad hoc
+
+### DEC-052: Use PySide6 for the first concrete desktop widget layer
+Status: Accepted
+
+Reasoning:
+- The project needs a real cross-platform desktop widget layer now, and Qt for Python is a mature fit for the planned main-window, dock, dialog, and status-bar patterns.
+- The repository already has toolkit-agnostic UI models, so the first widget slice should focus on binding those models into a real shell rather than reopening the toolkit decision.
+- Keeping the first widget pass narrow reduces churn while still proving that the current UI-model contracts support real desktop components.
+
+Consequences:
+- `PySide6` becomes a core project dependency for the desktop application layer
+- concrete widget code should live under `src/nwbforge/ui/qt/`
+- the first widget slice should cover the main window, log dock, package-install dialog, and conversion-session panel before broader visual expansion
+
+### DEC-053: Keep the first Qt widget slice thin and bind it directly to existing UI models
+Status: Accepted
+
+Reasoning:
+- The repository already has stable shell, package, conversion-session, and observability models, so the first widget layer should prove those contracts rather than introduce a second UI-state system.
+- A narrow `QMainWindow` plus dialog/dock/panel baseline is enough to validate menu wiring, background progress display, log-viewer integration, and package-install interactions.
+- Headless widget tests are sufficient for this phase and avoid adding a heavier GUI-testing dependency before the basic desktop surface settles.
+
+Consequences:
+- widget code under `src/nwbforge/ui/qt/` should bind directly to `DesktopShellModel`, `PackageInstallerScreenModel`, `ConversionSessionScreenModel`, and shared UI observability helpers
+- the first Qt surface remains intentionally narrow: main window, status bar, File menu, log dock, package-install dialog, and conversion-session widget
+- widget tests should run with an offscreen Qt platform and exercise model binding instead of pixel-level UI behavior

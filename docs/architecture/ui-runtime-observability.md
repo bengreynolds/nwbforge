@@ -4,7 +4,7 @@ Last updated: 2026-04-01
 
 ## Purpose
 
-This note captures the required runtime behaviors for the future desktop shell before UI implementation begins.
+This note captures the required runtime behaviors for the desktop shell and the current baseline for surfacing them through UI models and widgets.
 
 ## Required runtime behaviors
 
@@ -59,15 +59,17 @@ Current scope:
 - `ConversionSessionScreenModel` now gives the future conversion-session UI a toolkit-agnostic state model over `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError`
 - `InMemoryUiLogSink` and `UiLogHandler` now provide the first shared log-viewer bridge from standard logging into UI-visible log entries
 - `DefaultUiErrorPresenter` now provides one shared translation policy for package-install and conversion runtime errors across the UI model layer
+- `PySide6` widget bindings now exist for the first desktop shell slice, including a `QMainWindow`, status bar, log dock, package-install dialog, and conversion-session widget that consume the existing UI-model layer
+- the current widget tests run headlessly with an offscreen Qt platform and validate real menu, dialog, progress, and log-viewer bindings
 
 Still pending:
 - file-backed or multi-sink log output beyond the current in-memory viewer sink
-- the actual desktop widget components that render status, progress, dialogs, and logs
+- richer widget behavior beyond the current baseline shell/dialog/panel set
 - broader structured logging coverage across persistence, review, and plugin paths
 - shared widget-level presentation of translated user-facing errors
 
 ## Immediate follow-on work
 
 1. Add a file-backed log sink or composite sink on top of the current in-memory viewer sink.
-2. Bind translated `UserFacingError` payloads into concrete dialog/banner presentation once widget code begins.
-3. Introduce the first widget-level UI layer that renders shell, package-install, and conversion-session state.
+2. Bind translated `UserFacingError` payloads into concrete dialog/banner presentation on top of the current widget baseline.
+3. Expand the current widget layer with additional screens and layout polish without bypassing the existing UI-model contracts.

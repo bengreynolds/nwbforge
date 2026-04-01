@@ -1,0 +1,87 @@
+# Qt Widget Baseline
+
+Last updated: 2026-04-01
+
+## Purpose
+
+This note captures the first concrete desktop widget layer under `src/nwbforge/ui/qt/`. The current goal is not full desktop polish; it is to prove that the existing UI-model and runtime contracts support a real cross-platform desktop shell.
+
+## Implemented widgets
+
+### `MainWindow`
+
+Location: `src/nwbforge/ui/qt/main_window.py`
+
+Responsibilities:
+- host the first `QMainWindow` shell
+- expose the current `File` menu actions
+- bind shell/package/conversion state into the status bar
+- host the conversion-session central widget
+- host the docked log viewer
+- open and close the package-install dialog
+
+### `ConversionSessionWidget`
+
+Location: `src/nwbforge/ui/qt/conversion_session_widget.py`
+
+Responsibilities:
+- render one loaded conversion session
+- show source summaries and output-path entry
+- start preview and execution through `ConversionSessionScreenModel`
+- display current status and final preview/execution result text
+
+### `PackageInstallerDialog`
+
+Location: `src/nwbforge/ui/qt/package_dialog.py`
+
+Responsibilities:
+- render install mode and preset selection
+- render selectable route packages for custom route sets
+- show resolved extras, compatibility issues, and install status
+- submit background installs through `PackageInstallerScreenModel`
+
+### `LogViewerDockWidget`
+
+Location: `src/nwbforge/ui/qt/log_viewer.py`
+
+Responsibilities:
+- render `InMemoryUiLogSink` entries as plain text
+- support the shell's optional log-viewer workflow
+
+### `StateBridge`
+
+Location: `src/nwbforge/ui/qt/bridge.py`
+
+Responsibilities:
+- translate model callbacks into Qt signals so widget updates happen through QObject signal delivery
+
+## Design constraints
+
+- The Qt layer is intentionally thin and should not become a second application-service layer.
+- Widget code should bind to `DesktopShellModel`, `PackageInstallerScreenModel`, `ConversionSessionScreenModel`, and shared UI observability helpers rather than duplicating their logic.
+- Background execution remains owned by runtime executors and backend services, not by widgets.
+- Logging still flows through standard logging plus `UiLogHandler`; widgets only render captured entries.
+
+## Testing baseline
+
+- Widget tests live under `tests/ui/qt/`
+- Tests run headlessly with `QT_QPA_PLATFORM=offscreen`
+- Current coverage validates:
+  - File-menu wiring
+  - log-dock visibility and log capture
+  - package-dialog visibility and route-list binding
+  - conversion-session preview/execution bindings
+
+## Current limitations
+
+- no toolkit styling or visual design system yet
+- settings is still a placeholder action
+- no persisted window/layout state yet
+- log viewing is in-memory only
+- no end-to-end packaged desktop entry point yet
+
+## Immediate follow-on work
+
+1. Add concrete widget-level presentation for `UserFacingError` payloads.
+2. Add file-backed or composite log sinks and expose them through the log viewer.
+3. Add additional screens and navigation while keeping the current model-first boundary intact.
