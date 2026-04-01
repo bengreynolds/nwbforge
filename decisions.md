@@ -693,3 +693,16 @@ Consequences:
 - desktop settings now persist through `UiSettingsService`
 - the first persisted settings surface is intentionally narrow: verbose logging, file logging enabled, and file log path
 - Qt settings widgets should bind to `SettingsScreenModel`, and runtime shell updates should react to applied settings rather than reading dialog controls directly
+
+### DEC-056: Keep conversion review controls inside the conversion-session screen and use a temporary launcher for manual UI testing
+Status: Accepted
+
+Reasoning:
+- Validation outcome and review approval are part of the same user workflow as preview and execution, so splitting them into a separate top-level screen this early would add navigation complexity without improving architecture.
+- The repository needs a practical manual-testing entry point now, but that should not force premature decisions about packaged app startup or installer behavior.
+- A temporary Python launcher is sufficient for development validation as long as it is explicitly treated as a dev-only testing aid rather than a release mechanism.
+
+Consequences:
+- `ConversionSessionScreenModel` and the Qt conversion-session widget now own the first review/approval interaction surface
+- `scripts/run_app.py` is a development/testing launcher only and does not alter the long-term release or packaging plan
+- future packaged desktop startup can replace the temporary launcher without discarding the current screen-model and widget work

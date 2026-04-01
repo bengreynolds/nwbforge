@@ -30,6 +30,8 @@ Responsibilities:
 - show source summaries and output-path entry
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
+- render validation-summary and review-outcome details
+- render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 
 ### `PackageInstallerDialog`
 
@@ -92,6 +94,7 @@ Responsibilities:
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
   - settings-dialog save flow and runtime logging reconfiguration
+  - conversion-session review submission bindings
 
 ## Current limitations
 
@@ -99,6 +102,12 @@ Responsibilities:
 - no persisted window/layout state yet
 - file-backed logging is opt-in and does not yet have an app-level retention/configuration policy
 - no end-to-end packaged desktop entry point yet
+
+## Temporary manual launcher
+
+- `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
+- it uses demo conversion/package behavior so the UI can be exercised without changing release plans
+- it should be treated as a development aid, not as the final application startup path
 
 ## Immediate follow-on work
 

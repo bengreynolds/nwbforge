@@ -56,6 +56,7 @@ Completed:
 - Added the first concrete PySide6 widget baseline over the existing shell, package-install, and conversion-session UI models
 - Added shell-level widget error presentation and an opt-in file-backed/composite UI log-sink path for the PySide6 widget layer
 - Added a persisted desktop settings service plus a model-backed PySide6 settings dialog for verbose logging and file-log configuration
+- Added review/approval controls to the conversion-session UI plus a temporary `scripts/run_app.py` desktop launcher for manual testing
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -70,6 +71,7 @@ In progress:
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - File-backed/composite desktop logging expansion beyond the current opt-in shell log-file path
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
+- Transition from the temporary manual-test launcher to a packaged desktop entry point later in the release pipeline
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -104,6 +106,8 @@ Next:
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
+- The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
+- A temporary Python launcher now exists at `scripts/run_app.py` so the current desktop shell can be exercised manually during development without changing the long-term release plan.
 
 ## Project Vision and Scope
 

@@ -47,12 +47,16 @@ Responsibilities:
 - submit write/validation work through `ConversionExecutor`
 - consume `PipelineProgressEvent` updates directly
 - surface `PipelineRuntimeError` user messages into screen state
+- project validation issues into UI-facing acknowledgement items
+- capture reviewer name, rationale, override, and acknowledgement state for review submission
+- submit approve/reject decisions through `ExecutionReviewService` when review support is configured
 
 Current scope:
 - one loaded session at a time
 - in-memory state only
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
+- review controls are intentionally attached to the same session workflow instead of a separate review screen
 
 ### `SettingsScreenModel`
 
