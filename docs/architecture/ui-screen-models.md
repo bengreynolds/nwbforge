@@ -57,6 +57,7 @@ Current scope:
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
 - review controls are intentionally attached to the same session workflow instead of a separate review screen
+- the same screen model now supports both manual-test demo sessions and real manifest-backed desktop sessions loaded through the desktop bootstrap module
 
 ### `SettingsScreenModel`
 
@@ -99,10 +100,10 @@ The current Qt layer is intentionally thin:
 - the current widget layer supports an opt-in composite sink for file-backed JSON-lines logging, but no broader app-level log retention policy exists yet
 - shell state is in-memory only and not persisted
 - the current Qt widget layer is a baseline shell and does not yet include richer layout, navigation, or persisted view state
-- settings is still a placeholder action rather than a real screen
+- session loading is currently limited to manifest-backed desktop sessions through the temporary launcher/bootstrap path
 
 ## Immediate follow-on work
 
-1. Add file-backed or composite log sinks on top of the current in-memory UI log sink.
-2. Bind translated `UserFacingError` payloads into concrete dialog/banner behavior on top of the current widget baseline.
-3. Expand the Qt layer with additional screens while preserving the current model-first architecture.
+1. Expand desktop session loading beyond the current manifest-backed launcher path.
+2. Add broader shell/navigation state while preserving the current model-first architecture.
+3. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.

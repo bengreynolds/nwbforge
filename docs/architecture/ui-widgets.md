@@ -20,6 +20,7 @@ Responsibilities:
 - host the docked log viewer
 - open and close the package-install dialog
 - open and close the settings dialog
+- host a manually testable real desktop composition built from the current backend services
 
 ### `ConversionSessionWidget`
 
@@ -106,7 +107,8 @@ Responsibilities:
 ## Temporary manual launcher
 
 - `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
-- it uses demo conversion/package behavior so the UI can be exercised without changing release plans
+- it now bootstraps the real desktop service composition from `src/nwbforge/app/desktop.py`
+- it loads either a user-provided `session_manifest.json` path via `--manifest` or a generated demo manifest under `.nwbforge/demo-data/`
 - it should be treated as a development aid, not as the final application startup path
 
 ## Immediate follow-on work

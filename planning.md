@@ -57,6 +57,8 @@ Completed:
 - Added shell-level widget error presentation and an opt-in file-backed/composite UI log-sink path for the PySide6 widget layer
 - Added a persisted desktop settings service plus a model-backed PySide6 settings dialog for verbose logging and file-log configuration
 - Added review/approval controls to the conversion-session UI plus a temporary `scripts/run_app.py` desktop launcher for manual testing
+- Added a real desktop composition/bootstrap module that wires the current shell, settings, package-management, conversion, and review services together for manual testing
+- Switched the temporary `scripts/run_app.py` launcher from demo-only conversion behavior to the real manifest-backed desktop pipeline and screen-model stack
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -83,7 +85,7 @@ Next:
 - Longer-term persistence backend decision beyond the current JSON snapshot store
 
 ### Current application baseline
-- The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
+- The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
@@ -107,7 +109,8 @@ Next:
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
-- A temporary Python launcher now exists at `scripts/run_app.py` so the current desktop shell can be exercised manually during development without changing the long-term release plan.
+- The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the manifest-backed pipeline, package-management services, review service, threaded executors, and current UI models into one manual-testable application stack.
+- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real manifest-backed conversion session rather than a fake conversion executor.
 
 ## Project Vision and Scope
 

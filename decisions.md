@@ -706,3 +706,16 @@ Consequences:
 - `ConversionSessionScreenModel` and the Qt conversion-session widget now own the first review/approval interaction surface
 - `scripts/run_app.py` is a development/testing launcher only and does not alter the long-term release or packaging plan
 - future packaged desktop startup can replace the temporary launcher without discarding the current screen-model and widget work
+
+### DEC-057: Add a real desktop composition module for manual testing before packaged startup exists
+Status: Accepted
+
+Reasoning:
+- The repository needed to move beyond a fake widget/demo shell so the current desktop UI could exercise the real manifest-backed pipeline, review flow, package-management services, and runtime executors together.
+- Packaged desktop startup and installer behavior are still future release concerns, but manual testing is more useful when it runs through the same service composition the eventual app will use.
+- A dedicated composition module keeps the temporary launcher thin and prevents `scripts/run_app.py` from becoming an ad hoc application-service layer.
+
+Consequences:
+- `src/nwbforge/app/desktop.py` is now the real desktop bootstrap/composition entry point for development-time manual testing
+- `scripts/run_app.py` now loads a real manifest-backed conversion session and uses the actual desktop service stack instead of fake conversion behavior
+- future packaged entry points should build on the same composition module rather than bypassing it
