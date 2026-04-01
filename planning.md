@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
 Last updated: 2026-03-31
-Status: Phase 2 in progress
+Status: Late Phase 2 / preparing Phase 3 supported-path MVP
 
 ## Current Execution Status
 
@@ -32,7 +32,9 @@ Completed:
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Core backend contracts
+- Supported-path MVP preparation around the first real NeuroConv-backed adapter
+- Modality-aware assembly expansion beyond the current behavior trace/position baseline
+- Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 
 Next:
 - First real supported acquisition adapter selection and spike
@@ -42,6 +44,12 @@ Next:
 - Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
 - Preview-state persistence and review history beyond the current latest-snapshot baseline
 - Longer-term persistence backend decision beyond the current JSON snapshot store
+
+### Current application baseline
+- The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
+- The only supported-path adapter in code is the repo-native `session_manifest.json` pilot used for architecture validation.
+- The project can write real NWB files for the pilot path, validate them, persist review/report artifacts, and persist latest-state session snapshots.
+- The project does not yet include a real NeuroConv-backed format adapter, a production UI shell, or full multimodal NWB coverage.
 
 ## Project Vision and Scope
 

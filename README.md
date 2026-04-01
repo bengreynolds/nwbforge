@@ -81,6 +81,8 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
+The current application state is still backend-first: there is no user-facing desktop UI yet, no real NeuroConv-backed supported-format adapter yet, and no claim of broad production acquisition-format coverage.
+
 ## Local development
 
 Current development and testing should use the dedicated `nwbforge-dev` Conda environment:
