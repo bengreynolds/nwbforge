@@ -41,9 +41,11 @@ In progress:
 - Supported-path MVP expansion beyond the first NeuroConv-backed CSV intervals route
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
+- UI runtime and observability planning for a non-blocking desktop shell
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
+- Define UI runtime contracts for background execution, progress events, and structured logging
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
 - Additional modality-specific NWB containers beyond the new behavior baseline
 - Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
@@ -153,6 +155,8 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Persist conversion configuration, decisions, assumptions, and provenance
 - Allow users to resume recent execution and review state without reconstructing it from artifact files alone
 - Evaluate NeuroConv support status as a first-class step in supported-path planning
+- Expose actionable runtime status, progress, logs, and user-facing errors during conversion work
+- Support a desktop-style File menu with settings entry points and modular hooks for future tools
 
 ### Non-functional requirements
 - Modular codebase with stable internal contracts
@@ -162,6 +166,10 @@ Planning implication: validation must be a dedicated layer with machine checks a
 - Testable backend components independent of UI
 - Production-grade packaging and update story for Windows, macOS, and Linux
 - Isolated local development environment that does not interfere with unrelated Python installations
+- Structured logging throughout actionable code paths with no reliance on print-based diagnostics
+- Non-blocking conversion execution through background workers, threads, or async orchestration
+- Real progress reporting tied to actual pipeline steps rather than artificial timers
+- User-friendly error propagation from backend failures into the UI without silent failure modes
 
 ### Organizational constraints
 - Lab conventions will differ in naming, metadata completeness, and file layout
@@ -255,11 +263,17 @@ Responsibilities:
 - Metadata entry and review
 - Mapping preview
 - Validation and conversion reporting
+- Status bar reflecting current pipeline stage
+- Progress bar bound to real pipeline progress
+- Optional in-app log viewer
+- File menu with settings entry point and hooks for future tools/extensions
 
 Preferred design direction:
 - Build a workflow-oriented UI, not a generic form dump
 - Model conversion as stages with checkpoints
 - Preserve transparency around automatic versus manual decisions
+- Keep long-running work off the UI thread at all times
+- Surface both concise user-facing status and expandable verbose diagnostics
 
 ### Layer 2: Orchestration and application services
 Responsibilities:
@@ -268,6 +282,8 @@ Responsibilities:
 - Coordinate adapters, normalization, assembly, validation, and reporting
 - Persist intermediate state and decisions
 - Expose resumable session state through explicit persistence services
+- Emit structured stage, progress, and error events for UI consumers
+- Support verbose logging mode and worker-safe progress callbacks
 
 Key rule:
 - Orchestration knows process state, but not format-specific parsing details
@@ -308,9 +324,20 @@ Responsibilities:
 - Run PyNWB validation
 - Run NWB Inspector
 - Build human-readable reports describing mappings, assumptions, warnings, and unresolved items
+- Record structured logs and contextual failure data alongside review/report artifacts when appropriate
 
 Key rule:
 - Validation outcomes should inform UI review and export readiness, not just logs
+
+### Cross-cutting observability and runtime architecture
+Responsibilities:
+- Instrument actionable code paths with structured logging
+- Emit pipeline-stage and percentage progress updates from real processing steps
+- Capture exceptions with contextual metadata suitable for both logs and user-facing errors
+- Support optional in-app log viewing without coupling UI widgets to backend logger internals
+
+Key rule:
+- Logging, progress reporting, and user-facing status are part of the application contract, not optional diagnostics
 
 ### Cross-cutting release and update architecture
 Responsibilities:
@@ -332,6 +359,8 @@ src/nwbforge/
     sessions/
     services/
     workflows/
+    runtime/
+    logging/
   domain/
     models/
     contracts/
@@ -361,6 +390,7 @@ src/nwbforge/
   lab_profiles/
   persistence/
   cli/
+  ui/
 ```
 
 Rationale:
@@ -371,6 +401,8 @@ Rationale:
 - `validation/` and `provenance/` remain explicit first-class concerns
 - `persistence/` now provides a dedicated place for resumable session-state backends
 - `updates/` and `release/` reserve explicit space for installer and updater logic when that work begins
+- `app/runtime/` and `app/logging/` reserve explicit space for background execution, progress emission, and structured logging contracts
+- `ui/` reserves space for the eventual desktop shell, including status, log-viewer, and menu integration
 
 ## UI and Workflow Design
 
@@ -392,6 +424,20 @@ Critical UX principles:
 - Surface missing required metadata early
 - Let users preview NWB organization before final write
 - Support draft sessions and re-runs
+- Keep conversions responsive by running them off the main UI thread
+- Show current high-level stage in a status bar, not only in deep logs
+- Bind progress bars to actual backend progress events and percentages
+- Offer a clean optional log panel or window for verbose diagnostics
+- Present concise user-facing errors with access to deeper logged context
+
+### Planned desktop shell behaviors
+- File menu with:
+  - settings/configuration entry point
+  - reserved hooks/placeholders for future tools and extensions
+- Status bar states such as `loading`, `inspecting`, `normalizing`, `mapping`, `writing`, `validating`, `complete`, and `failed`
+- Progress bar driven by backend-reported percentage updates
+- Toggleable verbose log viewer for troubleshooting and review
+- Clear separation between view state, background worker state, and conversion domain state
 
 ## Metadata Normalization Strategy
 
@@ -425,6 +471,27 @@ Validation requirements:
 - Derive an explicit workflow-facing review outcome from validation results
 - Persist validation outputs in session artifacts
 - Persist resumable execution/review state separately from generated report artifacts
+- Log validation failures with enough context to diagnose source, stage, and affected artifact
+
+### Logging, progress, and error-handling requirements
+
+Structured logging:
+- Instrument actionable code paths with a standard logger
+- Avoid print statements in runtime paths
+- Support normal and verbose conversion logging modes
+- Preserve enough context to correlate logs with session id, source id, adapter id, and pipeline stage
+
+Progress reporting:
+- All conversion processes must be non-blocking
+- Progress updates must come from real processing steps
+- Emit both high-level stage transitions and percentage-based progress
+- Progress reporting contracts should be UI-agnostic and safe for worker-thread or async execution
+
+Error handling:
+- Catch and log exceptions with contextual metadata
+- Convert backend failures into concise, user-friendly UI-facing messages
+- Preserve detailed logs for troubleshooting without exposing raw stack traces as the primary user message
+- Avoid silent failure paths in adapters, orchestration, writing, validation, or persistence
 
 Recommended report sections:
 - Inputs
@@ -597,11 +664,17 @@ Important separation:
 8. Add intracellular and fiber photometry routes.
 9. Add extracellular recording and sorting families.
 10. Add combined workflow routes such as `SpikeGLX & Phy`, `Tiff & Suite2p`, and electrophysiology-plus-behavior sessions.
+11. Introduce the desktop runtime shell with:
+   - background execution infrastructure
+   - structured logging integration
+   - real progress/status event handling
+   - initial File menu, status bar, progress bar, and optional log viewer
 
 Execution rule:
 - single-interface routes should land on the shared interface-adapter framework
 - combined gallery workflows should land on a workflow adapter layer rather than being forced into single-source wrappers
 - each implemented route must include adapter tests plus at least one orchestration-level or integration-level proof path
+- UI implementation should consume runtime/logging/progress contracts rather than reaching directly into conversion internals
 
 ## Risk Register
 
@@ -671,6 +744,7 @@ Current status:
 Current status:
 - One end-to-end NeuroConv-backed supported workflow now exists for CSV time intervals carried into NWB trials
 - Additional supported routes and a minimal operator-facing shell remain outstanding
+- UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit planning requirements
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
@@ -713,6 +787,7 @@ Implementation references:
 - Adapter contract note: [docs/architecture/adapter-contracts.md](docs/architecture/adapter-contracts.md)
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
+- UI runtime note: [docs/architecture/ui-runtime-observability.md](docs/architecture/ui-runtime-observability.md)
 - Review workflow note: [docs/architecture/review-workflow.md](docs/architecture/review-workflow.md)
 - Session persistence note: [docs/architecture/session-persistence.md](docs/architecture/session-persistence.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)

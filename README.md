@@ -76,6 +76,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Shared NeuroConv adapter framework for single-interface supported routes
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
+- Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
 
 The manifest-backed supported-path pilot adapter remains a repo-native fixture source for architecture validation. In addition, the repo now includes a real NeuroConv-backed CSV time-interval route that carries trial-style interval data into NWB trials.
 
@@ -86,6 +87,8 @@ All current implementation slices are backed by tests and documented under `docs
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
 The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The first real NeuroConv-backed supported route is now in place for CSV time-interval/trial data, and a shared NeuroConv adapter framework now exists for additional single-interface routes, but broader supported-format coverage is still ahead.
+
+UI/runtime expectations are now explicit in the plan: long-running conversions must be non-blocking, actionable code paths must use structured logging rather than print statements, progress must come from real pipeline work, and the future desktop shell should expose a File menu, status bar, progress bar, and optional log viewer on top of explicit runtime contracts.
 
 ## Local development
 
@@ -112,4 +115,4 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current behavior trace/position baseline into richer modality-specific and multimodal content.
 3. Add the next real NeuroConv-backed supported adapter from the approved route catalog, starting with the remaining text/tabular and behavior-pose families.
-4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.
+4. Define runtime contracts for stage/progress/error events and structured logging before starting the desktop shell.

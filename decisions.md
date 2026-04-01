@@ -394,3 +394,17 @@ Consequences:
 - New single-interface NeuroConv routes should inherit from a shared framework rather than duplicating wrapper logic
 - The current CSV intervals adapter should be refactored onto that framework as the first proof case
 - Combined gallery workflows will need a distinct workflow-adapter layer instead of being forced into single-source adapter abstractions
+
+### DEC-033: Treat logging, progress, and background execution as first-class application contracts
+Status: Accepted
+
+Reasoning:
+- The product is intended to become a desktop application for non-technical lab users, so responsiveness and runtime transparency are part of the core user experience rather than optional polish.
+- Structured logging, stage/status reporting, and user-facing error propagation need to be designed into the application boundary before the UI shell is built.
+- If these concerns are left implicit, the likely result is thread-blocking conversions, print-based diagnostics, weak progress reporting, and inconsistent UI error behavior.
+
+Consequences:
+- actionable runtime paths should use structured logging rather than print statements
+- long-running conversion work must run through background execution infrastructure
+- progress reporting must emit real stage and percentage updates that the UI can bind to status and progress components
+- the desktop shell should include a File menu, status bar, progress bar, and optional log viewer on top of explicit runtime contracts

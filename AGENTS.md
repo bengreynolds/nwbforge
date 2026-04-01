@@ -73,6 +73,8 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Prefer the simplest correct documented PyNWB container and method rather than wrapping built-in APIs without need
 - When `pynwb.file` or another standard PyNWB module solves the problem directly, use it instead of inventing a parallel abstraction
 - For software and workflows listed in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md), assume NeuroConv should be investigated first and used whenever feasible
+- Treat logging, progress reporting, and user-facing runtime status as explicit cross-layer contracts, not incidental UI behavior
+- Keep long-running conversions off the UI thread and route them through background workers, threads, or async-safe runtime services
 
 ## Documentation Rules
 
@@ -90,6 +92,8 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Do not represent custom lab concepts as standard NWB semantics unless the meaning is actually aligned
 - If NeuroConv does not support a format, state that explicitly before implementing a direct PyNWB path
 - If a representation would require an NWB extension, state that explicitly before implementing it
+- Do not use `print` statements in actionable runtime paths; use structured logging instead
+- Do not swallow exceptions silently; log context and surface a user-facing error path
 
 ## Testing and Validation Rule
 
@@ -97,6 +101,7 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Add validation coverage for conversion-path changes where feasible
 - Treat schema validation and best-practice inspection as part of the expected workflow, not optional cleanup
 - If testing cannot be performed, state that clearly in commits, PR notes, or task summaries
+- When runtime/event behavior changes, add tests for stage transitions, progress emission, or error propagation where feasible
 
 ## Definition of Done
 
@@ -121,3 +126,5 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - For supported-path work, check the NeuroConv Conversion Gallery before proposing a manual converter
 - For direct NWB writing, prefer documented PyNWB patterns for `NWBFile`, `Subject`, acquisitions, processing modules, stimuli, intervals, units, ophys, and ecephys containers
 - Use [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md) as the repo's approved NeuroConv-first route catalog
+- Instrument actionable code paths with standard logging, not ad hoc printing
+- Prefer runtime contracts that expose stage, progress, and error events cleanly to the future UI
