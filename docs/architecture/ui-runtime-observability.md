@@ -54,15 +54,17 @@ Current scope:
 - `ThreadedPackageInstallationExecutor` now runs route-based package installs off the calling thread and preserves install-stage progress/failure events
 - structured logging is now implemented across `ConversionPipelineService`, `NeuroConvSupportedExecutionService`, and `ThreadedConversionExecutor`
 - log records now carry stable context payloads for session id, source id, adapter id, output path, and related runtime details where applicable
+- `DesktopShellModel` now gives the future UI a toolkit-agnostic shell state for File-menu actions, status-bar text, progress display, and log-viewer visibility
+- `PackageInstallerScreenModel` now gives the future setup and extension-install UI a toolkit-agnostic state model over `PackageManagementController`
 
 Still pending:
 - a log-sink abstraction that can feed file output and an in-app viewer
-- the actual desktop UI components that render status, progress, and logs
+- the actual desktop widget components that render status, progress, dialogs, and logs
 - broader structured logging coverage across persistence, review, and plugin paths
-- the route-based package-management UI for initial setup and later extension installation
+- conversion-session UI models beyond the initial package-management screen model
 
 ## Immediate follow-on work
 
 1. Add a log-sink abstraction that can feed file output and an in-app log viewer.
 2. Add explicit user-facing error translation policy on top of `PipelineRuntimeError` and package-install runtime errors.
-3. Introduce the first UI-facing runtime consumer for conversion and package-install status/progress events.
+3. Introduce the first conversion-session UI model that consumes pipeline status/progress events directly.

@@ -50,6 +50,7 @@ Completed:
 - Added a threaded runtime executor for package-install execution
 - Added a thin package-management controller as the first UI-facing consumer of the package-management backend
 - Applied category-first packaging to the supported tabular family under `src/nwbforge/adapters/supported/tabular/`
+- Added the first toolkit-agnostic desktop UI model layer with a shell model and package-installer screen model
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -60,6 +61,7 @@ In progress:
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - First UI-facing screen/controller layer on top of the current package-management backend services
+- First conversion-session UI models on top of the current runtime and pipeline contracts
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -88,6 +90,7 @@ Next:
 - The route-based package layer now also includes an install-execution service so future setup and extension-install screens can run installs, surface progress, log context, and present user-facing errors without owning subprocess logic.
 - The route-based package layer now also has a threaded runtime executor, so future setup and extension-install screens can run installs off the UI thread while preserving queued, progress, completion, and failure events.
 - The route-based package layer now also has a thin `PackageManagementController`, giving the future UI one small binding point for route listing, install preview, saved-selection loading, and background install execution.
+- The repository now also includes a first toolkit-agnostic `ui/` layer: a `DesktopShellModel` for File-menu/status/log-viewer state and a `PackageInstallerScreenModel` for setup and extension-install flows over the package-management controller.
 
 ## Project Vision and Scope
 
@@ -765,6 +768,7 @@ Execution rule:
 - combined gallery workflows should land on a workflow adapter layer rather than being forced into single-source wrappers
 - each implemented route must include adapter tests plus at least one orchestration-level or integration-level proof path
 - UI implementation should consume runtime/logging/progress contracts rather than reaching directly into conversion internals
+- Start the UI with toolkit-agnostic shell and screen models before committing to widget-specific code
 
 ## Risk Register
 
@@ -831,6 +835,7 @@ Current status:
 - Structured logging is now instrumented across the core runtime path, including `ConversionPipelineService`, `NeuroConvSupportedExecutionService`, and `ThreadedConversionExecutor`
 - Supported CSV, Excel, image, and audio routes can now execute through direct NeuroConv conversion, with repository-owned PyNWB assembly providing the base `NWBFile` and remaining the fallback, custom, and hybrid path
 - The package-management backend now also includes a thin controller layer, so the future desktop UI can consume one small binding surface instead of wiring directly to planner, service, and executor components
+- The first toolkit-agnostic UI models now exist under `src/nwbforge/ui/`, which lets the repo start desktop-shell development before choosing a concrete widget toolkit
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
@@ -884,6 +889,7 @@ Implementation references:
 - Application-service note: [docs/architecture/application-services.md](docs/architecture/application-services.md)
 - Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
 - UI runtime note: [docs/architecture/ui-runtime-observability.md](docs/architecture/ui-runtime-observability.md)
+- UI screen-model note: [docs/architecture/ui-screen-models.md](docs/architecture/ui-screen-models.md)
 - Review workflow note: [docs/architecture/review-workflow.md](docs/architecture/review-workflow.md)
 - Session persistence note: [docs/architecture/session-persistence.md](docs/architecture/session-persistence.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)

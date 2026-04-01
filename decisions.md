@@ -602,3 +602,16 @@ Consequences:
 - the shared CSV/Excel interval family now lives under `src/nwbforge/adapters/supported/tabular/`
 - future supported families should continue to migrate toward category-first packages before adding more top-level route files
 - public exports stay stable while the internal supported-adapter layout becomes more consistent
+
+### DEC-049: Start desktop UI development with toolkit-agnostic shell and screen models
+Status: Accepted
+
+Reasoning:
+- The repository now has enough backend runtime and package-management contracts that UI development can begin without waiting for a final widget toolkit decision.
+- Jumping straight into widget code would mix view concerns with still-settling shell and workflow behavior.
+- A small UI-model layer lets the team validate menu, status, progress, and setup-flow behavior while keeping the backend/UI boundary explicit.
+
+Consequences:
+- `src/nwbforge/ui/` is now the home for toolkit-agnostic shell and screen models
+- the first UI implementation slice focuses on `DesktopShellModel` and `PackageInstallerScreenModel` rather than concrete widgets
+- future widget code should bind to these models instead of duplicating package planning, install execution, or runtime-state logic in views
