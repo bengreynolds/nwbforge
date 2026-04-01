@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from nwbforge.app.runtime.contracts import ConversionExecutor
 from nwbforge.app.runtime.models import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ProgressCallback
-from nwbforge.app.services import ConversionPipelineService, ConversionPreview
+from nwbforge.app.services.models import ConversionPreview
 from nwbforge.domain.models import ConversionSession
+
+if TYPE_CHECKING:
+    from nwbforge.app.services.pipeline import ConversionPipelineService
 
 
 class ThreadedConversionExecutor(ConversionExecutor):
