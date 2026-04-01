@@ -45,6 +45,7 @@ Completed:
 - Added persisted post-execution review decisions and override records as machine-readable artifacts
 - Added resumable JSON session snapshots for execution and review state
 - Dedicated isolated Conda workflow for current development and testing
+- Added backend package-management service contracts for future setup and extension-install UI flows
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -78,6 +79,7 @@ Next:
 - The first concrete category-first package refactor is now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/`, which is the intended direction for future supported families.
 - Development workflow now also requires explicit Codex subagent orchestration guidance: use at most three concurrent subagents, keep state isolated, collate results deterministically, and fall back to sequential handling on failure.
 - Package-management work is now split between developer bootstrap and future UI flows: setup remains tied to the dedicated Conda environment, while the future UI should expose route-name package selection and post-setup installs without forcing a full reinstall.
+- The route-based package layer now includes a service boundary for future UI consumers: screens should call backend package-management services for route listing, install preview, persisted selection loading, and compatibility validation rather than reaching directly into setup scripts.
 
 ## Project Vision and Scope
 
@@ -307,6 +309,7 @@ Responsibilities:
 - Expose resumable session state through explicit persistence services
 - Emit structured stage, progress, and error events for UI consumers
 - Support verbose logging mode and worker-safe progress callbacks
+- Provide backend service contracts for package-management screens and setup flows
 
 Key rule:
 - Orchestration knows process state, but not format-specific parsing details
@@ -480,6 +483,12 @@ Critical UX principles:
 - Package selection should be curated around route names rather than raw dependency names.
 - Selected package sets should persist so repeated developer setup or future UI setup flows can reuse the last selection.
 - Later package installation should reuse the same route catalog through `File -> Install Extensions / Packages`.
+- Future UI screens should call a backend package-management service for:
+  - available route listing
+  - preset expansion
+  - install preview
+  - compatibility validation
+  - persisted selection loading/saving
 
 ## Metadata Normalization Strategy
 

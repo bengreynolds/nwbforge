@@ -537,3 +537,16 @@ Consequences:
 - the dedicated Conda setup flow should support `minimal`, `selected`, and `full` install modes
 - package selection should persist outside tracked source files so repeated setup can reuse the last choice
 - future UI package management should use the same route catalog for initial setup and `File -> Install Extensions / Packages`
+
+### DEC-044: Put future UI package-install flows behind backend package-management services
+Status: Accepted
+
+Reasoning:
+- The future UI should not need to understand planner internals, preset expansion rules, or persisted selection storage details.
+- Setup scripts and UI flows should share one backend service boundary for route listing, install preview, and compatibility validation.
+- Separating the service layer now keeps future UI package-management work thin and reduces the risk of duplicating install logic across scripts and screens.
+
+Consequences:
+- the route-based package layer now includes explicit service-facing request, preview, and compatibility models
+- future setup and extension-install screens should call backend package-management services rather than planner helpers directly
+- setup scripts remain an execution path, not the source of truth for package-management logic

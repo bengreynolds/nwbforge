@@ -26,6 +26,7 @@ The repository now includes a Python package-planning layer under `src/nwbforge/
 - named presets
 - install-plan resolution for `minimal`, `selected`, and `full` modes
 - persisted selection state for repeated setup runs
+- backend package-management service contracts for future UI or setup consumers
 
 Current route package catalog examples:
 - `audio`
@@ -56,6 +57,26 @@ The current setup flow persists the selected install plan at:
 
 This file is local state, not tracked source.
 
+## Backend service boundary
+
+The route-based package layer now includes a backend service boundary so future UI components do not need to call planner helpers directly.
+
+Current service-facing models:
+- `PackageInstallRequest`
+- `PackageCompatibilityIssue`
+- `PackageInstallPreview`
+
+Current service:
+- `PackageManagementService`
+
+Current service responsibilities:
+- list available route packages
+- expose preset route groupings
+- load the last saved selection
+- preview an install request
+- surface compatibility warnings or blocking issues
+- persist a validated selection when requested
+
 ## Future UI expectations
 
 Initial setup should:
@@ -63,6 +84,7 @@ Initial setup should:
 - let the user select route names explicitly
 - validate compatibility before starting installs
 - show progress and errors during install work
+- call the backend package-management service for preview/validation rather than duplicating planner logic in UI code
 
 Post-setup package installation should be accessible from:
 - `File -> Install Extensions / Packages`
@@ -71,3 +93,4 @@ That later flow should:
 - install additional route packages without requiring a full reinstall
 - reuse the same route catalog and preset language
 - report progress and failures through the standard runtime/logging model
+- call the same backend package-management service boundary used by setup
