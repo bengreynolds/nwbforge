@@ -888,3 +888,29 @@ Consequences:
 - the conversion workspace now shows pathway and source-count summaries in the session area
 - the selected source now exposes location, role, adapter, and media context directly in the UI
 - future hybrid work can build on the same source-detail area instead of inventing a second source-inspection surface
+
+### DEC-071: Represent the first hybrid workflow with a desktop session descriptor instead of a special adapter
+Status: Accepted
+
+Reasoning:
+- The first hybrid workflow needed to combine existing supported and custom sources without breaking the layered architecture.
+- A hybrid descriptor is a workflow/bootstrap concern, not a scientific source format in its own right.
+- Keeping hybrid composition in desktop/session loading allows the existing per-source adapters, normalization, mapping, provenance, and validation contracts to do the real work.
+
+Consequences:
+- the desktop app can now load `hybrid_session.json` sources that compose multiple real inputs into one `HYBRID` session
+- hybrid workflow composition stays outside the adapter layer
+- the first hybrid baseline combines supported and custom sources while preserving visible provenance and validation
+
+### DEC-072: Declare the first-pass milestone complete once supported, custom, and hybrid desktop workflows are all testable
+Status: Accepted
+
+Reasoning:
+- The first-pass gate was explicitly defined around a coherent desktop product plus representative supported/custom/hybrid workflows.
+- After the hybrid workflow landed, the repository satisfied the documented completion gate more accurately than it fit the earlier “entering first-pass milestone” label.
+- Marking the milestone complete creates a clean handoff into internal testing without pretending that release engineering or broad route expansion are finished.
+
+Consequences:
+- `planning.md` now reports the repository as `first pass complete / ready for internal testing`
+- the next phase is structured internal testing and issue triage, not additional gate-defining feature work
+- release engineering and broader supported-route growth remain post-first-pass priorities

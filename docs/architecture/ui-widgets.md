@@ -21,7 +21,7 @@ Responsibilities:
 - open and close the package-install dialog
 - open and close the settings dialog
 - host a manually testable real desktop composition built from the current backend services
-- open manifest-backed sessions from disk through `File -> Open Session...`
+- open supported, custom, and hybrid sessions from disk through `File -> Open Session...`
 - rebuild the `Open Recent` submenu from persisted session-history state
 - expose explicit `New Session` and `Reopen Last Session` actions
 
@@ -125,11 +125,11 @@ Responsibilities:
 
 - `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
 - it now bootstraps the real desktop service composition from `src/nwbforge/app/desktop.py`
-- it loads either a user-provided `session_manifest.json` or `custom_session.json` path via `--session`, the last-opened session from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
+- it loads either a user-provided `session_manifest.json`, `custom_session.json`, or `hybrid_session.json` path via `--session`, the last-opened session from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
 - it should be treated as a development aid, not as the final application startup path
 
 ## Immediate follow-on work
 
 1. Add additional screens and navigation while keeping the current model-first boundary intact.
-2. Extend the current workspace for the first hybrid workflow without losing the new source/session clarity.
+2. Improve multi-source/hybrid provenance presentation without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

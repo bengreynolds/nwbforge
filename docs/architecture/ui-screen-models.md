@@ -59,7 +59,7 @@ Current scope:
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
 - review controls are intentionally attached to the same session workflow instead of a separate review screen
-- the same screen model now supports demo sessions plus real supported/custom desktop sessions loaded through the desktop bootstrap module
+- the same screen model now supports demo sessions plus real supported/custom/hybrid desktop sessions loaded through the desktop bootstrap module
 
 ### `SettingsScreenModel`
 
@@ -87,7 +87,7 @@ Responsibilities:
 ## Widget binding baseline
 
 - `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
-- the shell now also owns the first file-based session-loading step through `File -> Open Session...`, with supported/custom session loading delegated to the desktop bootstrap helper
+- the shell now also owns the first file-based session-loading step through `File -> Open Session...`, with supported/custom/hybrid session loading delegated to the desktop bootstrap helper
 - the shell's recent-session submenu is now rebuilt from settings-backed recent-session state rather than widget-local memory
 - the shell now also owns explicit `New Session` and `Reopen Last Session` actions while the app remains single-session
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
@@ -107,10 +107,10 @@ The current Qt layer is intentionally thin:
 - the current widget layer supports an opt-in composite sink for file-backed JSON-lines logging, but no broader app-level log retention policy exists yet
 - shell state is in-memory only and not persisted
 - the current Qt widget layer is a baseline shell and does not yet include richer layout, navigation, or persisted view state
-- hybrid desktop session loading is not implemented yet
+- multi-session navigation is still not implemented; the shell still works on one loaded session at a time
 
 ## Immediate follow-on work
 
-1. Implement the first hybrid desktop session flow on top of the current supported/custom loading path.
-2. Add broader shell/navigation state while preserving the current model-first architecture.
-3. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
+1. Add broader shell/navigation state while preserving the current model-first architecture.
+2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
+3. Strengthen multi-source presentation now that hybrid sessions are real desktop flows.

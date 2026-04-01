@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
 Last updated: 2026-04-01
-Status: Late Phase 2 / entering first-pass desktop product milestone
+Status: First pass complete / ready for internal testing
 
 ## Current Execution Status
 
@@ -73,11 +73,10 @@ Completed:
 - Promoted the right-hand conversion workspace into explicit desktop tabs for run overview, review work, and generated artifacts
 - Added the first real custom-path workflow through a repo-owned `custom_session.json` adapter, desktop session loader, and direct PyNWB execution path
 - Added richer session/source detail presentation to the desktop conversion panel, including explicit pathway, source count, and selected-source details
+- Added the first real hybrid-path workflow through a desktop `hybrid_session.json` descriptor that combines supported and custom sources in one session
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Restructuring the desktop UI toward a finished-feeling first-pass product surface instead of a collection of functional panels
-- Hybrid-path workflow expansion beyond the current supported-path and custom-path baseline
 - Operational hardening around persistence, recovery, reporting, and reviewability for a first serious manual-testing round
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
@@ -88,20 +87,21 @@ In progress:
 - Transition from the temporary manual-test launcher to a more realistic app startup path for internal testing
 
 Next:
-- Continue restructuring the desktop UI so the shell reads like a finished desktop product rather than an engineering surface
-- Land the first real hybrid-path workflow slice that combines supported and custom inputs in one session
+- Begin formal first-pass internal testing in the dedicated Conda environment
+- Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
 - Harden operational concerns around preview persistence, review history, recovery, and artifact/report navigation
 - Expand structured logging from the current core runtime services into broader persistence, review, and plugin paths
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
-- Keep release engineering planned but defer implementation until after first-pass manual testing
+- Keep release engineering planned but defer implementation until after first-pass internal testing
 
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
+- The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
-- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real workflow route is implemented yet.
+- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real direct-NeuroConv workflow route is implemented yet.
 - The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for combined manifest-plus-image, manifest-plus-audio, manifest-plus-FicTrac, and manifest-plus-DeepLabCut supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
 - Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, and threaded executor.
@@ -122,8 +122,8 @@ Next:
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
 - The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the current supported/custom pipeline, package-management services, review service, threaded executors, and UI models into one manual-testable application stack.
-- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real supported or custom conversion session rather than a fake conversion executor.
-- The desktop shell can now load supported and custom sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
+- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real supported, custom, or hybrid conversion session rather than a fake conversion executor.
+- The desktop shell can now load supported, custom, and hybrid sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
 - The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
 - The desktop settings path now also persists `last_open_session_path` and a bounded recent-session list, and the shell uses that state to populate `Open Recent` and to prefer the last-opened manifest on startup when no explicit path is supplied.
 - The conversion-session panel now also supports direct actions for opening a selected artifact or its containing folder, which gives immediate desktop access to validation reports and later review artifacts.
@@ -167,7 +167,7 @@ Required direction:
 
 Current status:
 - satisfied for the custom-path requirement by the `custom_session.json` desktop workflow baseline
-- still outstanding for the hybrid-path requirement
+- satisfied for the hybrid-path requirement by the `hybrid_session.json` desktop workflow baseline
 
 ### Priority 3: Operational concerns for internal testing
 
@@ -215,6 +215,9 @@ Current status:
 - at least one real hybrid-path workflow is implemented end to end
 - hybrid sessions can combine supported and custom inputs with visible provenance and validation
 
+Current status:
+- satisfied by the `hybrid_session.json` desktop workflow baseline
+
 ### Operational baseline
 - session state, review state, and key artifacts are persisted well enough for repeated manual testing
 - user-facing error handling, structured logging, and progress reporting are reliable across the core desktop workflow
@@ -229,7 +232,11 @@ When these conditions are met, the repository should explicitly report:
 - first pass complete
 - ready for internal testing
 
-Only after that milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
+Current milestone result:
+- first pass complete
+- ready for internal testing
+
+Only after this milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
 
 ## Project Vision and Scope
 

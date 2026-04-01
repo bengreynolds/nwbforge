@@ -72,10 +72,9 @@ Current flow:
 - the custom source format is repo-defined, not yet tied to a real departmental lab dataset
 - no custom extension / NDX path is implemented yet
 - custom metadata inside acquisition or device records still needs broader review-first handling in later slices if more lab-specific fields become important
-- the first hybrid workflow is still not implemented
 
 ## Immediate follow-on work
 
-1. Implement the first hybrid workflow that combines a supported source with a custom source in one desktop session.
-2. Expand review/report presentation so custom-path assumptions are even more visible in the desktop UI.
-3. Decide when custom concepts should remain descriptive metadata versus become an NWB extension.
+1. Expand review/report presentation so custom-path assumptions are even more visible in the desktop UI.
+2. Decide when custom concepts should remain descriptive metadata versus become an NWB extension.
+3. Validate the current custom-path baseline against a real departmental lab dataset.
