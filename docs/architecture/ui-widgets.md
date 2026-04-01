@@ -48,6 +48,15 @@ Responsibilities:
 - render `InMemoryUiLogSink` entries as plain text
 - support the shell's optional log-viewer workflow
 
+### Shell-level error presentation
+
+Location: `src/nwbforge/ui/qt/main_window.py`
+
+Responsibilities:
+- observe `DesktopShellState.last_user_error`
+- present translated user-facing errors through a central warning dialog
+- keep package and conversion widgets free of ad hoc popup policy
+
 ### `StateBridge`
 
 Location: `src/nwbforge/ui/qt/bridge.py`
@@ -61,6 +70,7 @@ Responsibilities:
 - Widget code should bind to `DesktopShellModel`, `PackageInstallerScreenModel`, `ConversionSessionScreenModel`, and shared UI observability helpers rather than duplicating their logic.
 - Background execution remains owned by runtime executors and backend services, not by widgets.
 - Logging still flows through standard logging plus `UiLogHandler`; widgets only render captured entries.
+- The shell may mirror logs through `CompositeUiLogSink` so the docked log viewer and a file-backed JSON-lines sink receive the same entries.
 
 ## Testing baseline
 
@@ -77,7 +87,7 @@ Responsibilities:
 - no toolkit styling or visual design system yet
 - settings is still a placeholder action
 - no persisted window/layout state yet
-- log viewing is in-memory only
+- file-backed logging is opt-in and does not yet have an app-level retention/configuration policy
 - no end-to-end packaged desktop entry point yet
 
 ## Immediate follow-on work

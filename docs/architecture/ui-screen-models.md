@@ -76,10 +76,11 @@ The current Qt layer is intentionally thin:
 - widgets do not reimplement package planning or conversion lifecycle logic
 - widgets render model state and invoke model/controller actions
 - the toolkit-agnostic models remain the primary UI-state contracts for the application
+- shell-level dialog presentation now consumes `DesktopShellState.last_user_error` so package and conversion widgets still do not own popup policy
 
 ## Current limitations
 
-- only an in-memory log-viewer sink is implemented; file-backed or composite log sinks still remain to be added
+- the current widget layer supports an opt-in composite sink for file-backed JSON-lines logging, but no broader app-level log retention policy exists yet
 - shell state is in-memory only and not persisted
 - the current Qt widget layer is a baseline shell and does not yet include richer layout, navigation, or persisted view state
 - settings is still a placeholder action rather than a real screen

@@ -61,15 +61,16 @@ Current scope:
 - `DefaultUiErrorPresenter` now provides one shared translation policy for package-install and conversion runtime errors across the UI model layer
 - `PySide6` widget bindings now exist for the first desktop shell slice, including a `QMainWindow`, status bar, log dock, package-install dialog, and conversion-session widget that consume the existing UI-model layer
 - the current widget tests run headlessly with an offscreen Qt platform and validate real menu, dialog, progress, and log-viewer bindings
+- the current shell can optionally mirror UI-visible logs into a JSON-lines file through a composite sink while retaining the in-memory log viewer
+- shell-level `UserFacingError` payloads are now presented through real warning dialogs in the Qt shell instead of only appearing as status-bar text
 
 Still pending:
-- file-backed or multi-sink log output beyond the current in-memory viewer sink
 - richer widget behavior beyond the current baseline shell/dialog/panel set
 - broader structured logging coverage across persistence, review, and plugin paths
-- shared widget-level presentation of translated user-facing errors
+- broader dialog/banner presentation beyond the current shell-level warning dialogs
 
 ## Immediate follow-on work
 
-1. Add a file-backed log sink or composite sink on top of the current in-memory viewer sink.
-2. Bind translated `UserFacingError` payloads into concrete dialog/banner presentation on top of the current widget baseline.
+1. Expand the current file-backed/composite log-sink path into a durable app-level default and retention policy.
+2. Add richer dialog/banner presentation on top of the current shell-level warning-dialog baseline.
 3. Expand the current widget layer with additional screens and layout polish without bypassing the existing UI-model contracts.

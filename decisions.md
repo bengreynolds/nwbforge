@@ -667,3 +667,16 @@ Consequences:
 - widget code under `src/nwbforge/ui/qt/` should bind directly to `DesktopShellModel`, `PackageInstallerScreenModel`, `ConversionSessionScreenModel`, and shared UI observability helpers
 - the first Qt surface remains intentionally narrow: main window, status bar, File menu, log dock, package-install dialog, and conversion-session widget
 - widget tests should run with an offscreen Qt platform and exercise model binding instead of pixel-level UI behavior
+
+### DEC-054: Mirror desktop logs through a composite sink and surface shell errors centrally
+Status: Accepted
+
+Reasoning:
+- The in-app log viewer should not be the only durable record of desktop runtime activity; a file-backed sink is needed without duplicating logging logic in widgets.
+- Package-install and conversion screens already translate backend failures into shared `UserFacingError` payloads, so the shell should own the actual dialog presentation rather than each widget inventing its own popup policy.
+- Keeping both behaviors at the shell/observability boundary preserves the model-first UI design and avoids leaking file I/O or dialog policy into backend services.
+
+Consequences:
+- the desktop shell may use a `CompositeUiLogSink` to mirror entries to both the in-memory viewer sink and a file-backed JSON-lines sink
+- widget code should rely on `DesktopShellState.last_user_error` for centralized user-error presentation rather than opening ad hoc dialogs from package or conversion widgets
+- the first durable desktop log artifact format is JSON-lines and should remain easy to inspect during development and support workflows

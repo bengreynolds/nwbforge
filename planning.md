@@ -54,6 +54,7 @@ Completed:
 - Added the first conversion-session screen model over `ConversionExecutor` and pipeline runtime events
 - Added a shared UI observability layer with an in-memory log sink, logging handler bridge, and shared user-facing error presenter
 - Added the first concrete PySide6 widget baseline over the existing shell, package-install, and conversion-session UI models
+- Added shell-level widget error presentation and an opt-in file-backed/composite UI log-sink path for the PySide6 widget layer
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -66,6 +67,7 @@ In progress:
 - First UI-facing screen/controller layer on top of the current package-management backend services
 - File-backed/composite log sinks and widget-level presentation on top of the new UI model layer
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
+- File-backed/composite desktop logging expansion beyond the current opt-in shell log-file path
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -98,6 +100,7 @@ Next:
 - The `ui/` layer now also includes a `ConversionSessionScreenModel`, which consumes `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError` directly instead of duplicating preview/execution workflow logic in future widgets.
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
+- The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 
 ## Project Vision and Scope
 
