@@ -68,7 +68,11 @@ class MainWindow(QMainWindow):
         self._build_file_menu()
         self._build_status_bar()
 
-        self._conversion_widget = ConversionSessionWidget(self._conversion_screen_model, self)
+        self._conversion_widget = ConversionSessionWidget(
+            self._conversion_screen_model,
+            self,
+            output_path_selector=self._choose_output_path,
+        )
         self.setCentralWidget(self._conversion_widget)
 
         self._log_dock = LogViewerDockWidget(self)
@@ -204,6 +208,24 @@ class MainWindow(QMainWindow):
             return
 
         self._load_session(Path(selected_path))
+
+    def _choose_output_path(self, current_path: Path | None) -> Path | None:
+        initial_path = current_path
+        if initial_path is None:
+            output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
+            if output_directory is not None and self._conversion_screen_model.state.session is not None:
+                initial_path = output_directory / f"{self._conversion_screen_model.state.session.session_id}.nwb"
+
+        start_location = str(initial_path) if initial_path is not None else str(Path.cwd())
+        selected_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Choose NWB Output Path",
+            start_location,
+            "NWB files (*.nwb)",
+        )
+        if not selected_path:
+            return None
+        return Path(selected_path)
 
     def _new_session(self) -> None:
         self._conversion_screen_model.clear_session()

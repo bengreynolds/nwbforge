@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtGui import QDesktopServices
@@ -31,9 +32,16 @@ from nwbforge.ui.qt.bridge import StateBridge
 class ConversionSessionWidget(QWidget):
     """Widget bound to `ConversionSessionScreenModel`."""
 
-    def __init__(self, screen_model: ConversionSessionScreenModel, parent=None) -> None:
+    def __init__(
+        self,
+        screen_model: ConversionSessionScreenModel,
+        parent=None,
+        *,
+        output_path_selector: Callable[[Path | None], Path | None] | None = None,
+    ) -> None:
         super().__init__(parent)
         self._screen_model = screen_model
+        self._output_path_selector = output_path_selector
 
         self._session_label = QLabel("No session loaded.", self)
         self._source_list = QListWidget(self)
@@ -44,6 +52,8 @@ class ConversionSessionWidget(QWidget):
         self._output_path_edit = QLineEdit(self)
         self._output_path_edit.setPlaceholderText("Output NWB path")
         self._output_path_edit.textChanged.connect(self._refresh_execute_enabled)
+        self._choose_output_button = QPushButton("Choose Output...", self)
+        self._choose_output_button.clicked.connect(self._choose_output_path)
         self._validation_summary_label = QLabel("Validation summary: not available.", self)
         self._review_outcome_label = QLabel("Review outcome: not available.", self)
         self._review_status_label = QLabel("Review status: not reviewed.", self)
@@ -82,6 +92,7 @@ class ConversionSessionWidget(QWidget):
         button_row = QHBoxLayout()
         button_row.addWidget(self._preview_button)
         button_row.addWidget(self._execute_button)
+        button_row.addWidget(self._choose_output_button)
 
         review_button_row = QHBoxLayout()
         review_button_row.addWidget(self._approve_button)
@@ -167,6 +178,7 @@ class ConversionSessionWidget(QWidget):
                 self._rationale_edit.setPlainText(state.review_rationale)
 
         self._preview_button.setEnabled(state.can_run_preview)
+        self._choose_output_button.setEnabled(state.session is not None and not state.is_execution_running)
         self._refresh_execute_enabled()
         self._approve_button.setEnabled(state.can_submit_review)
         self._reject_button.setEnabled(state.can_submit_review)
@@ -267,6 +279,15 @@ class ConversionSessionWidget(QWidget):
             self._status_label.setText("Output path is required before writing NWB.")
             return
         self._screen_model.start_execution(Path(output_text))
+
+    def _choose_output_path(self) -> None:
+        if self._output_path_selector is None:
+            return
+        current_text = self._output_path_edit.text().strip()
+        selected = self._output_path_selector(Path(current_text) if current_text else None)
+        if selected is None:
+            return
+        self._output_path_edit.setText(str(selected))
 
     def _on_rationale_changed(self) -> None:
         self._screen_model.set_review_rationale(self._rationale_edit.toPlainText())

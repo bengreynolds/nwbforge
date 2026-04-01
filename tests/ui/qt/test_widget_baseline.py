@@ -245,6 +245,31 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     window.close()
 
 
+def test_conversion_widget_chooses_output_path(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (str(tmp_path / "chosen-output.nwb"), "NWB files (*.nwb)"),
+    )
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._choose_output_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._output_path_edit.text().endswith("chosen-output.nwb")
+    window.close()
+
+
 def test_main_window_shows_user_error_dialog(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)
