@@ -70,6 +70,7 @@ Completed:
 - Added a real desktop output-path chooser dialog for NWB save targets instead of relying only on manual path entry
 - Refactored the desktop conversion panel into explicit session-summary, execution-status, validation/review, and generated-artifact panes
 - Added a run-overview/readiness layer to the desktop conversion panel with explicit stage, output, validation-count, artifact-count, and review-guidance summaries
+- Promoted the right-hand conversion workspace into explicit desktop tabs for run overview, review work, and generated artifacts
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -130,6 +131,7 @@ Next:
 - The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
 - The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.
 - The desktop conversion surface now also summarizes current stage, output target, validation counts, artifact counts, and review guidance explicitly, so users can read session readiness before interacting with raw issue lists or artifact tables.
+- The desktop conversion surface now also uses a tabbed workspace for run overview, review work, and artifacts, which makes the right-hand side behave more like a desktop application workspace than a stacked panel.
 
 ## First-Pass Product Priorities
 
@@ -151,6 +153,7 @@ Required direction:
 - desktop shell should feel like one application, not a set of disconnected development panels
 - session loading, navigation, output selection, review, validation, settings, and logs should be reachable through clear product-level workflows
 - major conversion surfaces should present summary, status, review, and artifact information intentionally rather than as stacked debug fields
+- major conversion workspaces should use intentional desktop navigation patterns such as tabs or dedicated panes when that improves readability and task focus
 
 ### Priority 2: Custom and hybrid workflows
 

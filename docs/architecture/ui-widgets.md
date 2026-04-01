@@ -34,6 +34,7 @@ Responsibilities:
 - show source summaries and output-path entry
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
 - summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
+- expose the right-hand conversion workspace through explicit desktop tabs for run overview, review work, and artifacts
 - open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
@@ -94,6 +95,7 @@ Responsibilities:
 - Logging still flows through standard logging plus `UiLogHandler`; widgets only render captured entries.
 - The shell may mirror logs through `CompositeUiLogSink` so the docked log viewer and a file-backed JSON-lines sink receive the same entries.
 - The conversion-session widget should preserve clear workflow sections instead of collapsing status, review, and artifacts into one undifferentiated stacked form.
+- The conversion-session widget should prefer desktop navigation patterns such as tabs when they make the review and artifact workflow easier to scan.
 
 ## Testing baseline
 
@@ -106,6 +108,7 @@ Responsibilities:
   - conversion-session preview/execution bindings
   - conversion-session section layout for summary, execution, review, and artifacts
   - conversion-session run-overview and review-guidance summaries
+  - conversion-session workspace-tab structure and state-driven tab selection
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
 
@@ -126,5 +129,5 @@ Responsibilities:
 ## Immediate follow-on work
 
 1. Add additional screens and navigation while keeping the current model-first boundary intact.
-2. Evolve the run-overview and review workspace into a richer session-summary/review presentation beyond the current baseline.
+2. Evolve the tabbed run-overview and review workspace into a richer session-summary/review presentation beyond the current baseline.
 3. Add persisted window/layout state once the core desktop information architecture settles.

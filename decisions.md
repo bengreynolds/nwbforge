@@ -849,3 +849,16 @@ Consequences:
 - first-pass completion is now gated primarily by desktop UI coherence, representative custom/hybrid workflow coverage, and operational readiness for internal testing
 - supported-format growth is now a first-pass enabler only when it unblocks representative testing coverage
 - release engineering remains planned and mandatory later, but it no longer blocks the first-pass internal-testing milestone
+
+### DEC-068: Use a tabbed workspace on the right side of the conversion panel
+Status: Accepted
+
+Reasoning:
+- The right side of the conversion surface had become dense enough that static stacked sections were still doing too much at once.
+- Run overview, review work, and generated artifacts are distinct tasks that benefit from desktop-style workspace navigation.
+- Tabs improve focus without introducing a new controller or changing the underlying session/review contracts.
+
+Consequences:
+- `ConversionSessionWidget` now exposes explicit workspace tabs for run overview, review work, and artifacts
+- the widget now selects the most relevant tab based on current execution state, validation issues, and generated artifacts
+- future desktop UI work should continue using clearer workspace navigation patterns when they reduce visual overload
