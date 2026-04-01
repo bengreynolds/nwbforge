@@ -1,6 +1,7 @@
 """Supported-path pilot adapters."""
 
 from nwbforge.adapters.supported.neuroconv_audio import NeuroConvAudioAdapter
+from nwbforge.adapters.supported.neuroconv_fictrac import NeuroConvFicTracAdapter
 from nwbforge.adapters.supported.neuroconv_images import NeuroConvImageAdapter
 from nwbforge.adapters.supported.neuroconv_time_intervals import (
     EXCEL_TIME_INTERVAL_ROUTE,
@@ -17,6 +18,7 @@ __all__ = [
     "NeuroConvAudioAdapter",
     "NeuroConvCsvTimeIntervalsAdapter",
     "NeuroConvExcelTimeIntervalsAdapter",
+    "NeuroConvFicTracAdapter",
     "NeuroConvImageAdapter",
     "SessionManifestAdapter",
     "TABULAR_TIME_INTERVAL_ROUTES",
