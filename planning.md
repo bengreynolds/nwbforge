@@ -32,6 +32,7 @@ Completed:
 - Added a direct NeuroConv execution service for supported routes backed by base-`NWBFile` assembly plus NeuroConv append/conversion
 - Added structured logging helpers plus runtime instrumentation across pipeline, supported execution, and executor paths
 - Implemented concrete runtime contracts for stage/progress/error reporting plus a threaded conversion executor
+- Clarified that bounded parallel Codex subagent execution is a development workflow rule rather than an application runtime feature
 - Expanded the real supported text/tabular family to include Excel time intervals
 - Added a NeuroConv-backed still-image route using `ImageInterface`
 - Added a NeuroConv-backed audio route using `AudioInterface`
@@ -52,6 +53,7 @@ In progress:
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability expansion beyond the current logging/progress baseline
+- Route-based dependency management and package-install workflow for setup and future UI package management
 
 Next:
 - Add another real NeuroConv-backed supported adapter from the approved route catalog
@@ -74,6 +76,8 @@ Next:
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
 - Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
 - The first concrete category-first package refactor is now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/`, which is the intended direction for future supported families.
+- Development workflow now also requires explicit Codex subagent orchestration guidance: use at most three concurrent subagents, keep state isolated, collate results deterministically, and fall back to sequential handling on failure.
+- Package-management work is now split between developer bootstrap and future UI flows: setup remains tied to the dedicated Conda environment, while the future UI should expose route-name package selection and post-setup installs without forcing a full reinstall.
 
 ## Project Vision and Scope
 
@@ -451,15 +455,31 @@ Critical UX principles:
 - Bind progress bars to actual backend progress events and percentages
 - Offer a clean optional log panel or window for verbose diagnostics
 - Present concise user-facing errors with access to deeper logged context
+- Express package installation choices in route names such as `DeepLabCut` or `ScanImage`, not raw pip requirement strings
 
 ### Planned desktop shell behaviors
 - File menu with:
   - settings/configuration entry point
   - reserved hooks/placeholders for future tools and extensions
+  - `Install Extensions / Packages` entry point for adding route-specific support after setup
 - Status bar states such as `loading`, `inspecting`, `normalizing`, `mapping`, `writing`, `validating`, `complete`, and `failed`
 - Progress bar driven by backend-reported percentage updates
 - Toggleable verbose log viewer for troubleshooting and review
 - Clear separation between view state, background worker state, and conversion domain state
+
+### Planned setup and package-install behaviors
+- Initial setup should support install modes:
+  - `minimal`
+  - `selected`
+  - `full`
+- Initial setup should support route-name presets:
+  - `minimal`
+  - `common`
+  - `full`
+  - `custom`
+- Package selection should be curated around route names rather than raw dependency names.
+- Selected package sets should persist so repeated developer setup or future UI setup flows can reuse the last selection.
+- Later package installation should reuse the same route catalog through `File -> Install Extensions / Packages`.
 
 ## Metadata Normalization Strategy
 
@@ -515,6 +535,14 @@ Error handling:
 - Preserve detailed logs for troubleshooting without exposing raw stack traces as the primary user message
 - Avoid silent failure paths in adapters, orchestration, writing, validation, or persistence
 
+### Development subagent orchestration requirements
+
+- Codex subagent orchestration is a development workflow only and is not part of the shipped application.
+- Maximum concurrent subagents: `3`
+- Use parallel subagents only for independent tasks or code slices with isolated ownership.
+- Collate subagent outputs deterministically before integration.
+- When a subagent fails, conflicts, or returns ambiguous output, fall back to sequential local handling rather than adding more concurrent work.
+
 Recommended report sections:
 - Inputs
 - Detected sources and adapters
@@ -541,6 +569,12 @@ The product must ship as a production-grade desktop application with formal rele
 - The Conda environment is a developer convenience and isolation layer only
 - Development environment setup must not interfere with existing project or user environments on the machine
 - Current helper entry points are `scripts/setup-conda-dev.ps1` and `scripts/test-conda-dev.ps1`
+- Development bootstrap should support:
+  - `minimal` core install
+  - `selected` route-name install using presets or explicit route names
+  - `full` curated route install
+- Route-name package selection should persist outside tracked source files so repeated setup runs can reuse the prior selection.
+- Setup/install terminology must stay aligned with the future UI package-management flow.
 
 ### Required release packaging strategy
 
@@ -649,6 +683,7 @@ Recommended concepts:
 - Family registries and route configuration declarations for supported routes that differ mostly by metadata, interface class, or light sniffing behavior
 - Plugin package contract for lab-specific parsers and mapping presets
 - Lab profile package for naming conventions, metadata aliases, defaults, and review policies
+- Route-name package catalog that maps supported software/workflow names to optional dependency groups for developer setup and future UI package installation
 
 Important separation:
 - Source adapter: how to parse a format or folder structure

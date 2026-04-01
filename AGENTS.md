@@ -41,6 +41,7 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Use new isolated environments rather than repurposing unrelated existing environments
 - Do not rely on user-site Python packages for development or test success
 - Release artifacts must remain self-contained and must not require Conda or a virtual environment on user machines
+- Development bootstrap may support `minimal`, `selected`, and `full` install modes, but it must still target the dedicated Conda environment rather than arbitrary active user environments
 
 ## Change-Size Rule
 
@@ -122,6 +123,9 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 ## Operating Guidance for Agents
 
 - Start by checking repo instructions and plan documents
+- When using Codex subagents for repository work, cap parallel execution at 3 concurrent subagents
+- Use subagents only for independent tasks with isolated ownership and non-overlapping write scopes
+- Merge subagent outputs deterministically and resolve failures sequentially instead of increasing concurrency
 - Prefer primary-source documentation for NWB behavior and scientific format assumptions
 - Favor reversible, incremental changes over broad speculative scaffolding
 - When adding new adapters or mappings, define the contract first and implementation second
@@ -131,3 +135,4 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Use [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md) as the repo's approved NeuroConv-first route catalog
 - Instrument actionable code paths with standard logging, not ad hoc printing
 - Prefer runtime contracts that expose stage, progress, and error events cleanly to the future UI
+- Prefer route-name package catalogs and grouped install targets over raw dependency prompts when designing setup or future UI package-install flows

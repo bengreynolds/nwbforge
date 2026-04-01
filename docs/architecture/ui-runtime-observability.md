@@ -1,6 +1,6 @@
 # UI Runtime And Observability Baseline
 
-Last updated: 2026-03-31
+Last updated: 2026-04-01
 
 ## Purpose
 
@@ -39,6 +39,7 @@ This note captures the required runtime behaviors for the future desktop shell b
 - UI components render status, progress, and logs; they do not own conversion-state truth
 - logging, progress reporting, and user-facing error messages should be modeled through explicit contracts
 - future desktop menu structure should include a `File` menu with settings entry and modular hooks for future tools/extensions
+- future desktop menu structure should include `File -> Install Extensions / Packages` backed by the same curated route catalog used during setup
 
 ## Implemented contracts
 
@@ -57,6 +58,7 @@ Still pending:
 - a log-sink abstraction that can feed file output and an in-app viewer
 - the actual desktop UI components that render status, progress, and logs
 - broader structured logging coverage across persistence, review, and plugin paths
+- the route-based package-management UI for initial setup and later extension installation
 
 ## Immediate follow-on work
 

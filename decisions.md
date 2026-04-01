@@ -509,3 +509,31 @@ Consequences:
 - supported behavior routes now live under `src/nwbforge/adapters/supported/behavior/`
 - future supported families should prefer category packages plus family modules before introducing software-named top-level files
 - public adapter exports can remain stable while internal package layout continues migrating toward category-first structure
+
+### DEC-042: Treat bounded parallel Codex subagents as a development workflow rule, not an app runtime feature
+Status: Accepted
+
+Reasoning:
+- The request for parallel agents refers to Codex subagents used during repository development, not to the end-user desktop application.
+- Encoding this as application runtime behavior would mix development tooling concerns into the product architecture without improving the shipped app.
+- A bounded repository workflow rule is enough: parallelize only independent work, cap concurrency, and merge results deterministically.
+
+Consequences:
+- repository guidance should cap parallel Codex subagents at 3 concurrent workers
+- subagent tasks should have isolated ownership and non-overlapping write scopes
+- failed or ambiguous subagent results should fall back to sequential local resolution
+- application runtime code should not be described or implemented as “agent orchestration” for this requirement
+
+### DEC-043: Use route-name package catalogs and install presets for setup and future UI package management
+Status: Accepted
+
+Reasoning:
+- NeuroConv support often depends on route-specific extras or companion packages, so all-or-nothing setup is inefficient for development and too opaque for future UI package installation.
+- User-facing selection should be framed around route names such as `DeepLabCut` or `ScanImage`, not raw requirement strings.
+- The same curated route catalog should drive developer bootstrap and future UI package installation so install terminology and behavior do not drift.
+
+Consequences:
+- dependency groups should be organized around route-name install targets and presets
+- the dedicated Conda setup flow should support `minimal`, `selected`, and `full` install modes
+- package selection should persist outside tracked source files so repeated setup can reuse the last choice
+- future UI package management should use the same route catalog for initial setup and `File -> Install Extensions / Packages`

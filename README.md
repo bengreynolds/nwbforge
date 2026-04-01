@@ -34,6 +34,7 @@ Key files:
 - [docs/architecture/validation-services.md](docs/architecture/validation-services.md): artifact, schema, and NWB Inspector validation baseline
 - [docs/architecture/pilot-supported-adapter.md](docs/architecture/pilot-supported-adapter.md): first supported-path pilot adapter
 - [docs/architecture/development-environment.md](docs/architecture/development-environment.md): current Conda-based dev/test policy
+- [docs/architecture/package-management.md](docs/architecture/package-management.md): route-based package install planning for setup and future UI flows
 - [docs/architecture/release-strategy.md](docs/architecture/release-strategy.md): PyInstaller-first release, installer, and updater planning
 - [docs/research/nwb-ecosystem.md](docs/research/nwb-ecosystem.md): initial ecosystem research summary
 - [docs/research/codex-collaboration.md](docs/research/codex-collaboration.md): repo-collaboration notes for long-lived agent workflows
@@ -85,6 +86,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Direct NeuroConv supported-execution service that can write through NeuroConv while reusing a base `NWBFile` assembled from normalized metadata
 - Shared runtime contracts for stage/progress/error reporting and threaded background execution
 - Structured runtime logging across the core preview, execution, and supported-route handoff path
+- Route-based package install planning with curated presets and persisted selection state
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
@@ -99,7 +101,7 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
-The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, audio, FicTrac, and DeepLabCut conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; supported-route packaging is beginning to migrate toward category-first modules such as `supported/behavior/`; a dedicated workflow base exists for future combined NeuroConv pipelines; and runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting, but broader supported-format coverage is still ahead.
+The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The supported route set now includes real NeuroConv-backed CSV, Excel, image, audio, FicTrac, and DeepLabCut conversions; a shared NeuroConv adapter framework exists for additional single-interface routes; supported-route packaging is beginning to migrate toward category-first modules such as `supported/behavior/`; a dedicated workflow base exists for future combined NeuroConv pipelines; runtime contracts now exist for background execution, structured logging, and stage/progress/error reporting; and developer setup now has a route-based package planning layer with `minimal`, `selected`, and `full` install modes, but broader supported-format coverage and the actual UI are still ahead.
 
 UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, and the core runtime path now emits structured logs with stable context payloads. A File menu, status bar, progress bar, log sinks, and an optional log viewer remain the next UI-facing layers to build.
 
@@ -110,6 +112,14 @@ Current development and testing should use the dedicated `nwbforge-dev` Conda en
 ```text
 powershell -ExecutionPolicy Bypass -File scripts/setup-conda-dev.ps1
 powershell -ExecutionPolicy Bypass -File scripts/test-conda-dev.ps1
+```
+
+Example route-based setup flows:
+
+```text
+powershell -ExecutionPolicy Bypass -File scripts/setup-conda-dev.ps1 -InstallMode selected -Preset common
+powershell -ExecutionPolicy Bypass -File scripts/setup-conda-dev.ps1 -InstallMode selected -Preset custom -Routes deeplabcut,scanimage -PersistSelection
+powershell -ExecutionPolicy Bypass -File scripts/setup-conda-dev.ps1 -InstallMode full -PersistSelection
 ```
 
 This environment is intended only for development. Release artifacts should package everything needed so that Conda or virtual environments are not required for end users.
@@ -128,4 +138,4 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current behavior trace/position baseline into richer modality-specific and multimodal content.
 3. Add the next real NeuroConv-backed supported adapter family from the approved route catalog, likely continuing the behavior family or moving into the first combined workflow route.
-4. Expand structured logging beyond the current core runtime services into persistence, review, and plugin paths.
+4. Build the future UI-facing package-management flow on top of the new route catalog and install planner.
