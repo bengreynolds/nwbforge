@@ -3,7 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from nwbforge.app.desktop import build_adapter_registry, build_desktop_services, ensure_demo_manifest, load_manifest_session
+from nwbforge.app.desktop import (
+    build_adapter_registry,
+    build_desktop_services,
+    ensure_demo_manifest,
+    load_manifest_session,
+    resolve_startup_session_path,
+)
+from nwbforge.app.services import UiSettings
 
 
 class FakeRunner:
@@ -34,3 +41,25 @@ def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path
 
     services.conversion_screen_model.shutdown(wait=False)
     services.package_screen_model.shutdown(wait=False)
+
+
+def test_resolve_startup_session_path_prefers_requested_then_saved_then_demo(tmp_path: Path) -> None:
+    requested = tmp_path / "requested" / "session_manifest.json"
+    requested.parent.mkdir(parents=True)
+    requested.write_text("{}", encoding="utf-8")
+
+    saved = tmp_path / "saved" / "session_manifest.json"
+    saved.parent.mkdir(parents=True)
+    saved.write_text("{}", encoding="utf-8")
+
+    result_requested = resolve_startup_session_path(
+        tmp_path,
+        UiSettings(last_open_session_path=saved),
+        requested_manifest=requested,
+    )
+    result_saved = resolve_startup_session_path(tmp_path, UiSettings(last_open_session_path=saved))
+    result_demo = resolve_startup_session_path(tmp_path, UiSettings())
+
+    assert result_requested == requested.resolve()
+    assert result_saved == saved
+    assert result_demo.name == "session_manifest.json"

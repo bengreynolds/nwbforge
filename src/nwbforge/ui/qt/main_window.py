@@ -56,6 +56,7 @@ class MainWindow(QMainWindow):
         self._package_screen_model = package_screen_model
         self._conversion_screen_model = conversion_screen_model
         self._session_loader = session_loader or self._default_session_loader
+        self._recent_session_actions: list[QAction] = []
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
         self._viewer_log_sink = log_sink or InMemoryUiLogSink()
         self._log_handler: UiLogHandler | None = None
@@ -151,6 +152,9 @@ class MainWindow(QMainWindow):
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
         self._file_menu.addAction(self._open_session_action)
 
+        self._recent_sessions_menu = self._file_menu.addMenu("Open Recent")
+        self._recent_sessions_menu.setEnabled(False)
+
         self._settings_action = QAction("Settings", self)
         self._settings_action.triggered.connect(
             lambda: self._shell_model.invoke_file_menu_action(FileMenuAction.SETTINGS)
@@ -213,6 +217,7 @@ class MainWindow(QMainWindow):
             )
             return
 
+        self._settings_screen_model.record_recent_session(session_path)
         self._conversion_widget.load_session(session)
         self._shell_model.set_status_bar(
             StatusBarState(
@@ -223,6 +228,20 @@ class MainWindow(QMainWindow):
                 is_error=False,
             )
         )
+
+    def _rebuild_recent_sessions_menu(self, recent_paths: tuple[str, ...]) -> None:
+        self._recent_sessions_menu.clear()
+        self._recent_session_actions.clear()
+        if not recent_paths:
+            self._recent_sessions_menu.setEnabled(False)
+            return
+
+        self._recent_sessions_menu.setEnabled(True)
+        for path_text in recent_paths:
+            action = QAction(path_text, self)
+            action.triggered.connect(lambda checked=False, value=path_text: self._load_session(Path(value)))
+            self._recent_sessions_menu.addAction(action)
+            self._recent_session_actions.append(action)
 
     @staticmethod
     def _default_session_loader(session_path: Path) -> ConversionSession:
@@ -270,6 +289,7 @@ class MainWindow(QMainWindow):
         message_box.open()
 
     def _apply_settings_state(self, state: SettingsScreenState) -> None:
+        self._rebuild_recent_sessions_menu(state.recent_session_paths)
         if state.applied_settings != self._applied_settings:
             self._applied_settings = state.applied_settings
             self._configure_logging(state.applied_settings)

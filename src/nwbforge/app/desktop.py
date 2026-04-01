@@ -119,6 +119,7 @@ def build_desktop_services(
     app_state_dir = repo_root / ".nwbforge"
     settings_service = UiSettingsService(settings_path or app_state_dir / "ui-settings.json")
     settings_screen_model = SettingsScreenModel(settings_service)
+    settings_screen_model.load()
 
     package_service = PackageManagementService(
         selection_path=package_selection_path or app_state_dir / "install-selection.json"
@@ -254,3 +255,20 @@ def build_default_log_file_path(repo_root: Path, settings: UiSettings | None = N
     if settings is not None and settings.file_logging_enabled:
         return settings.log_file_path
     return repo_root / ".nwbforge" / "logs" / "desktop-ui.jsonl"
+
+
+def resolve_startup_session_path(
+    repo_root: Path,
+    settings: UiSettings,
+    *,
+    requested_manifest: Path | None = None,
+) -> Path:
+    """Resolve the manifest path to load on desktop startup."""
+
+    if requested_manifest is not None:
+        return requested_manifest.resolve()
+
+    if settings.last_open_session_path is not None and settings.last_open_session_path.exists():
+        return settings.last_open_session_path
+
+    return ensure_demo_manifest(repo_root)

@@ -11,6 +11,7 @@ from nwbforge.app.desktop import (
     build_desktop_services,
     ensure_demo_manifest,
     load_manifest_session,
+    resolve_startup_session_path,
 )
 from nwbforge.ui.qt import MainWindow, ensure_application
 
@@ -30,8 +31,11 @@ def main() -> int:
     args = parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     services = build_desktop_services(repo_root)
-
-    manifest_path = args.manifest.resolve() if args.manifest is not None else ensure_demo_manifest(repo_root)
+    manifest_path = resolve_startup_session_path(
+        repo_root,
+        services.settings_screen_model.state.applied_settings,
+        requested_manifest=args.manifest,
+    )
     session = load_manifest_session(manifest_path)
 
     app = ensure_application()
