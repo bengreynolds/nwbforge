@@ -23,6 +23,7 @@ Responsibilities:
 - host a manually testable real desktop composition built from the current backend services
 - open manifest-backed sessions from disk through `File -> Open Session...`
 - rebuild the `Open Recent` submenu from persisted session-history state
+- expose explicit `New Session` and `Reopen Last Session` actions
 
 ### `ConversionSessionWidget`
 
@@ -36,6 +37,7 @@ Responsibilities:
 - render validation-summary and review-outcome details
 - render generated execution/review artifacts from projected provenance state
 - open a selected generated artifact or its containing folder directly from the widget
+- open the validation report and latest review decision directly through dedicated shortcuts
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 
 ### `PackageInstallerDialog`

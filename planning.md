@@ -64,6 +64,9 @@ Completed:
 - Added persisted last-opened-session and recent-session tracking through the desktop settings path
 - Added a dynamic `Open Recent` desktop menu backed by persisted session history
 - Added direct desktop actions for opening generated artifacts and their containing folders from the conversion panel
+- Added explicit `New Session` and `Reopen Last Session` shell actions instead of relying only on open-session replacement behavior
+- Added persisted last-output-directory tracking plus per-session default NWB output paths in the desktop shell
+- Added dedicated desktop shortcuts for validation-report and review-decision artifacts on top of the generic generated-artifact list
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -120,6 +123,9 @@ Next:
 - The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
 - The desktop settings path now also persists `last_open_session_path` and a bounded recent-session list, and the shell uses that state to populate `Open Recent` and to prefer the last-opened manifest on startup when no explicit path is supplied.
 - The conversion-session panel now also supports direct actions for opening a selected artifact or its containing folder, which gives immediate desktop access to validation reports and later review artifacts.
+- The shell now also has explicit session lifecycle controls for `New Session` and `Reopen Last Session`, which moves the desktop flow closer to a conventional application model instead of a launcher-only workflow.
+- The desktop settings path now also persists the last used NWB output directory, and each newly loaded manifest-backed session receives a default output path derived from that directory and the current session id.
+- The conversion-session panel now also exposes dedicated validation-report and review-decision shortcuts so the most important review artifacts are directly reachable without manually selecting them from the artifact list.
 
 ## Project Vision and Scope
 

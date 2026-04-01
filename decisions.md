@@ -758,3 +758,42 @@ Consequences:
 - the Qt conversion-session widget now exposes actions to open the selected generated artifact or its containing folder
 - validation reports and later review artifacts become immediately reachable from the desktop UI
 - the artifact-open behavior stays generic and works across artifact types carried in execution provenance
+
+### DEC-061: Add explicit desktop session lifecycle actions before broader multi-session navigation exists
+Status: Accepted
+
+Reasoning:
+- The shell had reached the point where replacing the current session only through `Open Session...` was weaker than a standard desktop workflow.
+- Users need an explicit way to clear the current screen state and an equally explicit way to reopen the last manifest-backed session without re-browsing for it.
+- This can remain a thin shell concern while the app still operates on one loaded session at a time.
+
+Consequences:
+- the File menu now includes `New Session` and `Reopen Last Session`
+- `ConversionSessionScreenModel` now supports explicit session clearing
+- session lifecycle is now more app-like without introducing tabbed or multi-session navigation yet
+
+### DEC-062: Persist the last-used NWB output directory in desktop settings
+Status: Accepted
+
+Reasoning:
+- The desktop shell needed to move beyond a blank output-path field for every newly loaded session.
+- Output-directory preference is user-specific shell state and fits naturally alongside the existing recent-session and logging settings.
+- Persisting only the directory keeps the setting stable while allowing each new session to derive a sensible file name from its session id.
+
+Consequences:
+- `UiSettings` now persists `last_output_directory`
+- newly loaded manifest-backed sessions receive a default output path based on the last used directory and current session id
+- the shell records output-directory changes through the existing settings path instead of introducing another persistence channel
+
+### DEC-063: Add dedicated desktop shortcuts for validation and review artifacts
+Status: Accepted
+
+Reasoning:
+- Generic artifact browsing is useful, but the most important review-facing outputs are the validation report and the review decision record.
+- Giving those two artifact types explicit affordances reduces friction during manual testing and makes the review workflow clearer.
+- The shortcuts should remain view-level helpers over the same projected artifact state rather than becoming a special backend artifact API.
+
+Consequences:
+- the conversion-session widget now exposes dedicated actions for validation-report and review-decision artifacts
+- the generic artifact list remains available for all artifact types
+- artifact navigation stays provenance-driven and does not depend on bespoke report-location logic in services

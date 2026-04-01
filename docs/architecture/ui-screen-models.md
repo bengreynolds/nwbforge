@@ -42,6 +42,7 @@ Location: `src/nwbforge/ui/conversion_session.py`
 
 Responsibilities:
 - load a `ConversionSession` into UI-facing state
+- clear the current session explicitly when the shell starts a new session
 - track source summaries, preview state, execution state, and the selected output path
 - submit preview work through `ConversionExecutor`
 - submit write/validation work through `ConversionExecutor`
@@ -71,6 +72,7 @@ Responsibilities:
 - save settings back through the service without exposing persistence details to widgets
 - expose applied settings separately from unsaved draft changes so the shell can reconfigure runtime behavior only after save
 - record the last-opened session path and bounded recent-session history for shell-level reuse
+- record the last-used output directory so newly loaded sessions can receive a default NWB target path
 
 ## Design constraints
 
@@ -87,6 +89,7 @@ Responsibilities:
 - `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
 - the shell now also owns the first file-based session-loading step through `File -> Open Session...`, with manifest-backed session loading delegated to the desktop bootstrap helper
 - the shell's recent-session submenu is now rebuilt from settings-backed recent-session state rather than widget-local memory
+- the shell now also owns explicit `New Session` and `Reopen Last Session` actions while the app remains single-session
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
 - `src/nwbforge/ui/qt/conversion_session_widget.py` binds one conversion-session workflow into a central panel
 - `src/nwbforge/ui/qt/settings_dialog.py` binds persisted desktop settings into a modal dialog
