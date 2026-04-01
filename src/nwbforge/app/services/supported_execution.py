@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 
 from nwbforge.adapters.neuroconv import NeuroConvDirectConversionAdapter
 from nwbforge.adapters.registry import AdapterRegistry
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.services.models import ConversionPreview
 from nwbforge.domain.models import ProvenanceArtifact
 from nwbforge.mapping import PyNWBAssemblyService
@@ -20,6 +22,8 @@ class DirectExecutionSelection:
 
 class NeuroConvSupportedExecutionService:
     """Execute supported conversions by delegating the write path to NeuroConv."""
+
+    _logger = get_logger(__name__)
 
     def __init__(
         self,
@@ -62,6 +66,15 @@ class NeuroConvSupportedExecutionService:
             raise TypeError(f"Adapter '{selection.adapter_id}' does not support direct NeuroConv execution.")
 
         source = next(source for source in preview.session.sources if source.source_id == selection.source_id)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Executing supported route through NeuroConv.",
+            session_id=preview.session.session_id,
+            source_id=selection.source_id,
+            adapter_id=selection.adapter_id,
+            output_path=str(output_path),
+        )
         base_nwbfile = self._base_assembly_service.build_nwbfile(
             preview.session,
             preview.normalized_metadata,
@@ -69,9 +82,19 @@ class NeuroConvSupportedExecutionService:
             include_acquisition_streams=not adapter.writes_acquisition_streams,
             include_time_interval_tables=not adapter.writes_time_interval_tables,
         )
-        return adapter.write_conversion(
+        artifacts = adapter.write_conversion(
             session=preview.session,
             source=source,
             output_path=str(output_path),
             nwbfile=base_nwbfile,
         )
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Supported NeuroConv execution completed.",
+            session_id=preview.session.session_id,
+            source_id=selection.source_id,
+            adapter_id=selection.adapter_id,
+            artifact_count=len(artifacts),
+        )
+        return artifacts

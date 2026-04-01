@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+import logging
 
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.runtime.models import PipelineProgressEvent, PipelineStage, ProgressCallback
 from nwbforge.domain.contracts import (
     AssemblyService,
@@ -35,6 +37,8 @@ from nwbforge.app.services.supported_execution import NeuroConvSupportedExecutio
 class ConversionPipelineService:
     """Coordinate inspection, normalization, mapping, provenance, and validation."""
 
+    _logger = get_logger(__name__)
+
     def __init__(
         self,
         inspection_service: SourceInspectionService,
@@ -62,6 +66,14 @@ class ConversionPipelineService:
         session: ConversionSession,
         progress_callback: ProgressCallback | None = None,
     ) -> ConversionPreview:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Starting preview build.",
+            session_id=session.session_id,
+            pathway=session.pathway.value,
+            source_count=len(session.sources),
+        )
         working_session = session.transition(SessionStatus.INSPECTING)
         self._emit_progress(
             progress_callback,
@@ -73,6 +85,15 @@ class ConversionPipelineService:
         extraction_results = []
         total_sources = max(len(working_session.source_ids), 1)
         for index, source_id in enumerate(working_session.source_ids, start=1):
+            log_event(
+                self._logger,
+                logging.DEBUG,
+                "Inspecting source.",
+                session_id=working_session.session_id,
+                source_id=source_id,
+                source_index=index,
+                source_count=total_sources,
+            )
             extraction_results.append(self._inspection_service.inspect(working_session, source_id))
             inspected_percent = 5 + int((index / total_sources) * 35)
             self._emit_progress(
@@ -94,6 +115,15 @@ class ConversionPipelineService:
             "Normalizing extracted metadata.",
         )
         normalized_metadata = self._normalization_service.normalize(working_session, extraction_results)
+        log_event(
+            self._logger,
+            logging.DEBUG,
+            "Normalized metadata bundle.",
+            session_id=working_session.session_id,
+            device_count=len(normalized_metadata.devices),
+            acquisition_stream_count=len(normalized_metadata.acquisition_streams),
+            time_interval_table_count=len(normalized_metadata.time_interval_tables),
+        )
 
         working_session = working_session.transition(SessionStatus.MAPPING)
         self._emit_progress(
@@ -104,6 +134,15 @@ class ConversionPipelineService:
             "Building NWB mapping plan.",
         )
         mapping_plan = self._mapping_planner.plan(working_session, normalized_metadata)
+        log_event(
+            self._logger,
+            logging.DEBUG,
+            "Built mapping plan.",
+            session_id=working_session.session_id,
+            decision_count=len(mapping_plan.decisions),
+            issue_count=len(mapping_plan.issues),
+            requires_manual_review=mapping_plan.requires_manual_review(),
+        )
 
         review_status = SessionStatus.REVIEW if mapping_plan.requires_manual_review() else SessionStatus.READY_TO_WRITE
         working_session = working_session.transition(review_status)
@@ -140,6 +179,15 @@ class ConversionPipelineService:
         if adapter_ids and provenance_record.adapter_ids != adapter_ids:
             provenance_record = replace(provenance_record, adapter_ids=adapter_ids)
 
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Preview build completed.",
+            session_id=working_session.session_id,
+            status=working_session.status.value,
+            adapter_ids=adapter_ids,
+        )
+
         return ConversionPreview(
             session=working_session,
             extraction_results=extraction_results,
@@ -154,6 +202,13 @@ class ConversionPipelineService:
         output_artifacts: tuple[ProvenanceArtifact, ...],
         progress_callback: ProgressCallback | None = None,
     ) -> ConversionExecution:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Starting output evaluation.",
+            session_id=preview.session.session_id,
+            artifact_count=len(output_artifacts),
+        )
         validating_session = preview.session.transition(SessionStatus.VALIDATING)
         self._emit_progress(
             progress_callback,
@@ -202,6 +257,16 @@ class ConversionPipelineService:
             if final_status == SessionStatus.FAILED
             else "Conversion completed successfully.",
         )
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Output evaluation completed.",
+            session_id=final_session.session_id,
+            status=final_session.status.value,
+            error_count=len(validation_summary.errors()),
+            warning_count=len(validation_summary.warnings()),
+            review_outcome=review_outcome.status,
+        )
 
         return ConversionExecution(
             preview=preview,
@@ -218,6 +283,14 @@ class ConversionPipelineService:
         output_path: Path,
         progress_callback: ProgressCallback | None = None,
     ) -> ConversionExecution:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Starting conversion execution.",
+            session_id=preview.session.session_id,
+            output_path=str(output_path),
+            pathway=preview.session.pathway.value,
+        )
         if self._assembly_service is None:
             if self._supported_execution_service is None:
                 raise AssemblyConfigurationError(
@@ -236,12 +309,24 @@ class ConversionPipelineService:
             and self._supported_execution_service is not None
             and self._supported_execution_service.can_execute(preview)
         ):
+            log_event(
+                self._logger,
+                logging.INFO,
+                "Routing execution through direct NeuroConv supported path.",
+                session_id=preview.session.session_id,
+            )
             output_artifacts = self._supported_execution_service.write(preview, output_path)
         else:
             if self._assembly_service is None:
                 raise AssemblyConfigurationError(
                     "ConversionPipelineService.execute requires a configured assembly service."
                 )
+            log_event(
+                self._logger,
+                logging.INFO,
+                "Routing execution through repository assembly service.",
+                session_id=preview.session.session_id,
+            )
             output_artifacts = self._assembly_service.write(
                 preview.session,
                 preview.normalized_metadata,

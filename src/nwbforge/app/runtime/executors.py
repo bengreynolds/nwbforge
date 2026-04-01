@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from nwbforge.app.runtime.contracts import ConversionExecutor
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.runtime.models import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ProgressCallback
 from nwbforge.app.services.models import ConversionPreview
 from nwbforge.domain.models import ConversionSession
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
 
 class ThreadedConversionExecutor(ConversionExecutor):
     """Run conversion work in a thread pool and surface runtime-safe errors."""
+
+    _logger = get_logger(__name__)
 
     def __init__(
         self,
@@ -37,6 +41,13 @@ class ThreadedConversionExecutor(ConversionExecutor):
         *,
         progress_callback: ProgressCallback | None = None,
     ) -> Future[ConversionPreview]:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Queued preview execution.",
+            session_id=session.session_id,
+            pathway=session.pathway.value,
+        )
         self._emit(
             progress_callback,
             PipelineProgressEvent(
@@ -55,6 +66,13 @@ class ThreadedConversionExecutor(ConversionExecutor):
         *,
         progress_callback: ProgressCallback | None = None,
     ) -> Future:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Queued conversion execution.",
+            session_id=preview.session.session_id,
+            output_path=str(output_path),
+        )
         self._emit(
             progress_callback,
             PipelineProgressEvent(
@@ -75,6 +93,12 @@ class ThreadedConversionExecutor(ConversionExecutor):
         progress_callback: ProgressCallback | None,
     ) -> ConversionPreview:
         try:
+            log_event(
+                self._logger,
+                logging.DEBUG,
+                "Running preview in background executor.",
+                session_id=session.session_id,
+            )
             return self._pipeline_service.build_preview(
                 session,
                 progress_callback=progress_callback,
@@ -82,6 +106,13 @@ class ThreadedConversionExecutor(ConversionExecutor):
         except PipelineRuntimeError:
             raise
         except Exception as exc:
+            log_event(
+                self._logger,
+                logging.ERROR,
+                "Preview execution failed.",
+                session_id=session.session_id,
+                detail=str(exc),
+            )
             raise PipelineRuntimeError(
                 stage=PipelineStage.FAILED,
                 user_message="Preview generation failed.",
@@ -96,6 +127,13 @@ class ThreadedConversionExecutor(ConversionExecutor):
         progress_callback: ProgressCallback | None,
     ):
         try:
+            log_event(
+                self._logger,
+                logging.DEBUG,
+                "Running conversion in background executor.",
+                session_id=preview.session.session_id,
+                output_path=str(output_path),
+            )
             return self._pipeline_service.execute(
                 preview,
                 output_path,
@@ -104,6 +142,14 @@ class ThreadedConversionExecutor(ConversionExecutor):
         except PipelineRuntimeError:
             raise
         except Exception as exc:
+            log_event(
+                self._logger,
+                logging.ERROR,
+                "Conversion execution failed.",
+                session_id=preview.session.session_id,
+                output_path=str(output_path),
+                detail=str(exc),
+            )
             raise PipelineRuntimeError(
                 stage=PipelineStage.FAILED,
                 user_message="Conversion execution failed.",
