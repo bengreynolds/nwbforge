@@ -32,6 +32,7 @@ Location: `src/nwbforge/ui/qt/conversion_session_widget.py`
 Responsibilities:
 - render one loaded conversion session
 - show source summaries and output-path entry
+- open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
 - render validation-summary and review-outcome details

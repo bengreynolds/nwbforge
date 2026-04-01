@@ -67,6 +67,7 @@ Completed:
 - Added explicit `New Session` and `Reopen Last Session` shell actions instead of relying only on open-session replacement behavior
 - Added persisted last-output-directory tracking plus per-session default NWB output paths in the desktop shell
 - Added dedicated desktop shortcuts for validation-report and review-decision artifacts on top of the generic generated-artifact list
+- Added a real desktop output-path chooser dialog for NWB save targets instead of relying only on manual path entry
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -126,6 +127,7 @@ Next:
 - The shell now also has explicit session lifecycle controls for `New Session` and `Reopen Last Session`, which moves the desktop flow closer to a conventional application model instead of a launcher-only workflow.
 - The desktop settings path now also persists the last used NWB output directory, and each newly loaded manifest-backed session receives a default output path derived from that directory and the current session id.
 - The conversion-session panel now also exposes dedicated validation-report and review-decision shortcuts so the most important review artifacts are directly reachable without manually selecting them from the artifact list.
+- The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
 
 ## Project Vision and Scope
 

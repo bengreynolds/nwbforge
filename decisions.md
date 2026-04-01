@@ -797,3 +797,16 @@ Consequences:
 - the conversion-session widget now exposes dedicated actions for validation-report and review-decision artifacts
 - the generic artifact list remains available for all artifact types
 - artifact navigation stays provenance-driven and does not depend on bespoke report-location logic in services
+
+### DEC-064: Let the Qt shell own NWB output-path selection dialogs
+Status: Accepted
+
+Reasoning:
+- The desktop flow had reached the point where manual output-path typing was weaker than a standard save dialog.
+- Choosing an output path is a widget concern, but the dialog still needs shell-level knowledge of the persisted last-used output directory.
+- Keeping the dialog in the Qt shell avoids leaking `QFileDialog` concerns into toolkit-agnostic models while preserving the current model-first conversion workflow.
+
+Consequences:
+- `ConversionSessionWidget` now delegates output-path selection to a shell-provided callback
+- `MainWindow` owns the `QFileDialog.getSaveFileName` path chooser and seeds it from the current output path or persisted last-used output directory
+- the conversion-session panel now supports both direct path editing and dialog-based output-path selection
