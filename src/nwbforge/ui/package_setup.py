@@ -8,17 +8,24 @@ from threading import Lock
 
 from nwbforge.app.packages import InstallMode, InstallPreset, PackageInstallRequest, PackageInstallResult
 from nwbforge.app.services import PackageManagementController
+from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import PackageInstallerState, PackageInstallerStateListener
 
 
 class PackageInstallerScreenModel:
     """Drive route selection, preview, and background install state for the UI."""
 
-    def __init__(self, controller: PackageManagementController) -> None:
+    def __init__(
+        self,
+        controller: PackageManagementController,
+        *,
+        error_presenter: UiErrorPresenter | None = None,
+    ) -> None:
         self._controller = controller
         self._state = PackageInstallerState()
         self._listeners: list[PackageInstallerStateListener] = []
         self._lock = Lock()
+        self._error_presenter = error_presenter or DefaultUiErrorPresenter()
         self._preset_routes = {
             preset: tuple(spec.route_name for spec in specs)
             for preset, specs in controller.list_preset_routes().items()
@@ -48,6 +55,7 @@ class PackageInstallerScreenModel:
                 selected_routes=saved_selection.routes,
                 saved_selection=saved_selection,
                 error_message=None,
+                user_error=None,
             )
         else:
             default_routes = self._preset_routes[InstallPreset.COMMON]
@@ -59,6 +67,7 @@ class PackageInstallerScreenModel:
                 selected_routes=default_routes,
                 saved_selection=None,
                 error_message=None,
+                user_error=None,
             )
 
         self._set_state(next_state)
@@ -72,6 +81,7 @@ class PackageInstallerScreenModel:
                 install_preset=InstallPreset.MINIMAL,
                 selected_routes=(),
                 error_message=None,
+                user_error=None,
             )
         elif install_mode is InstallMode.FULL:
             next_state = replace(
@@ -80,6 +90,7 @@ class PackageInstallerScreenModel:
                 install_preset=InstallPreset.FULL,
                 selected_routes=self._preset_routes[InstallPreset.FULL],
                 error_message=None,
+                user_error=None,
             )
         else:
             preset = self._state.install_preset
@@ -96,6 +107,7 @@ class PackageInstallerScreenModel:
                 install_preset=preset,
                 selected_routes=selected_routes,
                 error_message=None,
+                user_error=None,
             )
 
         self._set_state(next_state)
@@ -114,6 +126,7 @@ class PackageInstallerScreenModel:
                 install_preset=preset,
                 selected_routes=selected_routes,
                 error_message=None,
+                user_error=None,
             )
         )
         return self.preview_install()
@@ -128,6 +141,7 @@ class PackageInstallerScreenModel:
                 install_preset=InstallPreset.CUSTOM,
                 selected_routes=selected_routes,
                 error_message=None,
+                user_error=None,
             )
         )
         return self.preview_install()
@@ -142,6 +156,7 @@ class PackageInstallerScreenModel:
                 issues=preview.issues,
                 resolved_extras=preview.plan.extras,
                 is_installable=preview.is_installable,
+                user_error=None,
             )
         )
 
@@ -152,6 +167,7 @@ class PackageInstallerScreenModel:
                 is_install_running=True,
                 error_message=None,
                 progress_event=None,
+                user_error=None,
             )
         )
         future = self._controller.start_install(
@@ -189,6 +205,7 @@ class PackageInstallerScreenModel:
                 is_install_running=event.stage.value not in {"completed", "failed"},
                 progress_event=event,
                 error_message=None,
+                user_error=None,
             )
         )
 
@@ -196,12 +213,13 @@ class PackageInstallerScreenModel:
         try:
             result = future.result()
         except Exception as exc:
-            user_message = getattr(exc, "user_message", str(exc))
+            user_error = self._error_presenter.present(exc)
             self._set_state(
                 replace(
                     self._state,
                     is_install_running=False,
-                    error_message=user_message,
+                    error_message=user_error.message,
+                    user_error=user_error,
                 )
             )
             return
@@ -211,6 +229,7 @@ class PackageInstallerScreenModel:
                 self._state,
                 is_install_running=False,
                 error_message=None,
+                user_error=None,
                 last_completed_routes=result.preview.plan.selection.routes,
                 preview=result.preview,
                 issues=result.preview.issues,

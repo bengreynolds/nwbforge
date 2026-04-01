@@ -201,4 +201,6 @@ def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:
         future.result(timeout=5)
 
     assert screen.state.error_message == "Preview generation failed."
+    assert screen.state.user_error is not None
+    assert screen.state.user_error.category == "conversion"
     assert screen.state.is_preview_running is False

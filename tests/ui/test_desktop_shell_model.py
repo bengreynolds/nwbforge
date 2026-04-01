@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from nwbforge.app.packages import PackageInstallProgressEvent, PackageInstallRuntimeError, PackageInstallStage
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
-from nwbforge.ui import DesktopShellModel, FileMenuAction
+from nwbforge.ui import DesktopShellModel, FileMenuAction, InMemoryUiLogSink, UiLogHandler
 
 
 def test_desktop_shell_model_handles_file_menu_actions() -> None:
@@ -67,3 +69,25 @@ def test_desktop_shell_model_applies_package_progress_and_errors() -> None:
     )
     assert shell.state.status_bar.is_error is True
     assert shell.state.status_bar.message == "Package installation failed."
+    assert shell.state.last_user_error is not None
+    assert shell.state.last_user_error.category == "packages"
+
+
+def test_desktop_shell_model_tracks_log_sink_entries() -> None:
+    sink = InMemoryUiLogSink()
+    shell = DesktopShellModel(log_sink=sink)
+    logger = logging.getLogger("tests.ui.shell")
+    handler = UiLogHandler(sink)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    try:
+        logger.info("Test log entry", extra={"nwbforge_context": {"session_id": "sess-1"}})
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
+
+    assert len(shell.state.log_entries) == 1
+    assert shell.state.log_entries[0].message == "Test log entry"
+    assert shell.state.log_entries[0].context["session_id"] == "sess-1"

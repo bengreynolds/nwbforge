@@ -10,6 +10,7 @@ from threading import Lock
 from nwbforge.app.runtime import ConversionExecutor
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.domain.models import ConversionSession
+from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import (
     ConversionSessionScreenState,
     ConversionSessionStateListener,
@@ -20,11 +21,17 @@ from nwbforge.ui.models import (
 class ConversionSessionScreenModel:
     """Drive preview/execution state for a future conversion-session screen."""
 
-    def __init__(self, executor: ConversionExecutor) -> None:
+    def __init__(
+        self,
+        executor: ConversionExecutor,
+        *,
+        error_presenter: UiErrorPresenter | None = None,
+    ) -> None:
         self._executor = executor
         self._state = ConversionSessionScreenState()
         self._listeners: list[ConversionSessionStateListener] = []
         self._lock = Lock()
+        self._error_presenter = error_presenter or DefaultUiErrorPresenter()
 
     @property
     def state(self) -> ConversionSessionScreenState:
@@ -42,6 +49,8 @@ class ConversionSessionScreenModel:
             ConversionSessionScreenState(
                 session=session,
                 sources=conversion_source_items(session.sources),
+                error_message=None,
+                user_error=None,
             )
         )
 
@@ -55,6 +64,7 @@ class ConversionSessionScreenModel:
                 preview=None,
                 execution=None,
                 progress_event=None,
+                user_error=None,
             )
         )
         future = self._executor.submit_preview(session, progress_callback=self._handle_progress)
@@ -71,6 +81,7 @@ class ConversionSessionScreenModel:
                 error_message=None,
                 execution=None,
                 progress_event=None,
+                user_error=None,
             )
         )
         future = self._executor.submit_execute(
@@ -87,18 +98,19 @@ class ConversionSessionScreenModel:
             shutdown(wait=wait)
 
     def _handle_progress(self, event) -> None:
-        self._set_state(replace(self._state, progress_event=event, error_message=None))
+        self._set_state(replace(self._state, progress_event=event, error_message=None, user_error=None))
 
     def _handle_preview_complete(self, future: Future[ConversionPreview]) -> None:
         try:
             preview = future.result()
         except Exception as exc:
-            user_message = getattr(exc, "user_message", str(exc))
+            user_error = self._error_presenter.present(exc)
             self._set_state(
                 replace(
                     self._state,
                     is_preview_running=False,
-                    error_message=user_message,
+                    error_message=user_error.message,
+                    user_error=user_error,
                 )
             )
             return
@@ -112,6 +124,7 @@ class ConversionSessionScreenModel:
                 execution=None,
                 is_preview_running=False,
                 error_message=None,
+                user_error=None,
             )
         )
 
@@ -119,12 +132,13 @@ class ConversionSessionScreenModel:
         try:
             execution = future.result()
         except Exception as exc:
-            user_message = getattr(exc, "user_message", str(exc))
+            user_error = self._error_presenter.present(exc)
             self._set_state(
                 replace(
                     self._state,
                     is_execution_running=False,
-                    error_message=user_message,
+                    error_message=user_error.message,
+                    user_error=user_error,
                 )
             )
             return
@@ -138,6 +152,7 @@ class ConversionSessionScreenModel:
                 preview=execution.preview,
                 is_execution_running=False,
                 error_message=None,
+                user_error=None,
             )
         )
 

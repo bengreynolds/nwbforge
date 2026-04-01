@@ -7,6 +7,8 @@ from dataclasses import replace
 from nwbforge.app.packages import PackageInstallProgressEvent, PackageInstallStage
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
 from nwbforge.app.packages.execution import PackageInstallRuntimeError
+from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
+from nwbforge.ui.logs import InMemoryUiLogSink
 from nwbforge.ui.models import (
     DesktopShellState,
     FileMenuAction,
@@ -18,9 +20,18 @@ from nwbforge.ui.models import (
 class DesktopShellModel:
     """Track shell state for menus, status text, and log-viewer visibility."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        log_sink: InMemoryUiLogSink | None = None,
+        error_presenter: UiErrorPresenter | None = None,
+    ) -> None:
         self._state = DesktopShellState()
         self._listeners: list[ShellStateListener] = []
+        self._log_sink = log_sink
+        self._error_presenter = error_presenter or DefaultUiErrorPresenter()
+        if self._log_sink is not None:
+            self._log_sink.subscribe(self._handle_log_entries)
 
     @property
     def state(self) -> DesktopShellState:
@@ -66,20 +77,23 @@ class DesktopShellModel:
                     is_busy=event.stage not in {PipelineStage.COMPLETED, PipelineStage.FAILED},
                     is_error=event.stage is PipelineStage.FAILED,
                 ),
+                last_user_error=None,
             )
         )
 
     def apply_pipeline_error(self, error: PipelineRuntimeError) -> DesktopShellState:
+        user_error = self._error_presenter.present(error)
         return self._set_state(
             replace(
                 self._state,
                 status_bar=StatusBarState(
                     stage_key=error.stage.value,
-                    message=error.user_message,
+                    message=user_error.message,
                     percent_complete=100,
                     is_busy=False,
                     is_error=True,
                 ),
+                last_user_error=user_error,
             )
         )
 
@@ -94,22 +108,28 @@ class DesktopShellModel:
                     is_busy=event.stage not in {PackageInstallStage.COMPLETED, PackageInstallStage.FAILED},
                     is_error=event.stage is PackageInstallStage.FAILED,
                 ),
+                last_user_error=None,
             )
         )
 
     def apply_package_error(self, error: PackageInstallRuntimeError) -> DesktopShellState:
+        user_error = self._error_presenter.present(error)
         return self._set_state(
             replace(
                 self._state,
                 status_bar=StatusBarState(
                     stage_key=f"packages:{error.stage.value}",
-                    message=error.user_message,
+                    message=user_error.message,
                     percent_complete=100,
                     is_busy=False,
                     is_error=True,
                 ),
+                last_user_error=user_error,
             )
         )
+
+    def _handle_log_entries(self, entries) -> None:
+        self._set_state(replace(self._state, log_entries=entries))
 
     def _set_state(self, new_state: DesktopShellState) -> DesktopShellState:
         self._state = new_state

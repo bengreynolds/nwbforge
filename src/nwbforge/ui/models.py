@@ -19,6 +19,8 @@ from nwbforge.app.packages import (
 from nwbforge.app.runtime import PipelineProgressEvent
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.domain.models import ConversionSession, SourceReference
+from nwbforge.ui.errors import UserFacingError
+from nwbforge.ui.logs import UiLogEntry
 
 
 class FileMenuAction(StrEnum):
@@ -65,6 +67,7 @@ class PackageInstallerState:
     is_install_running: bool = False
     progress_event: PackageInstallProgressEvent | None = None
     error_message: str | None = None
+    user_error: UserFacingError | None = None
     last_completed_routes: tuple[str, ...] = ()
 
 
@@ -90,6 +93,7 @@ class ConversionSessionScreenState:
     progress_event: PipelineProgressEvent | None = None
     output_path: Path | None = None
     error_message: str | None = None
+    user_error: UserFacingError | None = None
     is_preview_running: bool = False
     is_execution_running: bool = False
 
@@ -153,6 +157,8 @@ class DesktopShellState:
     is_log_viewer_visible: bool = False
     active_dialog: str | None = None
     verbose_logging_enabled: bool = False
+    log_entries: tuple[UiLogEntry, ...] = ()
+    last_user_error: UserFacingError | None = None
 
 
 ShellStateListener = Callable[[DesktopShellState], None]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CalledProcessError, CompletedProcess
 
 from nwbforge.app.packages import (
     InstallMode,
@@ -19,12 +19,29 @@ class FakeRunner:
         return CompletedProcess(args=list(command), returncode=0, stdout="ok", stderr="")
 
 
+class FailingRunner:
+    def run(self, command, *, cwd: Path):
+        raise CalledProcessError(returncode=1, cmd=list(command), stderr="install failed")
+
+
 def make_screen_model(tmp_path: Path) -> PackageInstallerScreenModel:
     package_service = PackageManagementService(selection_path=tmp_path / "selection.json")
     installation_service = PackageInstallationService(
         package_service,
         repo_root=tmp_path,
         command_runner=FakeRunner(),
+    )
+    executor = ThreadedPackageInstallationExecutor(installation_service)
+    controller = PackageManagementController(package_service, executor)
+    return PackageInstallerScreenModel(controller)
+
+
+def make_failing_screen_model(tmp_path: Path) -> PackageInstallerScreenModel:
+    package_service = PackageManagementService(selection_path=tmp_path / "selection.json")
+    installation_service = PackageInstallationService(
+        package_service,
+        repo_root=tmp_path,
+        command_runner=FailingRunner(),
     )
     executor = ThreadedPackageInstallationExecutor(installation_service)
     controller = PackageManagementController(package_service, executor)
@@ -71,4 +88,21 @@ def test_package_installer_screen_model_runs_background_install(tmp_path: Path) 
     assert screen.state.progress_event is not None
     assert screen.state.progress_event.message == "Package installation completed."
     assert any(update.progress_event is not None for update in state_updates)
+    screen.shutdown()
+
+
+def test_package_installer_screen_model_surfaces_user_facing_error(tmp_path: Path) -> None:
+    screen = make_failing_screen_model(tmp_path)
+    screen.load()
+
+    future = screen.start_install()
+
+    try:
+        future.result(timeout=10)
+    except Exception:
+        pass
+
+    assert screen.state.user_error is not None
+    assert screen.state.user_error.category == "packages"
+    assert screen.state.error_message == "Package installation failed. See logs for details."
     screen.shutdown()
