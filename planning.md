@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
 Last updated: 2026-03-31
-Status: Late Phase 2 / preparing Phase 3 supported-path MVP
+Status: Late Phase 2 / entering Phase 3 supported-path MVP
 
 ## Current Execution Status
 
@@ -25,6 +25,10 @@ Completed:
 - Added behavior spatial-data assembly through `Position` and `SpatialSeries`
 - Established NeuroConv-first supported-path planning as explicit repository policy
 - Added an explicit approved NeuroConv-first route catalog for supported-path work
+- Added `neuroconv` as a declared project dependency
+- Implemented the first real NeuroConv-backed supported adapter via CSV time intervals
+- Added first-class normalized interval-table and trial-row support
+- Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
 - Added an explicit validation review-outcome policy for UI and workflow consumers
 - Added persisted post-execution review decisions and override records as machine-readable artifacts
@@ -33,14 +37,12 @@ Completed:
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Supported-path MVP preparation around the first real NeuroConv-backed adapter
+- Supported-path MVP expansion beyond the first NeuroConv-backed CSV intervals route
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
 
 Next:
-- First real supported acquisition adapter selection and spike
-- Add `neuroconv` as an active implementation dependency when the first real supported-path adapter slice begins
-- Select the first real supported-path adapter from the approved NeuroConv route catalog
+- Add another real NeuroConv-backed supported adapter from the approved route catalog
 - Richer multimodal assembly beyond the current generic acquisition-stream baseline
 - Additional modality-specific NWB containers beyond the new behavior baseline
 - Additional behavior subtypes and non-behavior modality containers beyond the new trace/position baseline
@@ -49,9 +51,9 @@ Next:
 
 ### Current application baseline
 - The repository currently implements a backend conversion foundation, not a user-facing desktop application yet.
-- The only supported-path adapter in code is the repo-native `session_manifest.json` pilot used for architecture validation.
-- The project can write real NWB files for the pilot path, validate them, persist review/report artifacts, and persist latest-state session snapshots.
-- The project does not yet include a real NeuroConv-backed format adapter, a production UI shell, or full multimodal NWB coverage.
+- Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus a real NeuroConv-backed CSV time-interval adapter.
+- The project can write real NWB files for the manifest-backed pilot path and for combined manifest-plus-CSV trial sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
+- The project does not yet include a production UI shell, broader real acquisition-format coverage beyond the first CSV intervals route, or full multimodal NWB coverage.
 
 ## Project Vision and Scope
 
@@ -624,13 +626,19 @@ Current status:
 - The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus first-pass behavior trace and position pathways, but broader modality-specific and multimodal content remain out of scope
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
 - Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
-- The first real supported-path implementation should add `neuroconv` as a declared project dependency rather than keeping it only as architectural intent
-- The first real supported-path adapter should be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
+- `neuroconv` is now a declared project dependency and the first real supported-path route is implemented through `CsvTimeIntervalsInterface`
+- The current real supported route covers CSV interval/trial data and combines cleanly with the manifest-backed metadata pilot in a multi-source supported session
+- Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
+- Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
 - Provide minimal UI or CLI workflow to prove session orchestration
 - Produce validation and summary artifacts
+
+Current status:
+- One end-to-end NeuroConv-backed supported workflow now exists for CSV time intervals carried into NWB trials
+- Additional supported routes and a minimal operator-facing shell remain outstanding
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow

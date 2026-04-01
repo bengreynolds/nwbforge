@@ -157,7 +157,7 @@ Reasoning:
 Consequences:
 - `SessionManifestAdapter` is the first supported-path pilot adapter
 - Integration tests can now cover inspection through mapping with a deterministic source fixture
-- A real NeuroConv-backed format remains the next supported-path milestone
+- The manifest path remains the metadata and inline-stream fixture route even after real NeuroConv-backed routes are added
 
 ### DEC-014: Represent preview and execution as separate orchestration stages
 Status: Accepted
@@ -352,7 +352,7 @@ Reasoning:
 
 Consequences:
 - Future supported-path implementation must check NeuroConv support before manual converter design
-- The first real supported-path adapter slice should introduce `neuroconv` as a declared dependency
+- `neuroconv` became the declared dependency when the first real supported-path adapter slice landed
 - Direct PyNWB construction remains the fallback for unsupported or unusually custom cases
 - PyNWB documentation is the required source of truth for low-level NWB API usage and container placement
 
@@ -367,3 +367,17 @@ Consequences:
 - The route catalog lives in `docs/research/neuroconv-supported-routes.md`
 - When an input mentions a listed software package or workflow, NeuroConv should be investigated first and used whenever feasible
 - Format-specific caveats still need to be checked against the exact NeuroConv gallery page before implementation
+
+### DEC-031: Use NeuroConv CSV time intervals as the first real supported-path implementation
+Status: Accepted
+
+Reasoning:
+- The project needed one truthful supported-path implementation that uses NeuroConv directly without pulling in a larger binary acquisition stack too early.
+- NeuroConv's documented `CsvTimeIntervalsInterface` provides a stable, low-friction route for interval and trial data and fits the current architecture cleanly as a first real supported adapter.
+- CSV interval data also forces the architecture to handle NWB trials and `TimeIntervals`, which broadens the writer beyond acquisition traces without requiring premature ecephys or ophys design commitments.
+
+Consequences:
+- `neuroconv` is now a declared dependency
+- `NeuroConvCsvTimeIntervalsAdapter` is the first real NeuroConv-backed supported adapter in the repo
+- The canonical normalization, mapping, and assembly layers now include interval-table and trial-row support targeting NWB trials
+- The next supported-path increment should add another real NeuroConv route rather than revisiting whether NeuroConv belongs in the stack

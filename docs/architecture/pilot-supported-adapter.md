@@ -28,6 +28,26 @@ Its purpose is to:
 - prove the supported-path orchestration shape
 - provide a stable fixture source while real format support is still being selected
 
+## Current supported-path adapter set
+
+### `SessionManifestAdapter`
+
+Still used as the repo-native metadata and inline-stream fixture path for architecture validation.
+
+### `NeuroConvCsvTimeIntervalsAdapter`
+
+Location: `src/nwbforge/adapters/supported/neuroconv_csv_time_intervals.py`
+
+Responsibilities:
+- inspect CSV interval sources through NeuroConv's documented `CsvTimeIntervalsInterface`
+- emit stable extracted keys for interval-table metadata and trial-style row data
+- provide the first real NeuroConv-backed supported route in the repository
+
+Current role:
+- combine with the manifest-backed pilot metadata source in multi-source supported sessions
+- drive normalized interval-table models, mapping-plan visibility, and NWB trial writing
+- prove a truthful NeuroConv-backed supported workflow without claiming broad acquisition-system coverage yet
+
 ## Design constraints
 
 - adapter output is still extraction-only; no NWB writing happens here
@@ -36,6 +56,6 @@ Its purpose is to:
 
 ## Immediate follow-on work
 
-1. Select the first real supported acquisition format for a NeuroConv-backed adapter spike.
-2. Add a higher-level orchestration service that chains inspection, normalization, mapping, and validation explicitly.
-3. Expand beyond the current behavior trace/position assembly slice into additional modality-aware mappings.
+1. Add another real NeuroConv-backed supported adapter from the approved route catalog.
+2. Expand beyond the current behavior trace/position and trials assembly slices into additional modality-aware mappings.
+3. Decide when supported-path sessions should rely on multiple coordinated sources versus single-format all-in-one adapters.

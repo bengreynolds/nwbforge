@@ -35,6 +35,7 @@ The first writer intentionally covers a narrow, high-confidence subset:
 - behavior acquisition streams written into `BehavioralTimeSeries`
 - behavior position streams written into `Position` containers with `SpatialSeries`
 - generic acquisition `TimeSeries` fallback for non-behavior inline stream data, units, and timing metadata
+- trial interval tables written into NWB trials
 
 This is enough to prove a real NWB file can be written from the current preview pipeline without claiming the broader conversion problem is solved. It also brings the manifest-backed supported-path pilot to the point where writer-generated files can satisfy the current validation stack when the source provides the needed subject metadata, device records, and inline stream data.
 
@@ -43,6 +44,7 @@ This is enough to prove a real NWB file can be written from the current preview 
 - writer logic consumes normalized metadata and mapping intent, not raw source fields
 - identifier policy is currently conservative and derived from normalized session id or the conversion session id
 - the writer emits a minimal file and only supports behavior traces, behavior position data, plus generic inline fallback, not broader modality coverage yet
+- interval-table support is currently limited to NWB trials, with stop times inferred from the next interval start when needed
 - device manufacturer is currently written through PyNWB's deprecated `manufacturer` argument as a temporary bridge pending a fuller `DeviceModel` design
 - acquisition streams currently require inline `data`, `unit`, and either `rate` or `timestamps`
 - direct writer code should follow official PyNWB APIs and prefer built-in container classes over custom HDF5-level logic
@@ -51,5 +53,5 @@ This is enough to prove a real NWB file can be written from the current preview 
 ## Immediate follow-on work
 
 1. Expand assembly coverage from the current behavior trace/position baseline to additional modality-specific acquisition content.
-2. Replace temporary device manufacturer bridging with a deliberate `DeviceModel` strategy.
-3. Refine identifier and metadata policy as real supported formats are integrated.
+2. Expand interval-table support beyond NWB trials when a supported route requires epochs or custom `TimeIntervals`.
+3. Replace temporary device manufacturer bridging with a deliberate `DeviceModel` strategy.

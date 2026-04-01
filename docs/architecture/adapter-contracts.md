@@ -21,6 +21,10 @@ These represent adapter output before normalization. They are intentionally sour
 
 This keeps adapter discovery and compatibility checks explicit. Real supported and custom adapters can now be added without changing orchestration-facing expectations.
 
+Implemented adapters now include:
+- `SessionManifestAdapter` for the repo-native fixture path
+- `NeuroConvCsvTimeIntervalsAdapter` for real NeuroConv-backed CSV interval sources
+
 ### Service protocols
 - `SourceInspectionService`
 - `NormalizationService`
@@ -41,6 +45,6 @@ These protocols define what higher-level services must do without choosing concr
 
 ## Immediate follow-on work
 
-1. Add concrete application services that consume these protocols.
+1. Add another real NeuroConv-backed supported adapter behind the registry.
 2. Add lab-profile contracts and normalization rule interfaces.
-3. Choose the first real NeuroConv-backed supported adapter and implement it behind the registry.
+3. Keep supported-path adapters extraction-only and route broader source semantics through normalization rather than ad hoc writer logic.

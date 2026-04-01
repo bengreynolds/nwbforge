@@ -71,10 +71,12 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Supported-path pilot adapter for structured `session_manifest.json` sources
 - Behavior-stream assembly into NWB `BehavioralTimeSeries` containers, with generic `TimeSeries` fallback for other modalities
 - Behavior position assembly into NWB `Position`/`SpatialSeries` containers
+- NeuroConv-backed CSV time-interval inspection through `CsvTimeIntervalsInterface`
+- Interval-table normalization, mapping, and NWB trial assembly
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 
-The supported-path pilot adapter is intentionally a repo-native fixture source for architecture validation. It is not yet a claim of real acquisition-format support.
+The manifest-backed supported-path pilot adapter remains a repo-native fixture source for architecture validation. In addition, the repo now includes a real NeuroConv-backed CSV time-interval route that carries trial-style interval data into NWB trials.
 
 Supported-path policy is now explicit: check the NeuroConv Conversion Gallery first, use a documented NeuroConv interface when one exists, and fall back to direct PyNWB only when NeuroConv does not support the format or the direct PyNWB path is clearly simpler and more maintainable. For direct NWB writing, official PyNWB docs remain the source of truth.
 
@@ -82,7 +84,7 @@ All current implementation slices are backed by tests and documented under `docs
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and can persist the latest execution/review state as a resumable JSON session snapshot.
 
-The current application state is still backend-first: there is no user-facing desktop UI yet, no real NeuroConv-backed supported-format adapter yet, and no claim of broad production acquisition-format coverage.
+The current application state is still backend-first: there is no user-facing desktop UI yet, and there is still no claim of broad production acquisition-format coverage. The first real NeuroConv-backed supported route is now in place for CSV time-interval/trial data, but broader supported-format coverage is still ahead.
 
 ## Local development
 
@@ -108,5 +110,5 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 1. Persist preview-stage workflow state and add revision history beyond the current latest-snapshot baseline.
 2. Expand assembly coverage beyond the current behavior trace/position baseline into richer modality-specific and multimodal content.
-3. Choose the first real supported acquisition format, add `neuroconv` as a declared dependency, and spike a NeuroConv-backed adapter.
+3. Add the next real NeuroConv-backed supported adapter from the approved route catalog.
 4. Start translating the PyInstaller-first release plan into concrete build, installer, and updater scaffolding once the desktop shell is selected.
