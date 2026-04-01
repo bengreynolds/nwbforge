@@ -5,6 +5,7 @@ from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.adapters.supported import (
     NeuroConvAudioAdapter,
     NeuroConvCsvTimeIntervalsAdapter,
+    NeuroConvDeepLabCutAdapter,
     NeuroConvExcelTimeIntervalsAdapter,
     NeuroConvFicTracAdapter,
     NeuroConvImageAdapter,
@@ -16,6 +17,7 @@ __all__ = [
     "AdapterRegistry",
     "NeuroConvAudioAdapter",
     "NeuroConvCsvTimeIntervalsAdapter",
+    "NeuroConvDeepLabCutAdapter",
     "NeuroConvExcelTimeIntervalsAdapter",
     "NeuroConvFicTracAdapter",
     "NeuroConvImageAdapter",
