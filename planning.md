@@ -88,6 +88,9 @@ Completed:
 - Added source-specific metadata overrides to direct ingest, source inspection, normalization, and persisted session/project state
 - Added direct-ingest project recovery through persisted workspace state plus launcher-level `--project` support
 - Added an internal smoke suite covering supported, custom, hybrid, and direct-ingest-project round trips
+- Promoted direct-ingest groups into first-class session-assembly state with dataset/group summaries, mixed-pathway group review, and richer same-stem sidecar bundle grouping
+- Added a dedicated metadata-review workspace after preview/build so mixed-source normalized conflicts surface as explicit canonical-value comparisons instead of living only in override notes
+- Polished the desktop `New Session` and conversion workspaces with explicit detected-group summaries and a dedicated metadata-review tab
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -98,13 +101,13 @@ In progress:
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Richer direct-ingest grouping, sidecar association, and dataset-level confirmation beyond the current heuristic and per-source correction baseline
+- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, and per-source correction baseline
 
 Next:
 - Continue formal first-pass internal testing in the dedicated Conda environment using the full suite plus the internal smoke baseline
 - Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
 - Deepen direct-ingest grouping from current heuristics and manual correction toward a richer dataset/session model
-- Improve mixed-source disagreement handling beyond the current session-wide and source-specific override baseline
+- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace toward explicit field-by-field conflict resolution
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
 - Keep release engineering planned but defer implementation until after first-pass internal testing
 
@@ -191,7 +194,7 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first parent-folder grouping suggestions, reviewable auto-grouping issues, per-source grouping correction, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, reviewable auto-grouping and mixed-group issues, per-source grouping correction, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
@@ -270,7 +273,7 @@ Current status:
 - this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
 - the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
 - the first concrete version of that milestone is now implemented and now includes initial source-role editing, session-wide metadata overrides, source-specific metadata overrides for core canonical fields, explicit saved-project workflows, and persisted draft/project reopen behavior
-- richer grouping and more explicit post-preview mixed-source disagreement review remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
+- richer grouping confirmation and explicit post-preview conflict resolution remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
 - if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
 
 ### Testing baseline for first-pass handoff
@@ -1080,17 +1083,18 @@ Current status:
 
 The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
 
-### 1. Direct ingest now uses shallow folder-based heuristics, not real dataset grouping
+### 1. Direct ingest now has first-class group summaries, but grouping confirmation is still not a full dataset model
 - Target direction:
   - the app should help users load combinations of files/folders and organize them into one session intentionally
   - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
 - Current implementation:
-  - `SessionAssemblyService` now auto-groups selected inputs by simple path heuristics, primarily parent-folder relationships and known session-descriptor locations
-  - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group
-  - users can now correct grouping per source in the `New Session` workflow, and simple same-stem JSON/YAML/TXT sidecars are associated and defaulted toward metadata role
-  - there is still no dataset-level grouping confirmation step and no richer dataset model beyond grouped selected paths
+  - `SessionAssemblyService` now carries first-class group summaries in the draft/session-assembly state instead of only attaching labels to individual sources
+  - grouping heuristics now distinguish descriptor-parent groups and same-stem sidecar bundles instead of relying only on flat parent-folder grouping
+  - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group, and mixed supported/custom-looking groups now emit an explicit warning
+  - users can now correct grouping per source in the `New Session` workflow, and the dialog now shows a dedicated detected-group summary panel
+  - there is still no dataset-level confirmation workflow with merge/split actions and no richer dataset model beyond grouped selected paths
 - Why this matters:
-  - the current ingest path is now proactive enough for testing, but it is still too shallow for heterogeneous lab datasets
+  - the current ingest path is now honest enough for broader internal testing, but it is still too shallow for heterogeneous lab datasets with ambiguous multi-file bundles
 
 ### 2. Source-role semantics are now partial rather than purely descriptive
 - Target direction:
@@ -1104,16 +1108,17 @@ The repository is now in internal-testing mode. The following deviations between
 - Why this matters:
   - the role control is now honest enough for first-pass review, but it is not yet a full mixed-source policy model
 
-### 3. Direct ingest now supports source-specific overrides, but disagreement review is still partial
+### 3. Direct ingest now supports source-specific overrides and post-preview metadata review, but conflict resolution is still partial
 - Target direction:
   - users should be able to review and override metadata before preview/build in a way that remains correct for supported, custom, and hybrid sessions
   - mixed-source disagreement handling should be explicit rather than accidental
 - Current implementation:
   - `ConversionSession.metadata_overrides` remains the session-wide path for simple canonical overrides
   - direct ingest now also supports per-source overrides for the same core canonical field set, and those overrides are applied at the inspection boundary and normalized as user-supplied values
-  - the desktop UI still does not surface extracted competing source values automatically after preview or offer a post-preview field-by-field conflict chooser
+  - the desktop conversion workspace now includes a dedicated metadata-review tab that surfaces pending normalized conflicts, their retained canonical values, contributing source values, and normalization notes after preview or execution
+  - the desktop UI still does not offer a post-preview field-by-field source chooser or direct conflict-resolution action beyond returning to overrides
 - Why this matters:
-  - the architectural shortcut is gone and first-pass source-specific override handling now exists, but disagreement review is still narrower than a fuller mixed-source resolution workspace
+  - the architectural shortcut is gone and a real disagreement-review surface now exists, but resolution is still narrower than a fuller mixed-source conflict workspace
 
 ### 4. Structured logging is improved but still incomplete outside the runtime core
 - Target direction:

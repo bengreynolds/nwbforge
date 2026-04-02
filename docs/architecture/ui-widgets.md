@@ -38,6 +38,7 @@ Responsibilities:
 - let users add files and folders to a new conversion session
 - show the suggested session id, title, pathway, source preview, and assembly issues
 - show saved-project path and clean/dirty status
+- show detected dataset-group summaries with pathway and role composition
 - remove selected inputs from the draft
 - edit source-specific metadata overrides for the selected source
 - create a real `ConversionSession` through `SessionAssemblyScreenModel`
@@ -51,7 +52,7 @@ Responsibilities:
 - show source summaries, selected-source details, and output-path entry
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
 - summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
-- expose the right-hand conversion workspace through explicit desktop tabs for run overview, review work, and artifacts
+- expose the right-hand conversion workspace through explicit desktop tabs for run overview, review work, metadata review, and artifacts
 - surface recovered latest-state session information when a saved snapshot exists for the reopened session
 - open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
@@ -62,6 +63,7 @@ Responsibilities:
 - open the validation report and latest review decision directly through dedicated shortcuts
 - delegate artifact-open and reveal behavior to shell-provided callbacks so missing files and failed shell launches can use the standard desktop error path
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
+- render pending mixed-source metadata conflicts as explicit canonical-key comparisons with source-value context and normalization notes
 
 ### `PackageInstallerDialog`
 
@@ -128,9 +130,10 @@ Responsibilities:
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
   - conversion-session section layout for summary, execution, review, and artifacts
+  - direct-ingest detected-group summaries in the `New Session` dialog
   - conversion-session source-detail presentation for pathway, source count, and selected-source metadata
   - conversion-session run-overview and review-guidance summaries
-  - conversion-session workspace-tab structure and state-driven tab selection
+  - conversion-session workspace-tab structure and state-driven tab selection, including metadata-review focus for pending mixed-source conflicts
   - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
@@ -160,6 +163,6 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Expand the new-session assembly dialog from the current role-assignment, per-source regrouping, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset grouping and post-preview disagreement workflows.
+1. Expand the new-session assembly dialog from the current role-assignment, group-summary, per-source regrouping, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset confirmation and field-by-field disagreement-resolution workflows.
 2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

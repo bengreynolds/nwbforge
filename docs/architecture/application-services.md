@@ -77,10 +77,12 @@ Responsibilities:
 - ask the adapter registry which sources can be handled directly
 - suggest a session pathway (`supported`, `custom`, or `hybrid`) from the selected inputs
 - apply first-pass automatic grouping heuristics to related selected inputs before session creation
+- promote detected groups into first-class draft state with pathway and composition summaries
 - support explicit per-source grouping correction on top of those heuristics
 - detect simple same-stem metadata sidecars before session creation
 - carry both session-wide and source-specific metadata overrides into the assembled session model
 - surface no-match and ambiguous-match conditions as reviewable issues
+- surface mixed supported/custom-looking groups as explicit reviewable issues
 - build a real `ConversionSession` once the draft is acceptable
 
 This keeps direct-ingest session assembly in the application layer instead of scattering path grouping heuristics, source-role decisions, metadata-override handling, and adapter classification logic across widgets or desktop bootstrap helpers.
@@ -108,6 +110,6 @@ This gives the desktop app a truthful `Save Project` / `Open Project` path witho
 
 ## Immediate follow-on work
 
-1. Expand session assembly from current path selection, heuristic grouping, grouping correction, simple sidecar association, explicit project files, and current session/source override support into richer dataset grouping and post-preview disagreement workflows.
+1. Expand session assembly from current path selection, heuristic grouping, first-class group summaries, grouping correction, simple sidecar association, explicit project files, and current session/source override support into richer dataset confirmation and post-preview conflict-resolution workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.

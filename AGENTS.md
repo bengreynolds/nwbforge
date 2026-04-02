@@ -72,12 +72,14 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Do not design the primary user workflow around hand-authored app-specific session JSON files
 - Prefer real file and folder ingestion, followed by inspection, grouping, classification, and explicit metadata override/review
 - For first-pass direct ingest, prefer automatic grouping heuristics first and add richer confirmation/correction workflows incrementally
+- Treat direct-ingest groups as first-class review state in the session-assembly workflow rather than only as labels attached to sources
 - For current desktop-facing startup behavior, prefer a direct-ingest `New Session` flow by default and keep JSON session loading as a compatibility, testing, or reopen path
 - App-owned session or project files may exist for internal persistence, reopen behavior, or future `Save Project` flows, but they should not be the required initial user input format
 - Treat explicit direct-ingest project files as saved internal workspace state for reopen/recovery, not as the primary scientific source of truth
 - Session-wide metadata overrides must merge at the session/normalization layer rather than being injected through one source inspection result
 - Source-specific metadata overrides should attach to the selected source, be applied at the inspection boundary, and normalize as user-supplied values
 - For first-pass mixed-source conflict handling, treat source-role precedence as `primary > metadata > supplemental` and keep conflicting values reviewable
+- Prefer a dedicated post-preview metadata-review surface for mixed-source conflicts instead of hiding disagreement context only in override notes or validation text
 - For supported-path conversions, check NeuroConv support before designing a custom parser or direct PyNWB converter
 - For supported proprietary or acquisition-system routes that NeuroConv documents, use direct NeuroConv conversion APIs as the primary execution path
 - Use UI/orchestration code to collect metadata and user selections, then feed those into NeuroConv rather than rebuilding supported conversion logic in custom PyNWB code

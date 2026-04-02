@@ -1231,3 +1231,29 @@ Consequences:
 - `scripts/run_internal_smoke.py` now exercises supported, custom, hybrid, and direct-ingest project round trips
 - internal local testing now has a documented checklist and smoke baseline in addition to the full automated suite
 - deployment and release engineering remain deferred, but the local app now has a stronger repeatable test gate
+
+### DEC-097: Promote direct-ingest groups into first-class session-assembly state
+Status: Accepted
+
+Reasoning:
+- Per-source group labels were enough to prove regrouping, but they were not enough for a usable desktop ingest workflow.
+- The `New Session` workspace needs to reason about dataset groups directly so it can show group-level pathway hints, counts, and review status.
+- Grouping can remain heuristic-first while still exposing a clearer dataset-level model to users.
+
+Consequences:
+- `SessionAssemblyDraft` now includes explicit group summaries instead of leaving grouping implicit in source rows
+- the `New Session` dialog now shows detected dataset groups with pathway and composition summaries
+- grouping is still heuristic and reviewable; merge/split confirmation workflows remain follow-on work
+
+### DEC-098: Surface mixed-source conflicts in a dedicated metadata-review workspace after preview
+Status: Accepted
+
+Reasoning:
+- Source-specific overrides fixed the architecture boundary problem, but they still left conflict review too implicit for real internal testing.
+- Mixed-source sessions need a post-preview workspace that shows the retained canonical value and the competing source values that produced it.
+- This is enough to make disagreement handling visible now without prematurely designing a full conflict-resolution engine.
+
+Consequences:
+- the conversion workspace now projects pending normalized conflicts into a dedicated metadata-review tab
+- the metadata-review tab shows canonical keys, retained values, contributing source values, and normalization notes
+- direct field-by-field resolution actions remain follow-on work; users still resolve conflicts through the existing override/edit flows
