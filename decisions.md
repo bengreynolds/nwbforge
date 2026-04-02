@@ -1417,3 +1417,17 @@ Consequences:
 - the desktop adapter registry now skips optional adapters whose required route dependencies are not installed in the current environment
 - newly implemented optional routes should be wired through both the package catalog and the registry gate, not added as unconditional app surface area
 - the first routes added under this rule are `ScanImage` and `SLEAP`
+
+### DEC-111: Scale optional route growth by extending category-first family backbones instead of adding isolated wrappers
+Status: Accepted
+
+Reasoning:
+- Supported-route growth is now a scaling problem, so new routes should reinforce the family-module pattern rather than drifting back toward one-off top-level adapter files.
+- The package-gated registry model makes it safe to add more implemented routes, but only if those routes stay organized around shared semantics and dependency gates.
+- Behavior pose, media, and imaging each need at least one more proof case to validate that the optional-route model works across different route shapes.
+
+Consequences:
+- the `behavior` family now includes `LightningPose` alongside `FicTrac`, `DeepLabCut`, and `SLEAP`
+- the `media` family now includes `Videos` alongside still-image and audio support
+- the `imaging` family now includes `HDF5 Imaging` alongside `ScanImage`
+- new optional routes should continue to land through category-first family modules plus package-catalog gates rather than unconditional registry growth

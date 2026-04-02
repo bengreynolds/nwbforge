@@ -39,6 +39,9 @@ Completed:
 - Added a NeuroConv-backed FicTrac behavior route using `FicTracDataInterface`
 - Added a NeuroConv-backed DeepLabCut pose-estimation route using `DeepLabCutInterface`
 - Added a NeuroConv-backed SLEAP pose-estimation route using `SLEAPInterface`
+- Added a NeuroConv-backed LightningPose pose-estimation route using `LightningPoseDataInterface`
+- Added a NeuroConv-backed external-video route using `ExternalVideoInterface`
+- Added a NeuroConv-backed HDF5 imaging route using `Hdf5ImagingInterface`
 - Added a NeuroConv-backed ScanImage imaging route using `ScanImageImagingInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
@@ -143,7 +146,7 @@ Next:
 - The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
 - Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
-- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP` and `ScanImage` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
+- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `Videos`, `HDF5 Imaging`, and `ScanImage` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
 - The next supported-route scaling step should add more NeuroConv-backed acquisition and behavior routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.

@@ -31,9 +31,12 @@ The repository now includes a Python package-planning layer under `src/nwbforge/
 Current route package catalog examples:
 - `audio`
 - `deeplabcut`
+- `lightningpose`
 - `excel`
+- `hdf5`
 - `image`
 - `sleap`
+- `videos`
 - `scanimage`
 
 ## Setup modes
@@ -99,7 +102,10 @@ Current rule:
 
 Examples:
 - `deeplabcut` depends on `ndx_pose`
+- `lightningpose` depends on `cv2` and `ndx_pose`
 - `sleap` depends on `sleap_io` and `ndx_pose`
+- `videos` depends on `cv2`
+- `hdf5` depends on `h5py` and `roiextractors`
 - `scanimage` depends on `roiextractors` and `tifffile`
 
 This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.

@@ -31,6 +31,9 @@ Implemented adapters now include:
 - `NeuroConvFicTracAdapter` for real NeuroConv-backed FicTrac behavior sources
 - `NeuroConvDeepLabCutAdapter` for real NeuroConv-backed DeepLabCut pose-estimation sources
 - `NeuroConvSLEAPAdapter` for real NeuroConv-backed SLEAP pose-estimation sources
+- `NeuroConvLightningPoseAdapter` for real NeuroConv-backed LightningPose pose-estimation sources
+- `NeuroConvVideoAdapter` for real NeuroConv-backed external video sources
+- `NeuroConvHdf5ImagingAdapter` for real NeuroConv-backed HDF5 imaging sources
 - `NeuroConvScanImageAdapter` for real NeuroConv-backed ScanImage imaging sources
 
 Current package direction:
@@ -55,7 +58,7 @@ Implemented framework pieces:
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
-- the SLEAP and ScanImage adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
+- the SLEAP, LightningPose, Video, HDF5 imaging, and ScanImage adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
 - the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:
