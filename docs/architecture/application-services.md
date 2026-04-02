@@ -79,10 +79,22 @@ Responsibilities:
 - apply first-pass automatic grouping heuristics to related selected inputs before session creation
 - support explicit per-source grouping correction on top of those heuristics
 - detect simple same-stem metadata sidecars before session creation
+- carry both session-wide and source-specific metadata overrides into the assembled session model
 - surface no-match and ambiguous-match conditions as reviewable issues
 - build a real `ConversionSession` once the draft is acceptable
 
 This keeps direct-ingest session assembly in the application layer instead of scattering path grouping heuristics, source-role decisions, metadata-override handling, and adapter classification logic across widgets or desktop bootstrap helpers.
+
+### `JsonSessionAssemblyProjectStore`
+
+Location: `src/nwbforge/app/services/projects.py`
+
+Responsibilities:
+- persist explicit direct-ingest project files as app-owned workspace documents
+- load saved direct-ingest project files back into `SessionAssemblyWorkspace`
+- keep saved project state distinct from hand-authored scientific source inputs
+
+This gives the desktop app a truthful `Save Project` / `Open Project` path without treating JSON bootstrap fixtures as the long-term primary ingest model.
 
 ## Design constraints
 
@@ -96,6 +108,6 @@ This keeps direct-ingest session assembly in the application layer instead of sc
 
 ## Immediate follow-on work
 
-1. Expand session assembly from current path selection, heuristic grouping, grouping correction, simple sidecar association, source-role assignment, and session-wide metadata overrides into richer dataset grouping and source-specific disagreement workflows.
+1. Expand session assembly from current path selection, heuristic grouping, grouping correction, simple sidecar association, explicit project files, and current session/source override support into richer dataset grouping and post-preview disagreement workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.

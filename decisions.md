@@ -1179,3 +1179,55 @@ Consequences:
 - desktop session loading, reopen behavior, output selection, and artifact open/reveal actions now emit structured logs
 - observability coverage is materially better for internal testing, but broader desktop/UI interaction logging is still follow-on work
 - planning/docs should treat shell-action logging as implemented rather than still grouping it under the older review/persistence-only expansion
+
+### DEC-093: Make explicit direct-ingest project files a first-class desktop workflow
+Status: Accepted
+
+Reasoning:
+- Draft-only app-state persistence was enough for early `New Session` work, but it was too weak for a credible local desktop product.
+- Users need a real saved-work state for reopen, handoff, and manual testing without falling back to hand-authored bootstrap JSON session files.
+- A project document should persist assembled workspace state, not replace the real scientific source files as the authoritative data inputs.
+
+Consequences:
+- the desktop shell now exposes `Open Project...`, `Save Project`, `Save Project As...`, and `Open Recent Project`
+- direct-ingest project files now persist selected paths, grouping, roles, and metadata override state as app-owned workspace documents
+- JSON session fixtures remain compatibility/testing inputs, but explicit project files are now the preferred saved-state workflow
+
+### DEC-094: Apply source-specific metadata overrides at the inspection boundary
+Status: Accepted
+
+Reasoning:
+- Session-wide overrides are useful, but they are not enough once mixed-source sessions disagree on subject or session metadata.
+- Source-specific overrides should behave like user edits to one source's extracted facts, not like hidden normalization shortcuts.
+- Applying them at inspection keeps adapter parsing and normalization boundaries honest while preserving source provenance.
+
+Consequences:
+- `ConversionSession` now carries `source_metadata_overrides` in addition to session-wide overrides
+- source-specific overrides are injected into `ExtractionResult` as user overrides before normalization
+- normalization now converts those values into `USER_SUPPLIED` canonical values while still respecting the current source-role precedence model
+
+### DEC-095: Preserve project identity through direct-ingest draft recovery
+Status: Accepted
+
+Reasoning:
+- Once explicit project files exist, reopening a draft without its saved project path creates a confusing half-project state.
+- Recovery should preserve whether the current workspace is anonymous draft state or a saved project with a clean/dirty lifecycle.
+- This is necessary for credible local-app behavior even before deployment or richer project history exists.
+
+Consequences:
+- persisted direct-ingest workspace state now retains project-path identity and clean/dirty status
+- reopened `New Session` drafts can retain their saved project context instead of reverting to anonymous draft state
+- recovery remains latest-state only; richer project history is still follow-on work
+
+### DEC-096: Add a repeatable internal smoke suite before deployment work
+Status: Accepted
+
+Reasoning:
+- Full pytest coverage is necessary but not sufficient for a local desktop milestone that spans direct ingest, saved projects, and real supported/custom/hybrid execution paths.
+- Internal testing needed one command that exercises the current product stack in a more integrated way than unit tests alone.
+- This improves confidence and shortens future triage during the first manual testing round.
+
+Consequences:
+- `scripts/run_internal_smoke.py` now exercises supported, custom, hybrid, and direct-ingest project round trips
+- internal local testing now has a documented checklist and smoke baseline in addition to the full automated suite
+- deployment and release engineering remain deferred, but the local app now has a stronger repeatable test gate

@@ -20,6 +20,12 @@ Responsibilities:
 - consume pipeline and package-install progress/error events without touching widgets directly
 
 Current menu actions:
+- `New Session`
+- `Open Project...`
+- `Save Project`
+- `Save Project As...`
+- `Open Session...`
+- `Reopen Last Session`
 - `Settings`
 - `Install Extensions / Packages`
 - `Toggle Log Viewer`
@@ -72,6 +78,8 @@ Location: `src/nwbforge/ui/session_assembly.py`
 Responsibilities:
 - track currently selected real files and folders for a new conversion session
 - call `SessionAssemblyService` whenever selected inputs, draft session id, draft title, source roles, or session-wide metadata overrides change
+- persist and restore explicit direct-ingest project files
+- carry source-specific metadata overrides for selected sources
 - expose suggested pathway, source summaries, and reviewable assembly issues to widgets
 - create a real `ConversionSession` once the assembled draft is acceptable
 
@@ -80,7 +88,9 @@ Current scope:
 - additive path selection plus removal
 - source-role assignment is now available for `primary`, `supplemental`, and `metadata` inputs
 - session-wide metadata overrides are now available for a narrow canonical field set before preview/build
+- source-specific metadata overrides are now available for the same narrow canonical field set
 - draft assembly state now persists so `New Session` can reopen in-progress work
+- explicit saved-project identity now persists through reopened draft state as well
 
 ### `SettingsScreenModel`
 
@@ -93,6 +103,7 @@ Responsibilities:
 - save settings back through the service without exposing persistence details to widgets
 - expose applied settings separately from unsaved draft changes so the shell can reconfigure runtime behavior only after save
 - record the last-opened session path and bounded recent-session history for shell-level reuse
+- record the last-opened project path and bounded recent-project history for shell-level reuse
 - record the last-used output directory so newly loaded sessions can receive a default NWB target path
 
 ## Design constraints
@@ -110,9 +121,11 @@ Responsibilities:
 - `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
 - `src/nwbforge/ui/qt/session_assembly_dialog.py` binds `SessionAssemblyScreenModel` into the first direct-ingest `New Session` workflow
 - the shell now also owns the first file-based session-loading step through `File -> Open Session...`, with supported/custom/hybrid session loading delegated to the desktop bootstrap helper
+- the shell now also owns explicit project loading and saving through `Open Project...`, `Save Project`, `Save Project As...`, and `Open Recent Project`
 - the current `File -> Open Session...` path is a testing/bootstrap and compatibility path; the intended primary desktop flow should shift toward `New Conversion Session` plus direct file/folder ingestion and optional saved-project reopen behavior
 - `New Session` now opens a real assembly dialog instead of clearing the current screen immediately
 - the shell's recent-session submenu is now rebuilt from settings-backed recent-session state rather than widget-local memory
+- the shell's recent-project submenu is now rebuilt from settings-backed recent-project state rather than widget-local memory
 - the shell now also owns explicit `New Session` and `Reopen Last Session` actions while the app remains single-session
 - `New Session` now preserves and reopens in-progress direct-ingest drafts rather than resetting on every dialog open
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
@@ -136,6 +149,6 @@ The current Qt layer is intentionally thin:
 
 ## Immediate follow-on work
 
-1. Expand direct session assembly from the current heuristic-grouping, per-source regrouping, simple sidecar association, role-assignment, and session-wide override baseline into richer dataset grouping and source-specific metadata workflows.
+1. Expand direct session assembly from the current heuristic-grouping, per-source regrouping, simple sidecar association, saved-project baseline, and current session/source override model into richer dataset grouping and post-preview disagreement workflows.
 2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
-3. Strengthen multi-source presentation and source-specific metadata workflows once direct session assembly fully replaces JSON-first startup as the primary UX.
+3. Strengthen multi-source presentation and source-specific disagreement workflows once direct session assembly fully replaces JSON-first startup as the primary UX.

@@ -22,7 +22,9 @@ Responsibilities:
 - open and close the package-install dialog
 - open and close the settings dialog
 - host a manually testable real desktop composition built from the current backend services
+- open and save explicit direct-ingest project files from the shell
 - open supported, custom, and hybrid session fixtures or saved-state descriptors from disk through `File -> Open Session...`
+- rebuild the `Open Recent Project` submenu from persisted project-history state
 - rebuild the `Open Recent` submenu from persisted session-history state
 - expose explicit `New Session` and `Reopen Last Session` actions
 - route `New Session` into the direct-ingest session-assembly workflow instead of treating it as a simple screen reset
@@ -35,7 +37,9 @@ Location: `src/nwbforge/ui/qt/session_assembly_dialog.py`
 Responsibilities:
 - let users add files and folders to a new conversion session
 - show the suggested session id, title, pathway, source preview, and assembly issues
+- show saved-project path and clean/dirty status
 - remove selected inputs from the draft
+- edit source-specific metadata overrides for the selected source
 - create a real `ConversionSession` through `SessionAssemblyScreenModel`
 
 ### `ConversionSessionWidget`
@@ -119,6 +123,7 @@ Responsibilities:
 - Tests run headlessly with `QT_QPA_PLATFORM=offscreen`
 - Current coverage validates:
   - File-menu wiring
+  - direct-ingest project open/save wiring
   - log-dock visibility and log capture
   - package-dialog visibility and route-list binding
   - conversion-session preview/execution bindings
@@ -129,6 +134,8 @@ Responsibilities:
   - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
+  - source-specific direct-ingest metadata override bindings
+  - direct-ingest project recovery through reopened draft state
 
 ## Current limitations
 
@@ -141,7 +148,7 @@ Responsibilities:
 
 - `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
 - it now bootstraps the real desktop service composition from `src/nwbforge/app/desktop.py`
-- it loads either a user-provided `session_manifest.json`, `custom_session.json`, or `hybrid_session.json` path via `--session`, the last-opened session from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
+- it loads either a user-provided `session_manifest.json`, `custom_session.json`, or `hybrid_session.json` path via `--session`, a direct-ingest project via `--project`, or the default direct-ingest `New Session` workflow
 - it should be treated as a development aid, not as the final application startup path
 
 ## Ingest direction
@@ -153,6 +160,6 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Expand the new-session assembly dialog from the current role-assignment, per-source regrouping, simple sidecar association, narrow metadata-override, and draft-reopen baseline into richer dataset grouping and saved-project workflows.
+1. Expand the new-session assembly dialog from the current role-assignment, per-source regrouping, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset grouping and post-preview disagreement workflows.
 2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

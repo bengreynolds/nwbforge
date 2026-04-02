@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
 Last updated: 2026-04-01
-Status: First pass complete / ready for internal testing
+Status: First pass complete / internal testing underway
 
 ## Current Execution Status
 
@@ -84,23 +84,27 @@ Completed:
 - Added explicit review-workspace guidance describing source-role conflict precedence
 - Applied category-first packaging to the supported media family under `src/nwbforge/adapters/supported/media/`
 - Expanded structured logging into desktop bootstrap, session assembly, direct-ingest workspace persistence, and settings persistence
+- Added explicit direct-ingest project documents plus `Open Project...`, `Save Project`, `Save Project As...`, and `Open Recent Project` desktop workflows
+- Added source-specific metadata overrides to direct ingest, source inspection, normalization, and persisted session/project state
+- Added direct-ingest project recovery through persisted workspace state plus launcher-level `--project` support
+- Added an internal smoke suite covering supported, custom, hybrid, and direct-ingest-project round trips
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Operational hardening around persistence, recovery, reporting, and reviewability for a first serious manual-testing round
+- Operational hardening around persistence, recovery, reporting, and reviewability during the first serious manual-testing round
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
 - Snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Richer direct-ingest grouping, sidecar association, and dataset-level confirmation beyond the current flat path-to-source assembly
+- Richer direct-ingest grouping, sidecar association, and dataset-level confirmation beyond the current heuristic and per-source correction baseline
 
 Next:
-- Begin formal first-pass internal testing in the dedicated Conda environment
+- Continue formal first-pass internal testing in the dedicated Conda environment using the full suite plus the internal smoke baseline
 - Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
-- Harden operational concerns around preview persistence, review history, recovery, and artifact/report navigation
-- Expand structured logging from the current core runtime services into broader persistence, review, and plugin paths
+- Deepen direct-ingest grouping from current heuristics and manual correction toward a richer dataset/session model
+- Improve mixed-source disagreement handling beyond the current session-wide and source-specific override baseline
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
 - Keep release engineering planned but defer implementation until after first-pass internal testing
 
@@ -112,6 +116,7 @@ Next:
 - The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.
 - The intended desktop entry point is `New Conversion Session`, followed by additive file/folder ingestion, source inspection, grouping, pathway classification, and explicit metadata override/review before preview or write.
 - The first concrete direct-ingest slice now exists: `New Session` opens a draft session-assembly workflow over real files/folders instead of behaving only as a shell reset.
+- Direct ingest now has explicit saved-project behavior through app-owned `.nwbforge-project.json` files, with open/save/recent project desktop flows layered on top of the in-progress draft workspace.
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
@@ -139,10 +144,10 @@ Next:
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
 - The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the current supported/custom pipeline, package-management services, review service, threaded executors, and UI models into one manual-testable application stack.
-- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition in direct-ingest `New Session` mode by default while still supporting explicit supported/custom/hybrid session loading through `--session`.
+- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition in direct-ingest `New Session` mode by default while still supporting explicit supported/custom/hybrid session loading through `--session` and explicit direct-ingest project loading through `--project`.
 - The desktop shell can now load supported, custom, and hybrid sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
 - The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
-- The desktop settings path now also persists `last_open_session_path` and a bounded recent-session list, and the shell uses that state to populate `Open Recent` and to prefer the last-opened manifest on startup when no explicit path is supplied.
+- The desktop settings path now also persists `last_open_session_path`, `last_open_project_path`, and bounded recent-session/recent-project lists, and the shell uses that state to populate `Open Recent` and `Open Recent Project`.
 - The conversion-session panel now also supports direct actions for opening a selected artifact or its containing folder, which gives immediate desktop access to validation reports and later review artifacts.
 - The shell now also has explicit session lifecycle controls for `New Session` and `Reopen Last Session`, which moves the desktop flow closer to a conventional application model instead of a launcher-only workflow.
 - The desktop settings path now also persists the last used NWB output directory, and each newly loaded supported or custom session receives a default output path derived from that directory and the current session id.
@@ -156,6 +161,7 @@ Next:
 - The desktop conversion surface now also exposes pathway, source-count, and selected-source detail fields so supported and custom sessions read more like one intentional desktop workflow rather than a raw source list.
 - The real desktop path now persists latest preview, execution, and review snapshots automatically under the app-state directory, which improves resumability and operational readiness for repeated internal testing without waiting for a fuller history store.
 - The real desktop path now also restores the latest saved snapshot when a session is reopened, surfacing recovered artifacts, validation state, review status, and the last known NWB output path directly in the conversion workspace.
+- The direct-ingest workflow now persists both draft workspace state and explicit project identity, so reopened drafts can retain their saved-project path and clean/dirty status instead of falling back to anonymous draft state.
 
 ## First-Pass Product Priorities
 
@@ -185,8 +191,8 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, heuristic-first parent-folder grouping suggestions, reviewable auto-grouping issues, per-source grouping correction, simple same-stem sidecar association, and draft session creation
-- in-progress `New Session` drafts now persist under app state and reopen with their selected inputs and override values instead of resetting on every dialog open
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first parent-folder grouping suggestions, reviewable auto-grouping issues, per-source grouping correction, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
 
@@ -211,6 +217,7 @@ Current status:
 - latest preview, execution, and review state now persist and recover in the real desktop workflow
 - artifact/report visibility is available from the conversion workspace and shell actions
 - structured logging now covers the runtime core, desktop bootstrap, session assembly, settings persistence, review submission, session persistence, and core desktop shell file/artifact actions, though some desktop interaction paths remain lighter than the target end state
+- the repo now also has a repeatable internal smoke baseline through `scripts/run_internal_smoke.py`, covering supported, custom, hybrid, and direct-ingest project round trips
 
 ### Priority 4: Supported-format growth
 
@@ -262,8 +269,8 @@ Current status:
 - first-pass internal testing may continue to use checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` examples plus equivalent desktop session descriptors
 - this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
 - the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
-- the first concrete version of that milestone is now implemented and now includes initial source-role editing, session-wide metadata overrides, and persisted draft reopen behavior
-- richer grouping, source-specific metadata disagreement handling, and explicit saved-project semantics remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
+- the first concrete version of that milestone is now implemented and now includes initial source-role editing, session-wide metadata overrides, source-specific metadata overrides for core canonical fields, explicit saved-project workflows, and persisted draft/project reopen behavior
+- richer grouping and more explicit post-preview mixed-source disagreement review remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
 - if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
 
 ### Testing baseline for first-pass handoff
@@ -1097,15 +1104,16 @@ The repository is now in internal-testing mode. The following deviations between
 - Why this matters:
   - the role control is now honest enough for first-pass review, but it is not yet a full mixed-source policy model
 
-### 3. Direct ingest still uses session-wide overrides only
+### 3. Direct ingest now supports source-specific overrides, but disagreement review is still partial
 - Target direction:
   - users should be able to review and override metadata before preview/build in a way that remains correct for supported, custom, and hybrid sessions
   - mixed-source disagreement handling should be explicit rather than accidental
 - Current implementation:
-  - `ConversionSession.metadata_overrides` is still session-wide only
-  - overrides now merge correctly at the normalization/session layer instead of being injected through first-source inspection
+  - `ConversionSession.metadata_overrides` remains the session-wide path for simple canonical overrides
+  - direct ingest now also supports per-source overrides for the same core canonical field set, and those overrides are applied at the inspection boundary and normalized as user-supplied values
+  - the desktop UI still does not surface extracted competing source values automatically after preview or offer a post-preview field-by-field conflict chooser
 - Why this matters:
-  - the architectural shortcut is gone, but the model is still narrower than future source-specific override behavior
+  - the architectural shortcut is gone and first-pass source-specific override handling now exists, but disagreement review is still narrower than a fuller mixed-source resolution workspace
 
 ### 4. Structured logging is improved but still incomplete outside the runtime core
 - Target direction:
@@ -1117,14 +1125,15 @@ The repository is now in internal-testing mode. The following deviations between
 - Why this matters:
   - internal testing will generate harder-to-triage failures if only the conversion runtime is well instrumented
 
-### 5. `Open Session...` is still a JSON/bootstrap compatibility path, not a general project model
+### 5. `Open Session...` is still a JSON/bootstrap compatibility path even though explicit project workflows now exist
 - Target direction:
   - app-owned project/session files may exist later for reopen and saved work, but they should not define the primary ingest story
 - Current implementation:
   - `Open Session...` is still constrained around `session_manifest.json`, `custom_session.json`, and `hybrid_session.json`
-  - there is no explicit `Save Project` / `Open Project` workflow yet
+  - explicit `Save Project`, `Save Project As...`, `Open Project...`, and `Open Recent Project` workflows now exist for direct-ingest state
+  - the launcher now also supports `--project` for local testing
 - Why this matters:
-  - the app currently has a compatibility path without a fully articulated long-term project-state model
+  - project-state behavior is now real, but the compatibility JSON loader is still more prominent than the long-term ingest model in some testing flows
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
@@ -1164,9 +1173,8 @@ Current status:
 - When should the system recommend descriptive metadata versus a formal NDX?
 - How should lab vocabularies be versioned and reviewed?
 - Which validation findings should block export by default for each lab profile or deployment mode?
-- Should app-owned saved state remain internal-only at first, or become an explicit `Save Project` / `Open Project` workflow after direct file/folder ingest lands?
 - When should source-role semantics expand beyond review guidance, normalization precedence, and provenance ordering into grouping and deeper mapping policy?
-- Which metadata overrides should remain session-wide versus becoming source-specific when mixed inputs disagree?
+- When should source-specific overrides expand from the current core canonical fields into a broader mixed-source disagreement workspace?
 - How broad does structured logging need to be before internal testing is considered adequately instrumented beyond the current runtime, review, persistence, and session-assembly coverage?
 
 ## Decisions Log

@@ -74,7 +74,9 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - For first-pass direct ingest, prefer automatic grouping heuristics first and add richer confirmation/correction workflows incrementally
 - For current desktop-facing startup behavior, prefer a direct-ingest `New Session` flow by default and keep JSON session loading as a compatibility, testing, or reopen path
 - App-owned session or project files may exist for internal persistence, reopen behavior, or future `Save Project` flows, but they should not be the required initial user input format
+- Treat explicit direct-ingest project files as saved internal workspace state for reopen/recovery, not as the primary scientific source of truth
 - Session-wide metadata overrides must merge at the session/normalization layer rather than being injected through one source inspection result
+- Source-specific metadata overrides should attach to the selected source, be applied at the inspection boundary, and normalize as user-supplied values
 - For first-pass mixed-source conflict handling, treat source-role precedence as `primary > metadata > supplemental` and keep conflicting values reviewable
 - For supported-path conversions, check NeuroConv support before designing a custom parser or direct PyNWB converter
 - For supported proprietary or acquisition-system routes that NeuroConv documents, use direct NeuroConv conversion APIs as the primary execution path
@@ -151,3 +153,4 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Instrument actionable code paths with standard logging, not ad hoc printing
 - Prefer runtime contracts that expose stage, progress, and error events cleanly to the future UI
 - Prefer route-name package catalogs and grouped install targets over raw dependency prompts when designing setup or future UI package-install flows
+- Prefer explicit `Save Project` / `Open Project` behavior over expanding JSON bootstrap fixtures when evolving direct-ingest desktop workflows
