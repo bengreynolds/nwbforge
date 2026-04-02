@@ -45,13 +45,17 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_blackrock_sorting" not in registered
     assert "neuroconv_brukertiff_singleplane" not in registered
     assert "neuroconv_brukertiff_multiplane" not in registered
+    assert "neuroconv_caiman_segmentation" not in registered
     assert "neuroconv_cellexplorer_sorting" not in registered
+    assert "neuroconv_cnmfe_segmentation" not in registered
     assert "neuroconv_excel_time_intervals" in registered
     assert "neuroconv_deeplabcut" not in registered
     assert "neuroconv_edf" not in registered
+    assert "neuroconv_extract_segmentation" not in registered
     assert "neuroconv_femtonics" not in registered
     assert "neuroconv_lightningpose" not in registered
     assert "neuroconv_inscopix" not in registered
+    assert "neuroconv_inscopix_segmentation" not in registered
     assert "neuroconv_mcsraw" not in registered
     assert "neuroconv_maxone" not in registered
     assert "neuroconv_mearec" not in registered
@@ -85,8 +89,10 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_scanbox" not in registered
     assert "neuroconv_scanimage" not in registered
     assert "neuroconv_scanimage_legacy" not in registered
+    assert "neuroconv_suite2p_segmentation" not in registered
     assert "neuroconv_tiff_imaging" not in registered
     assert "neuroconv_thor" not in registered
+    assert "neuroconv_tdt_fiber_photometry" not in registered
 
 
 def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path) -> None:

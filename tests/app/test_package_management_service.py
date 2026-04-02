@@ -19,9 +19,12 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "biocam" in route_names
     assert "blackrock" in route_names
     assert "brukertiff" in route_names
+    assert "caiman" in route_names
     assert "cellexplorer" in route_names
+    assert "cnmfe" in route_names
     assert "deeplabcut" in route_names
     assert "edf" in route_names
+    assert "extract" in route_names
     assert "femtonics" in route_names
     assert "lightningpose" in route_names
     assert "inscopix" in route_names
@@ -40,10 +43,12 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "plexon2" in route_names
     assert "phy" in route_names
     assert "scanbox" in route_names
+    assert "suite2p" in route_names
     assert "spikegadgets" in route_names
     assert "spike2" in route_names
     assert "spikeglx" in route_names
     assert "tdt" in route_names
+    assert "tdt_fiber_photometry" in route_names
     assert "tiff" in route_names
     assert "whitematter" in route_names
     assert "videos" in route_names

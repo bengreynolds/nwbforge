@@ -44,8 +44,14 @@ cellexplorer = [
 brukertiff = [
   "neuroconv[brukertiff]>=0.9,<0.10",
 ]
+caiman = [
+  "neuroconv[caiman]>=0.9,<0.10",
+]
 deeplabcut = [
   "ndx-pose>=0.2,<0.3",
+]
+cnmfe = [
+  "neuroconv[cnmfe]>=0.9,<0.10",
 ]
 edf = [
   "spikeinterface>=0.103,<0.104",
@@ -53,6 +59,9 @@ edf = [
 ]
 femtonics = [
   "neuroconv[femtonics]>=0.9,<0.10",
+]
+extract = [
+  "neuroconv[extract]>=0.9,<0.10",
 ]
 intan = [
   "neuroconv[intan]>=0.9,<0.10",
@@ -125,6 +134,9 @@ phy = [
 scanbox = [
   "neuroconv[ophys]>=0.9,<0.10",
 ]
+suite2p = [
+  "neuroconv[suite2p]>=0.9,<0.10",
+]
 spike2 = [
   "neuroconv[spike2]>=0.9,<0.10",
 ]
@@ -139,6 +151,9 @@ tiff = [
 ]
 tdt = [
   "neuroconv[tdt]>=0.9,<0.10",
+]
+tdt_fiber_photometry = [
+  "neuroconv[tdt-fp]>=0.9,<0.10",
 ]
 videos = [
   "opencv-python-headless>=4.10,<5",

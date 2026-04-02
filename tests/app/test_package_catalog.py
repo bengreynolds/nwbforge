@@ -11,13 +11,17 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
             "isx",
             "lxml",
             "MEArec",
+            "ndx_fiber_photometry",
+            "ndx_ophys_devices",
             "natsort",
             "pymatreader",
+            "scipy",
             "sleap_io",
             "sonpy",
             "ndx_pose",
             "cv2",
             "roiextractors",
+            "tdt",
             "tifffile",
             "ndx_events",
             "spikeinterface",
@@ -33,10 +37,13 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
     assert route_dependencies_available("blackrock") is True
     assert route_dependencies_available("cellexplorer") is True
     assert route_dependencies_available("brukertiff") is True
+    assert route_dependencies_available("caiman") is True
+    assert route_dependencies_available("cnmfe") is True
     assert route_dependencies_available("sleap") is True
     assert route_dependencies_available("lightningpose") is True
     assert route_dependencies_available("medpc") is True
     assert route_dependencies_available("edf") is True
+    assert route_dependencies_available("extract") is True
     assert route_dependencies_available("femtonics") is True
     assert route_dependencies_available("inscopix") is True
     assert route_dependencies_available("mcsraw") is True
@@ -60,7 +67,9 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
     assert route_dependencies_available("spikegadgets") is True
     assert route_dependencies_available("spikeglx") is True
     assert route_dependencies_available("tdt") is True
+    assert route_dependencies_available("tdt_fiber_photometry") is True
     assert route_dependencies_available("tiff") is True
     assert route_dependencies_available("whitematter") is True
     assert route_dependencies_available("hdf5") is True
+    assert route_dependencies_available("suite2p") is True
     assert route_dependencies_available("image") is False
