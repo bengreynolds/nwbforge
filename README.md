@@ -132,6 +132,8 @@ Supported-path policy is now explicit: check the NeuroConv Conversion Gallery fi
 
 For real supported proprietary or acquisition-system formats, the intended execution model is to let the UI and orchestration layers parameterize documented NeuroConv conversion APIs directly. The repo now also supports a bridge mode where it assembles a base `NWBFile` from normalized metadata and then lets NeuroConv append the supported route content into that file. Repository-owned PyNWB assembly remains the fallback path for unsupported formats and the primary path for custom and hybrid conversion flows.
 
+The current desktop app can open checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` files for internal testing, but that is not the intended long-term primary ingest model. The target product flow is `New Conversion Session`, then direct file/folder ingestion, inspection, grouping, supported/custom/hybrid classification, and explicit metadata override/review before preview or write. App-owned session/project files may remain useful later for reopen/recovery or explicit `Save Project` behavior, but they are not meant to be the required hand-authored starting point for users.
+
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
 The current writer is still intentionally narrow overall, but it now carries the core subject/session fields, first-pass device metadata, and first modality-specific acquisition paths for behavior traces via NWB `BehavioralTimeSeries` and behavior position data via `Position`/`SpatialSeries`, with generic `TimeSeries` fallback retained for other modalities. The pipeline now emits a machine-readable JSON validation report artifact alongside the generated outputs, derives an explicit validation review outcome, supports persisted post-execution review decisions, and the real desktop workflow now persists the latest preview, execution, and review state as a resumable JSON session snapshot.
@@ -162,7 +164,7 @@ conda run -n nwbforge-dev python scripts/run_app.py --session examples\sessions\
 conda run -n nwbforge-dev python scripts/run_app.py --session examples\sessions\hybrid\hybrid_session.json
 ```
 
-The temporary launcher is a development aid only. It now boots the real desktop service composition and loads either a user-provided supported/custom session source or a generated demo manifest, without changing the long-term packaging plan.
+The temporary launcher is a development aid only. It now boots the real desktop service composition and loads either a user-provided supported/custom/hybrid testing fixture or a generated demo manifest, without changing the long-term packaging plan. Those JSON session files are current bootstrap and internal-testing inputs, not the intended long-term primary ingest UX.
 
 If no output directory has been chosen yet, the desktop shell now defaults NWB writes into `.nwbforge/outputs/` instead of the repository root.
 
@@ -198,5 +200,6 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 1. Begin structured internal testing in the dedicated Conda environment.
 2. Capture internal-testing findings and convert them into prioritized UI, workflow, and operational fixes.
-3. Harden operational concerns such as richer review history, multi-snapshot recovery flows, and report visibility on top of the current latest-state persistence baseline.
-4. Start release engineering only after the first-pass testing round confirms the product direction.
+3. Replace the JSON-first test harness workflow with a real `New Conversion Session` ingest flow for direct file/folder selection, grouping, and metadata overrides.
+4. Harden operational concerns such as richer review history, multi-snapshot recovery flows, and report visibility on top of the current latest-state persistence baseline.
+5. Start release engineering only after the first-pass testing round confirms the product direction.
