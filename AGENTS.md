@@ -92,6 +92,8 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Prefer category-first supported-adapter packaging when semantics are shared, including `behavior/`, `tabular/`, and `media/` families
 - Treat logging, progress reporting, and user-facing runtime status as explicit cross-layer contracts, not incidental UI behavior
 - Keep long-running conversions off the UI thread and route them through background workers, threads, or async-safe runtime services
+- For the current desktop application direction, prefer one integrated main-window workspace over separate top-level dialogs or windows for routine workflows unless there is a strong technical reason
+- Ensure UI-visible logs preserve timestamps from the originating logging event so internal-testing traces stay correlated across background work and user actions
 
 ## Documentation Rules
 

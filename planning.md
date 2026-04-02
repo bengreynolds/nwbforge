@@ -107,6 +107,10 @@ Completed:
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
 - Added a shared Qt visual system with reusable header cards, metric cards, restrained color treatment, and cleaner dialog/workspace composition across the desktop shell
+- Consolidated routine desktop workflows into one integrated main-window workspace with tabs for conversion, direct ingest, packages, settings, and NWB viewing
+- Embedded the NWB viewer into the main shell while keeping the standalone viewer class only as a thin compatibility wrapper
+- Switched UI-visible log timestamps to use the original logging-record time instead of UI append time
+- Improved log-viewer responsiveness by appending new entries incrementally instead of redrawing the full log buffer on every update
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -124,14 +128,15 @@ Next:
 - Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
 - Deepen direct-ingest grouping from current heuristics, confirmation, and manual correction toward a richer dataset/session model
 - Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and current session/source override actions toward fuller field-by-field conflict resolution
-- Expand the standalone NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
+- Expand the integrated NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
 - Keep the optional `nwbwidgets + Panel` path additive and avoid turning notebook/web tooling into a hard dependency of the base viewer path
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
 - Keep release engineering planned but defer implementation until after first-pass internal testing
 
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
-- The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner dialog hierarchy, and restrained styling across the shell, ingest flow, viewer, settings, and package-management windows.
+- The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
+- Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
@@ -213,6 +218,9 @@ Required direction:
 - major conversion surfaces should present summary, status, review, and artifact information intentionally rather than as stacked debug fields
 - major conversion workspaces should use intentional desktop navigation patterns such as tabs or dedicated panes when that improves readability and task focus
 - desktop windows and dialogs should share a consistent visual system so the shell, viewer, settings, package install, and direct-ingest flows read like one product
+- routine workflows should live inside the same main application window; separate top-level windows should be avoided unless there is a strong technical reason
+- UI-visible logging should always include timestamps, and internal-testing logs should be easy to correlate across background work and user actions
+- UI state changes should favor incremental updates and lazy loading over full redraw behavior when possible
 - the primary start flow should become `New Conversion Session`, not “prepare an app-specific JSON file by hand”
 - users should be able to add real files and folders incrementally, combine supported and custom inputs in one session, and review the resulting source grouping before preview/build
 - direct-ingest grouping should start with automatic heuristics first, then grow toward richer confirmation and correction workflows rather than starting fully manual
@@ -224,6 +232,7 @@ Current status:
 - current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, grouping-reason/member summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source and selected-group split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
 - the Qt widget layer now also has a shared polished visual treatment with page headers, metric cards, cleaner split layouts, and stronger dialog grouping instead of relying on default stacked utility layouts
+- routine settings, package-management, direct-ingest, conversion-review, and NWB-viewing flows now share one integrated main-window workspace, with remaining UI work focused on performance and workflow polish rather than window consolidation
 
 ### Priority 2: Custom and hybrid workflows
 

@@ -1376,3 +1376,30 @@ Consequences:
 - the Qt layer now uses one shared application stylesheet plus reusable header-card and metric-card helpers
 - the main shell, direct-ingest dialog, package installer, settings dialog, and NWB viewer now share cleaner spacing, restrained color treatment, and stronger section hierarchy
 - future UI polish should extend the shared design system rather than adding one-off widget styling
+
+### DEC-108: Consolidate routine desktop workflows into one integrated main-window workspace
+Status: Accepted
+
+Reasoning:
+- Internal testing showed that separate top-level dialogs and windows were adding lifecycle complexity, slowing down routine task switching, and making the app feel less like one product.
+- The local desktop app has now grown past the stage where `New Session`, settings, package management, NWB viewing, and conversion review should behave like loosely related utilities.
+- The shell already had a stable central workspace and tab pattern, so consolidating routine surfaces into one main window was lower risk than continuing to tune separate windows.
+
+Consequences:
+- the main window now hosts conversion review, direct-ingest session assembly, package management, settings, and NWB viewing inside one integrated tabbed workspace
+- routine flows no longer depend on separate top-level dialogs or a separate NWB viewer window during normal shell use
+- the standalone `NwbViewerWindow` remains only as a compatibility wrapper around the embedded viewer widget, not the primary user-facing path
+- future desktop UI work should default to integrated workspace tabs or panes unless a separate top-level window is clearly justified
+
+### DEC-109: Favor incremental UI log rendering and true record timestamps during internal testing
+Status: Accepted
+
+Reasoning:
+- UI responsiveness had started to degrade as more runtime and desktop actions emitted structured logs into the in-app viewer.
+- Internal testing also needed log timestamps that match the original logging event, not the later UI append time.
+- The cheapest durable improvement was to preserve `logging` record timestamps and avoid resetting the entire log widget on every new entry.
+
+Consequences:
+- UI log entries now use the originating `logging` record timestamp when rendered or mirrored to file
+- the docked log viewer now appends incrementally when possible instead of redrawing the entire visible log buffer for every update
+- future high-volume UI observability work should prefer incremental rendering and stable event timestamps over convenience rebuilds
