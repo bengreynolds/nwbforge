@@ -103,6 +103,7 @@ Location: `src/nwbforge/ui/qt/nwb_viewer_window.py`
 Responsibilities:
 - host a standalone read-only NWB viewer lifecycle
 - support `File -> Open NWB...` and `Reload`
+- support an optional `Open Rich Preview` action for the selected node when richer renderer packages are installed
 - render a lazy tree over major NWB sections and child nodes
 - keep all branches collapsed by default except the initial metadata expansion
 - render selected-node details through a dedicated detail pane
@@ -175,6 +176,7 @@ Responsibilities:
 - file-backed logging is opt-in and does not yet have an app-level retention/configuration policy
 - no end-to-end packaged desktop entry point yet
 - standalone NWB viewing still uses generic previews rather than richer modality-specific renderers
+- richer previews now exist only as an optional browser-backed `nwbwidgets + Panel` path rather than a native Qt rendering layer
 
 ## Temporary manual launcher
 

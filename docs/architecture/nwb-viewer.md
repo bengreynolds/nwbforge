@@ -54,8 +54,20 @@ Responsibilities:
 - own a standalone top-level viewer lifecycle
 - support `File -> Open NWB...`
 - support `Reload`
+- optionally support `Open Rich Preview` for the selected node when optional renderer packages are installed
 - keep viewer state independent from the main conversion shell
 - host the tree/detail split view and default expansion behavior
+
+### `NwbWidgetsPanelRenderer`
+
+Location: `src/nwbforge/app/services/nwb_viewer_rich.py`
+
+Responsibilities:
+- remain optional and unavailable unless both `nwbwidgets` and `panel` are installed
+- wrap the selected NWB node with `nwbwidgets.nwb2widget(...)`
+- serve that widget through a small Panel session
+- open the resulting rich preview in a browser without changing the base Qt viewer architecture
+- keep richer rendering outside the base viewer contract so the default path remains lightweight
 
 ## Read-only behavior
 
@@ -81,12 +93,20 @@ Responsibilities:
 - the main shell now exposes `File -> Open NWB Viewer...`
 - opening a generated `.nwb` artifact from the conversion workspace now launches the standalone viewer window instead of delegating to the operating system
 - `scripts/run_app.py --view-nwb <path>` can open the desktop app and a preloaded viewer window for manual testing
+- inside the viewer window, `Render -> Open Rich Preview` is enabled only when the optional renderer is installed and a node is selected
+
+## Optional renderer path
+
+- the base viewer path depends only on `PyNWB` and the desktop Qt layer
+- the optional rich renderer path uses `nwbwidgets + Panel`
+- the optional dependency group is exposed through the project extra `viewer_rich`
+- notebook/web tooling is still not a hard dependency of the local app baseline
 
 ## Current limitations
 
 - initial file open still happens synchronously in the current process; lazy traversal and bounded previews are the main protection against slow loads
 - the viewer currently uses generic text/table previews instead of modality-specific plots
-- `nwbwidgets` is not yet integrated; richer renderers remain optional follow-on work rather than a base dependency
+- `nwbwidgets` integration is now available only as an optional browser-backed rich preview layer, not as a base dependency
 - raw HDF5 fallback traversal is intentionally absent from the first baseline
 
 ## Immediate follow-on work

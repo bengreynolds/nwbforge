@@ -112,6 +112,16 @@ Responsibilities:
 
 This keeps standalone NWB viewing backend-first and widget-thin instead of embedding PyNWB traversal rules directly inside the Qt layer.
 
+### `NwbWidgetsPanelRenderer`
+
+Location: `src/nwbforge/app/services/nwb_viewer_rich.py`
+
+Responsibilities:
+- detect whether optional `nwbwidgets` and `panel` dependencies are available
+- expose a small availability/support contract for selected viewer nodes
+- launch a richer browser-backed preview session for the selected node when available
+- keep richer rendering optional and separate from the base `NwbFileController` path
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
@@ -122,6 +132,7 @@ This keeps standalone NWB viewing backend-first and widget-thin instead of embed
 - future UI setup and package-management screens should use thin controller bindings over backend services instead of embedding planning or runtime wiring in widgets
 - direct file/folder ingestion should go through `SessionAssemblyService` instead of pushing adapter-discovery logic into the Qt layer
 - standalone NWB viewing should go through `NwbFileController` instead of embedding PyNWB file traversal directly in the Qt widgets
+- optional rich NWB rendering should stay behind a distinct renderer service so the base viewer remains usable without web/notebook tooling
 
 ## Immediate follow-on work
 

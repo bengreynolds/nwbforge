@@ -1309,3 +1309,16 @@ Consequences:
 - `NwbFileController` now opens `.nwb` files in read-only mode through `NWBHDF5IO(..., mode="r", load_namespaces=True)`
 - viewer tree nodes are generated lazily over major NWB sections and immediate child branches
 - richer renderers such as `nwbwidgets` remain optional follow-on work rather than a base viewer dependency
+
+### DEC-103: Add `nwbwidgets + Panel` only as an optional rich-preview layer for the standalone viewer
+Status: Accepted
+
+Reasoning:
+- `nwbwidgets` can provide richer object-specific NWB rendering, but it is primarily notebook-oriented and should not redefine the base desktop viewer architecture.
+- The local app still needs a robust generic viewer even when richer web/notebook tooling is unavailable.
+- A browser-backed optional preview is enough to prove richer rendering without turning the Qt viewer into a web shell.
+
+Consequences:
+- the base standalone viewer remains `PyNWB` + custom Qt tree/detail UI
+- the viewer now has an optional `Open Rich Preview` action powered by `nwbwidgets + Panel` when those packages are installed
+- `nwbwidgets` and `panel` are now exposed through an optional dependency group rather than the core app dependency set
