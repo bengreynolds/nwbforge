@@ -113,6 +113,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Generated-artifact visibility in the conversion-session panel for NWB, validation-report, and review outputs
 - Direct desktop actions to open generated artifacts and their folders from the conversion panel
 - Dedicated desktop shortcuts for validation reports and review decisions
+- Shell-level user-facing errors for missing or failed artifact-open actions
 - A sectioned conversion-session desktop surface with clearer summary, execution, review, and artifact panes
 - Run-overview and review-guidance summaries in the conversion panel so stage, output target, issue counts, artifact counts, and expected review actions are visible at a glance
 - A tabbed conversion workspace for run overview, review work, and artifacts

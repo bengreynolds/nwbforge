@@ -942,6 +942,19 @@ Consequences:
 - validation reports now follow those outputs into the app-owned directory instead of landing in the repository root by default
 - checked-in example session metadata should prefer cleaner happy-path values where practical so first-run testing is less noisy
 
+### DEC-076: Route artifact-open failures through shell-level user-facing errors
+Status: Accepted
+
+Reasoning:
+- Manual testing showed that stale or unsupported artifact paths currently fall through to raw Qt shell errors, which is too low-level for desktop users.
+- The shell already owns user-facing error dialogs and status-bar error state, so artifact-open failures should use the same path instead of being handled ad hoc in widgets.
+- Existence checks are cheap and prevent noisy failed shell launches for deleted files or outdated recovered snapshots.
+
+Consequences:
+- artifact open and reveal actions now validate path existence before calling `QDesktopServices`
+- failed artifact opens now surface shell-level user-facing errors instead of only console noise
+- the conversion widget remains thin by delegating artifact-open behavior to shell callbacks
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 

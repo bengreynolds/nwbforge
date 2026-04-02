@@ -43,6 +43,7 @@ Responsibilities:
 - render generated execution/review artifacts from projected provenance state
 - open a selected generated artifact or its containing folder directly from the widget
 - open the validation report and latest review decision directly through dedicated shortcuts
+- delegate artifact-open and reveal behavior to shell-provided callbacks so missing files and failed shell launches can use the standard desktop error path
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 
 ### `PackageInstallerDialog`
