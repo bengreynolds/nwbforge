@@ -108,7 +108,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Explicit direct-ingest project workflow with `Open Project...`, `Save Project`, `Save Project As...`, recent-project history, and project-aware draft recovery
 - Source-specific metadata overrides for selected direct-ingest sources, carried through inspection and normalization as user-supplied values
 - First-class direct-ingest group summaries with pathway/composition review in the `New Session` workflow
-- Dataset-level direct-ingest grouping actions for renaming detected groups and creating/moving selected sources into named groups
+- Dataset-level direct-ingest grouping actions for renaming detected groups, confirming detected bundles, splitting selected sources into individual groups, and creating/moving selected sources into named groups
 - Opt-in composite UI logging to both the in-app viewer and a JSON-lines file, plus shell-level warning dialogs for translated user-facing errors
 - Persisted desktop settings with a real `File -> Settings` dialog for verbose logging and file-log configuration
 - Conversion-session review controls for validation outcomes, acknowledgements, and approve/reject submission
@@ -126,6 +126,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Run-overview and review-guidance summaries in the conversion panel so stage, output target, issue counts, artifact counts, and expected review actions are visible at a glance
 - A tabbed conversion workspace for run overview, review work, metadata review, and artifacts
 - Actionable metadata-review controls that can promote a selected source value into a session-wide override and then require a preview rebuild
+- Actionable metadata-review controls that can also apply and clear source-specific overrides before the next preview rebuild
 - A standalone read-only NWB viewer window that can inspect arbitrary `.nwb` files through a lazy PyNWB-backed tree/detail browser
 - An optional `nwbwidgets + Panel` rich-preview layer for selected NWB viewer nodes, without making notebook/web tooling part of the base app path
 - A repo-owned `custom_session.json` custom-path workflow that runs through normalization, reviewable mapping, direct PyNWB assembly, validation, provenance, and desktop execution
@@ -227,6 +228,6 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 1. Begin structured internal testing in the dedicated Conda environment.
 2. Capture internal-testing findings and convert them into prioritized UI, workflow, and operational fixes.
-3. Expand the new direct-ingest `New Session` workflow from the current heuristic grouping, group summaries, group-action baseline, simple sidecar association, explicit project baseline, and current session/source override model into richer dataset confirmation and field-by-field conflict resolution.
+3. Expand the new direct-ingest `New Session` workflow from the current heuristic grouping, group summaries, current group-confirmation/group-action baseline, simple sidecar association, explicit project baseline, and current session/source override model into richer dataset/session modeling and field-by-field conflict resolution.
 4. Harden operational concerns such as richer review history, multi-snapshot recovery flows, broader desktop interaction logging beyond the current shell actions, and clearer report/project recovery behavior on top of the current latest-state persistence baseline.
 5. Start release engineering only after the first-pass testing round confirms the product direction.

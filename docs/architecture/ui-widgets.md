@@ -42,6 +42,7 @@ Responsibilities:
 - show saved-project path and clean/dirty status
 - show detected dataset-group summaries with pathway and role composition
 - support lightweight dataset-level grouping actions for selected groups and selected sources
+- persist and surface explicit group-confirmation state for detected groups
 - remove selected inputs from the draft
 - edit source-specific metadata overrides for the selected source
 - create a real `ConversionSession` through `SessionAssemblyScreenModel`
@@ -68,6 +69,7 @@ Responsibilities:
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 - render pending mixed-source metadata conflicts as explicit canonical-key comparisons with source-value context and normalization notes
 - let users promote a selected source value into a session-wide override directly from the metadata-review workspace
+- let users apply and clear source-specific overrides from the metadata-review workspace
 
 ### `PackageInstallerDialog`
 
@@ -157,11 +159,12 @@ Responsibilities:
   - conversion-session preview/execution bindings
   - conversion-session section layout for summary, execution, review, and artifacts
   - direct-ingest detected-group summaries in the `New Session` dialog
-  - direct-ingest group rename and selected-source create/move actions in the `New Session` dialog
+  - direct-ingest group rename, confirmation, split, and selected-source create/move actions in the `New Session` dialog
   - conversion-session source-detail presentation for pathway, source count, and selected-source metadata
   - conversion-session run-overview and review-guidance summaries
   - conversion-session workspace-tab structure and state-driven tab selection, including metadata-review focus for pending mixed-source conflicts
   - conversion-session metadata-resolution actions that clear stale preview/execution state and require rebuild
+  - conversion-session source-specific metadata-resolution actions from the metadata-review workspace
   - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
@@ -195,7 +198,7 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Expand the new-session assembly dialog from the current role-assignment, group-summary, group-action baseline, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset confirmation and field-by-field disagreement-resolution workflows.
+1. Expand the new-session assembly dialog from the current role-assignment, group-summary, group-confirmation/group-action baseline, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset/session modeling and field-by-field disagreement-resolution workflows.
 2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
 3. Add richer NWB node renderers only where the generic viewer proves insufficient.
 4. Add persisted window/layout state once the core desktop information architecture settles.

@@ -1322,3 +1322,17 @@ Consequences:
 - the base standalone viewer remains `PyNWB` + custom Qt tree/detail UI
 - the viewer now has an optional `Open Rich Preview` action powered by `nwbwidgets + Panel` when those packages are installed
 - `nwbwidgets` and `panel` are now exposed through an optional dependency group rather than the core app dependency set
+
+### DEC-104: Treat direct-ingest group confirmation and source-specific metadata resolution as first-class local-app state
+Status: Accepted
+
+Reasoning:
+- Heuristic grouping and read-only disagreement review were enough for first-pass testing, but not enough for a stronger local-app workflow.
+- Users need to explicitly acknowledge dataset bundles and preserve that acknowledgement through project save/reopen flows.
+- Mixed-source conflict review also needs a narrower source-specific path before a fuller field-by-field conflict engine exists.
+
+Consequences:
+- direct-ingest groups now carry explicit confirmation state, and that state persists through workspace recovery and saved project files
+- the `New Session` dialog now supports confirming groups and splitting selected sources back into individual groups
+- the post-preview metadata-review workspace now supports source-specific override actions in addition to the existing session-wide override path
+- fuller dataset modeling and richer conflict-resolution history remain follow-on work

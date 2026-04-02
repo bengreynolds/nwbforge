@@ -94,6 +94,10 @@ Completed:
 - Added dataset-level grouping actions in `New Session`, including group rename plus create/move flows over selected sources
 - Added first actionable mixed-source conflict resolution in the metadata-review tab through session-wide override actions on selected source values
 - Polished the desktop review flow so metadata-resolution actions clear stale preview/execution state and explicitly prompt a rebuild
+- Added explicit group-confirmation state for direct-ingest dataset groups, persisted through saved projects and reopened draft workspaces
+- Added direct-ingest split actions so selected sources can be broken back into individual dataset groups
+- Added first source-specific metadata-resolution actions from the post-preview metadata-review workspace
+- Expanded metadata-review status summaries to show both session-wide and source-specific override state
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
 - Focused tests for session, normalization, mapping, provenance, and validation models
@@ -106,13 +110,13 @@ In progress:
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, and current group-action baseline
+- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, group-confirmation, and current group-action baseline
 
 Next:
 - Continue formal first-pass internal testing in the dedicated Conda environment using the full suite plus the internal smoke baseline
 - Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
-- Deepen direct-ingest grouping from current heuristics and manual correction toward a richer dataset/session model
-- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and session-wide override actions toward fuller field-by-field conflict resolution
+- Deepen direct-ingest grouping from current heuristics, confirmation, and manual correction toward a richer dataset/session model
+- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and current session/source override actions toward fuller field-by-field conflict resolution
 - Expand the standalone NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
 - Keep the optional `nwbwidgets + Panel` path additive and avoid turning notebook/web tooling into a hard dependency of the base viewer path
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
@@ -128,7 +132,7 @@ Next:
 - The first concrete direct-ingest slice now exists: `New Session` opens a draft session-assembly workflow over real files/folders instead of behaving only as a shell reset.
 - Direct ingest now has explicit saved-project behavior through app-owned `.nwbforge-project.json` files, with open/save/recent project desktop flows layered on top of the in-progress draft workspace.
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
-- Direct ingest now also has first-pass dataset-level grouping actions, including selected-group rename plus create/move flows for selected sources on top of heuristic grouping and first-class group summaries.
+- Direct ingest now also has first-pass dataset-level grouping actions, including selected-group rename plus create/move flows for selected sources, explicit group confirmation, and selected-source split actions on top of heuristic grouping and first-class group summaries.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Supported NeuroConv routes now use category-first package layout for the `behavior`, `tabular`, and `media` families, while keeping stable public adapter exports.
@@ -151,7 +155,7 @@ Next:
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 - The PySide6 shell now also includes a `SessionAssemblyDialog`, so `New Session` begins the direct-ingest workflow by letting users add real files/folders and create a draft `ConversionSession`.
-- The `SessionAssemblyDialog` now also supports dataset-level grouping actions so users can rename a detected group, create a new group from selected sources, or move selected sources into the currently selected group.
+- The `SessionAssemblyDialog` now also supports dataset-level grouping actions so users can rename a detected group, confirm it, split selected sources back into individual groups, create a new group from selected sources, or move selected sources into the currently selected group.
 - The desktop shell now includes a standalone read-only NWB viewer window that can open arbitrary `.nwb` files through `PyNWB`, launch from the main shell, and inspect generated outputs without embedding NWB browsing into the conversion panel.
 - The standalone viewer now also includes an optional `nwbwidgets + Panel` rich-preview path for selected nodes when those packages are installed, but the base viewer remains PyNWB-first and dependency-light.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
@@ -206,7 +210,7 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, reviewable auto-grouping and mixed-group issues, per-source grouping correction, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation, per-source grouping correction, selected-source split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
@@ -285,7 +289,7 @@ Current status:
 - this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
 - the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
 - the first concrete version of that milestone is now implemented and now includes initial source-role editing, session-wide metadata overrides, source-specific metadata overrides for core canonical fields, explicit saved-project workflows, and persisted draft/project reopen behavior
-- richer grouping confirmation and explicit post-preview conflict resolution remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
+- richer dataset modeling and fuller field-by-field post-preview conflict resolution remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
 - if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
 
 ### Testing baseline for first-pass handoff
@@ -1095,7 +1099,7 @@ Current status:
 
 The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
 
-### 1. Direct ingest now has first-class group actions, but grouping confirmation is still not a full dataset model
+### 1. Direct ingest now has first-class group actions and confirmation, but it is still not a full dataset model
 - Target direction:
   - the app should help users load combinations of files/folders and organize them into one session intentionally
   - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
@@ -1104,8 +1108,9 @@ The repository is now in internal-testing mode. The following deviations between
   - grouping heuristics now distinguish descriptor-parent groups and same-stem sidecar bundles instead of relying only on flat parent-folder grouping
   - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group, and mixed supported/custom-looking groups now emit an explicit warning
   - users can now correct grouping per source in the `New Session` workflow, and the dialog now shows a dedicated detected-group summary panel
-  - the dialog now also supports dataset-level actions, including group rename plus create/move flows for selected sources
-  - there is still no richer dataset model beyond grouped selected paths, no explicit merge/split history, and no stronger dataset confirmation artifact beyond the current group overrides
+  - the dialog now also supports dataset-level actions, including group rename, selected-source create/move flows, selected-source split actions, and explicit group confirmation
+  - confirmed groups now persist through saved projects and reopened draft workspaces
+  - there is still no richer dataset model beyond grouped selected paths, no explicit merge/split history, and no stronger dataset confirmation artifact beyond the current confirmation state and group overrides
 - Why this matters:
   - the current ingest path is now honest enough for broader internal testing, but it is still too shallow for heterogeneous lab datasets with ambiguous multi-file bundles
 
@@ -1129,8 +1134,9 @@ The repository is now in internal-testing mode. The following deviations between
   - `ConversionSession.metadata_overrides` remains the session-wide path for simple canonical overrides
   - direct ingest now also supports per-source overrides for the same core canonical field set, and those overrides are applied at the inspection boundary and normalized as user-supplied values
   - the desktop conversion workspace now includes a dedicated metadata-review tab that surfaces pending normalized conflicts, their retained canonical values, contributing source values, and normalization notes after preview or execution
-  - the metadata-review tab now lets users promote a selected source value into a session-wide override directly from that workspace and then rebuild preview
-  - the desktop UI still does not offer fuller field-by-field resolution policy, source-specific conflict actions from the post-preview workspace, or a richer conflict-resolution history beyond the override state itself
+  - the metadata-review tab now lets users promote a selected source value into a session-wide override, apply a source-specific override, clear either override path, and then rebuild preview
+  - the desktop UI now also shows explicit session/source override status in the metadata-review workspace
+  - the desktop UI still does not offer fuller field-by-field resolution policy or a richer conflict-resolution history beyond current override state and notes
 - Why this matters:
   - the architectural shortcut is gone and a real disagreement-review surface now exists, but resolution is still narrower than a fuller mixed-source conflict workspace
 
