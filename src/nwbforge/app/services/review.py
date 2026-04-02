@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import logging
 
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.services.errors import ReviewDecisionError
 from nwbforge.app.services.models import ConversionExecution, ReviewSubmission
 from nwbforge.domain.contracts import ReviewArtifactService
@@ -13,6 +15,8 @@ from nwbforge.domain.models import ExecutionReviewRecord
 
 class ExecutionReviewService:
     """Persist review acknowledgements and approval decisions for execution results."""
+
+    _logger = get_logger(__name__)
 
     def __init__(self, review_artifact_service: ReviewArtifactService) -> None:
         self._review_artifact_service = review_artifact_service
@@ -27,6 +31,15 @@ class ExecutionReviewService:
         override_blocks_completion: bool = False,
         rationale: str | None = None,
     ) -> ReviewSubmission:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Submitting execution review.",
+            session_id=execution.session.session_id,
+            decision=decision.value,
+            acknowledged_issue_count=len(acknowledged_issue_refs),
+            override_blocks_completion=override_blocks_completion,
+        )
         self._validate_submission(
             execution,
             decision=decision,
@@ -54,6 +67,14 @@ class ExecutionReviewService:
         provenance_record = replace(
             execution.provenance_record,
             generated_artifacts=execution.provenance_record.generated_artifacts + (review_artifact,),
+        )
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Submitted execution review.",
+            session_id=execution.session.session_id,
+            decision=decision.value,
+            review_artifact=str(review_artifact.location),
         )
         return ReviewSubmission(
             execution=execution,

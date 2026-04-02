@@ -164,6 +164,8 @@ class SessionAssemblyScreenModel:
                 sources=tuple(
                     SessionAssemblySourceItem(
                         source_id=source.source_id,
+                        group_key=source.group_key,
+                        group_label=source.group_label,
                         label=source.label,
                         location=source.location,
                         source_type=source.source_type.value,

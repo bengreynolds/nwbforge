@@ -38,6 +38,7 @@ def test_session_assembly_service_builds_hybrid_session_from_supported_and_custo
     assert session.pathway.value == "hybrid"
     assert len(session.sources) == 2
     assert {source.adapter_hint for source in session.sources} == {"session_manifest", "custom_json_session"}
+    assert {source.metadata["session_assembly.group_label"] for source in session.sources} == {tmp_path.name}
 
 
 def test_session_assembly_service_preserves_roles_and_metadata_overrides(tmp_path: Path) -> None:
@@ -82,6 +83,18 @@ def test_session_assembly_service_treats_unmatched_source_as_custom_review(tmp_p
     assert draft.sources[0].suggested_adapter_id is None
     assert draft.sources[0].needs_review is True
     assert session.pathway.value == "custom"
+
+
+def test_session_assembly_service_emits_auto_grouping_issue_for_shared_folder(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+
+    draft = SessionAssemblyService(build_adapter_registry()).assemble_draft((manifest_path, custom_path))
+
+    assert all(source.group_label == tmp_path.name for source in draft.sources)
+    assert any(issue.code == "session-assembly-auto-grouped-inputs" for issue in draft.issues)
 
 
 def test_session_assembly_service_deduplicates_selected_paths(tmp_path: Path) -> None:

@@ -38,6 +38,11 @@ class ConversionPipelineService:
     """Coordinate inspection, normalization, mapping, provenance, and validation."""
 
     _logger = get_logger(__name__)
+    _SOURCE_ROLE_PRIORITY = {
+        "primary": 3,
+        "metadata": 2,
+        "supplemental": 1,
+    }
 
     def __init__(
         self,
@@ -160,14 +165,7 @@ class ConversionPipelineService:
             terminal_preview_message,
         )
 
-        input_artifacts = tuple(
-            ProvenanceArtifact(
-                artifact_type="input",
-                location=source.location,
-                description=source.label,
-            )
-            for source in working_session.sources
-        )
+        input_artifacts = self._build_input_artifacts(working_session)
         provenance_record = self._provenance_service.build_record(
             working_session,
             input_artifacts=input_artifacts,
@@ -378,4 +376,22 @@ class ConversionPipelineService:
                 message=message,
                 source_id=source_id,
             )
+        )
+
+    @classmethod
+    def _build_input_artifacts(cls, session: ConversionSession) -> tuple[ProvenanceArtifact, ...]:
+        ordered_sources = sorted(
+            enumerate(session.sources),
+            key=lambda item: (
+                -cls._SOURCE_ROLE_PRIORITY.get(item[1].role, 1),
+                item[0],
+            ),
+        )
+        return tuple(
+            ProvenanceArtifact(
+                artifact_type="input",
+                location=source.location,
+                description=f"{source.label} [{source.role}]",
+            )
+            for _, source in ordered_sources
         )

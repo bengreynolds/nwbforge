@@ -65,6 +65,8 @@ class SessionAssemblyDialog(QDialog):
         self._role_combo.addItems(["primary", "supplemental", "metadata"])
         self._role_combo.currentTextChanged.connect(self._apply_selected_role)
         self._pathway_label = QLabel("custom", self)
+        self._grouping_label = QLabel("No grouping suggestions yet.", self)
+        self._grouping_label.setWordWrap(True)
         self._summary_label = QLabel("Add files or folders to build a conversion session.", self)
         self._error_label = QLabel("", self)
         self._error_label.setWordWrap(True)
@@ -90,6 +92,7 @@ class SessionAssemblyDialog(QDialog):
         summary_layout.addRow("Session ID", self._session_id_edit)
         summary_layout.addRow("Title", self._title_edit)
         summary_layout.addRow("Pathway", self._pathway_label)
+        summary_layout.addRow("Grouping", self._grouping_label)
         summary_layout.addRow("Status", self._summary_label)
 
         input_group = QGroupBox("Selected Inputs", self)
@@ -187,8 +190,10 @@ class SessionAssemblyDialog(QDialog):
                 self._title_edit.setText(state.title)
 
         self._pathway_label.setText(state.suggested_pathway)
+        unique_groups = sorted({source.group_label for source in state.sources})
+        self._grouping_label.setText(", ".join(unique_groups) if unique_groups else "No grouping suggestions yet.")
         self._summary_label.setText(
-            f"{len(state.sources)} sources, {len(state.issues)} issues."
+            f"{len(state.sources)} sources in {len(unique_groups)} groups, {len(state.issues)} issues."
             if state.selected_paths
             else "Add files or folders to build a conversion session."
         )
@@ -205,7 +210,7 @@ class SessionAssemblyDialog(QDialog):
         for source in state.sources:
             adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "no adapter match"
             item = QListWidgetItem(
-                f"[{source.suggested_pathway}] {source.label} ({source.role}) -> {adapter_summary}"
+                f"[{source.group_label}] [{source.suggested_pathway}] {source.label} ({source.role}) -> {adapter_summary}"
             )
             item.setToolTip(str(source.location))
             item.setData(Qt.ItemDataRole.UserRole, source.source_id)
@@ -251,7 +256,7 @@ class SessionAssemblyDialog(QDialog):
             self._role_combo.setEnabled(False)
             return
 
-        self._selected_source_label.setText(f"{source.label}\n{source.location}")
+        self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
         adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "No adapter match"
         self._selected_adapter_label.setText(adapter_summary)
         with QSignalBlocker(self._role_combo):

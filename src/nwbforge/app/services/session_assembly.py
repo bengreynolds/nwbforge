@@ -29,6 +29,8 @@ class SessionAssemblySource:
     """A UI-facing draft source assembled from one selected path."""
 
     source_id: str
+    group_key: str
+    group_label: str
     location: Path
     source_type: SourceType
     label: str
@@ -107,6 +109,7 @@ class SessionAssemblyService:
 
     _logger = get_logger(__name__)
     _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
+    _DESKTOP_SESSION_FILENAMES = {"session_manifest.json", "custom_session.json", "hybrid_session.json"}
 
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
@@ -123,11 +126,13 @@ class SessionAssemblyService:
         """Build a suggested session draft from one or more selected files or folders."""
 
         normalized_paths = self._normalize_paths(selected_paths)
+        grouped_paths = self._grouped_paths(normalized_paths)
         log_event(
             self._logger,
             logging.INFO,
             "Assembling direct-ingest session draft.",
             selected_path_count=len(normalized_paths),
+            group_count=len(grouped_paths),
             requested_session_id=session_id or "",
         )
         draft_sources: list[SessionAssemblySource] = []
@@ -143,6 +148,7 @@ class SessionAssemblyService:
         }
 
         for index, path in enumerate(normalized_paths, start=1):
+            group_key, group_label = self._group_for_path(path)
             source_id = self._build_source_id(path, draft_sources)
             source_reference = SourceReference(
                 source_id=source_id,
@@ -185,6 +191,8 @@ class SessionAssemblyService:
             draft_sources.append(
                 SessionAssemblySource(
                     source_id=source_reference.source_id,
+                    group_key=group_key,
+                    group_label=group_label,
                     location=path,
                     source_type=source_reference.source_type,
                     label=source_reference.label,
@@ -193,6 +201,21 @@ class SessionAssemblyService:
                     suggested_pathway=suggested_pathway,
                     role=role,
                     needs_review=needs_review,
+                )
+            )
+
+        for group_label, paths in grouped_paths.items():
+            if len(paths) < 2:
+                continue
+            issues.append(
+                SessionAssemblyIssue(
+                    code="session-assembly-auto-grouped-inputs",
+                    message=(
+                        f"Auto-grouped {len(paths)} selected inputs under '{group_label}'. "
+                        "Confirm they belong to the same conversion session."
+                    ),
+                    severity=IssueSeverity.INFO,
+                    location=paths[0].parent if paths[0].is_file() else paths[0],
                 )
             )
 
@@ -239,6 +262,10 @@ class SessionAssemblyService:
                 label=source.label,
                 role=source.role,
                 adapter_hint=source.suggested_adapter_id,
+                metadata={
+                    "session_assembly.group_key": source.group_key,
+                    "session_assembly.group_label": source.group_label,
+                },
             )
             for source in draft.sources
         )
@@ -298,6 +325,22 @@ class SessionAssemblyService:
         if len(normalized_paths) == 1:
             return f"Conversion for {first.name}"
         return f"Conversion for {first.name} and {len(normalized_paths) - 1} more sources"
+
+    def _group_for_path(self, path: Path) -> tuple[str, str]:
+        if path.is_dir():
+            return str(path), path.name
+        if path.name.lower() in self._DESKTOP_SESSION_FILENAMES:
+            parent = path.parent.resolve()
+            return str(parent), parent.name or path.stem
+        parent = path.parent.resolve()
+        return str(parent), parent.name or path.stem
+
+    def _grouped_paths(self, normalized_paths: tuple[Path, ...]) -> dict[str, list[Path]]:
+        groups: dict[str, list[Path]] = {}
+        for path in normalized_paths:
+            _, group_label = self._group_for_path(path)
+            groups.setdefault(group_label, []).append(path)
+        return groups
 
     @staticmethod
     def _slugify(value: str) -> str:

@@ -100,6 +100,8 @@ class SessionAssemblySourceItem:
     """A UI-facing summary of one selected input in session assembly."""
 
     source_id: str
+    group_key: str
+    group_label: str
     label: str
     location: Path
     source_type: str

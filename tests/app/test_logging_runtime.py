@@ -9,11 +9,18 @@ from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import ThreadedConversionExecutor
 from nwbforge.app.services import (
     ConversionPipelineService,
+    ExecutionReviewService,
     RegistrySourceInspectionService,
     SessionAssemblyService,
+    SessionPersistenceService,
     SessionProvenanceService,
     UiSettingsService,
 )
+from nwbforge.app.services.models import ConversionExecution, ConversionPreview
+from nwbforge.domain.enums import ReviewStatus, ValidationReviewStatus
+from nwbforge.domain.models import MappingPlan, NormalizedMetadataBundle, ProvenanceArtifact, ProvenanceRecord, ValidationReviewOutcome, ValidationSummary
+from nwbforge.persistence import JsonSessionSnapshotStore
+from nwbforge.validation import JsonExecutionReviewArtifactService
 from nwbforge.domain.enums import ConversionPathway, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
 from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
@@ -148,3 +155,60 @@ def test_ui_settings_service_logs_save_context(tmp_path: Path, caplog: pytest.Lo
     records = [record for record in caplog.records if hasattr(record, "nwbforge_context")]
     save_record = next(record for record in records if record.message == "Saved desktop settings.")
     assert save_record.nwbforge_context["settings_path"].endswith("ui-settings.json")
+
+
+def test_review_and_persistence_services_log_structured_context(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    session = make_manifest_session(tmp_path)
+    preview = ConversionPreview(
+        session=session,
+        extraction_results=(),
+        normalized_metadata=NormalizedMetadataBundle(),
+        mapping_plan=MappingPlan(pathway=session.pathway),
+        provenance_record=ProvenanceRecord(session_id=session.session_id, pathway=session.pathway),
+    )
+    execution = ConversionExecution(
+        preview=preview,
+        session=session,
+        output_artifacts=(),
+        provenance_record=ProvenanceRecord(
+            session_id=session.session_id,
+            pathway=session.pathway,
+            generated_artifacts=(
+                ProvenanceArtifact(
+                    artifact_type="nwb",
+                    location=tmp_path / "outputs" / "session.nwb",
+                ),
+            ),
+        ),
+        validation_summary=ValidationSummary(),
+        review_outcome=ValidationReviewOutcome(
+            status=ValidationReviewStatus.PASS,
+            blocks_completion=False,
+            requires_manual_review=False,
+            error_count=0,
+            warning_count=0,
+        ),
+    )
+    persistence_service = SessionPersistenceService(JsonSessionSnapshotStore(tmp_path / "session-state"))
+    review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
+
+    persistence_service.persist_preview(preview)
+    persistence_service.persist_execution(execution)
+    submission = review_service.submit_review(
+        execution,
+        reviewer="alice",
+        decision=ReviewStatus.APPROVED,
+    )
+    persistence_service.persist_review_submission(submission)
+    persistence_service.load(session.session_id)
+
+    records = [record for record in caplog.records if hasattr(record, "nwbforge_context")]
+    assert any(record.message == "Persisting preview snapshot." for record in records)
+    assert any(record.message == "Persisting execution snapshot." for record in records)
+    assert any(record.message == "Submitting execution review." for record in records)
+    assert any(record.message == "Submitted execution review." for record in records)
+    assert any(record.message == "Loading session snapshot." for record in records)

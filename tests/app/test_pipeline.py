@@ -434,6 +434,8 @@ def test_pipeline_execute_hybrid_session_combines_supported_and_custom_sources(t
     assert preview.session.pathway == ConversionPathway.HYBRID
     assert preview.session.status == SessionStatus.REVIEW
     assert preview.provenance_record.adapter_ids == ("custom_json_session", "session_manifest")
+    assert preview.provenance_record.input_artifacts[0].description == "Structured session manifest [primary]"
+    assert preview.provenance_record.input_artifacts[1].description == "Custom supplemental source [supplemental]"
     assert len(preview.normalized_metadata.acquisition_streams) == 2
     assert any(
         decision.target_path == "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].data"
