@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSignalBlocker
+from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
-    QDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -22,12 +21,13 @@ from nwbforge.ui.settings import SettingsScreenModel
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
-class SettingsDialog(QDialog):
-    """Dialog bound to `SettingsScreenModel`."""
+class SettingsDialog(QWidget):
+    """Embedded panel bound to `SettingsScreenModel`."""
+
+    dismissed = Signal()
 
     def __init__(self, screen_model: SettingsScreenModel, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Settings")
         self.resize(640, 360)
         apply_window_chrome(self)
         self._screen_model = screen_model
@@ -94,6 +94,9 @@ class SettingsDialog(QDialog):
         self._bridge.state_changed.connect(self._apply_state)
         self._screen_model.subscribe(self._bridge.publish)
         self._screen_model.load()
+
+    def reject(self) -> None:
+        self.dismissed.emit()
 
     def _apply_state(self, state: SettingsScreenState) -> None:
         with QSignalBlocker(self._verbose_checkbox):

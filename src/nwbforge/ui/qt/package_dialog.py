@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSignalBlocker, Qt
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
-    QDialog,
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
@@ -14,6 +13,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from nwbforge.app.packages import InstallMode, InstallPreset
@@ -23,12 +23,13 @@ from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
-class PackageInstallerDialog(QDialog):
-    """Dialog bound to `PackageInstallerScreenModel`."""
+class PackageInstallerDialog(QWidget):
+    """Embedded panel bound to `PackageInstallerScreenModel`."""
+
+    dismissed = Signal()
 
     def __init__(self, screen_model: PackageInstallerScreenModel, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Install Extensions / Packages")
         self.resize(680, 620)
         apply_window_chrome(self)
         self._screen_model = screen_model
@@ -105,6 +106,9 @@ class PackageInstallerDialog(QDialog):
         self._bridge.state_changed.connect(self._apply_state)
         self._screen_model.subscribe(self._bridge.publish)
         self._screen_model.load()
+
+    def reject(self) -> None:
+        self.dismissed.emit()
 
     def _apply_state(self, state: PackageInstallerState) -> None:
         self._sync_mode_combo(state.install_mode)

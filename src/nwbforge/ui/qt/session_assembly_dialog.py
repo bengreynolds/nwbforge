@@ -5,12 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
-    QDialog,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -33,8 +32,10 @@ from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
-class SessionAssemblyDialog(QDialog):
-    """Dialog bound to `SessionAssemblyScreenModel` for direct source ingestion."""
+class SessionAssemblyDialog(QWidget):
+    """Embedded panel bound to `SessionAssemblyScreenModel` for direct source ingestion."""
+
+    dismissed = Signal()
 
     _METADATA_OVERRIDE_FIELDS = (
         ("session.start_time", "Session Start Time"),
@@ -52,7 +53,6 @@ class SessionAssemblyDialog(QDialog):
         session_created: Callable[[ConversionSession], None] | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("New Conversion Session")
         self.resize(1120, 820)
         apply_window_chrome(self)
 
@@ -307,6 +307,9 @@ class SessionAssemblyDialog(QDialog):
         self._bridge.state_changed.connect(self._apply_state)
         self._screen_model.subscribe(self._bridge.publish)
 
+    def reject(self) -> None:
+        self.dismissed.emit()
+
     def _add_files(self) -> None:
         selected_paths, _ = QFileDialog.getOpenFileNames(
             self,
@@ -342,7 +345,7 @@ class SessionAssemblyDialog(QDialog):
         session = self._screen_model.create_session()
         if self._session_created is not None:
             self._session_created(session)
-        self.accept()
+        self.dismissed.emit()
 
     def _apply_state(self, state: SessionAssemblyState) -> None:
         selected_source_id = None
@@ -452,11 +455,10 @@ class SessionAssemblyDialog(QDialog):
         self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
         self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
         self._confirm_all_groups_button.setEnabled(bool(state.groups))
-        self.setWindowTitle(
+        self._header_title_label.setText(
             "New Conversion Session"
             if state.project_path is None and not state.has_unsaved_changes
             else "Conversion Project"
-            + (" *" if state.has_unsaved_changes else "")
         )
 
     def _sync_selected_source(self, *_args) -> None:

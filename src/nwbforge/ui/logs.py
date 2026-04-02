@@ -129,11 +129,13 @@ class UiLogHandler(logging.Handler):
         context = getattr(record, "nwbforge_context", {})
         if not isinstance(context, dict):
             context = {"raw_context": context}
+        created_at = datetime.fromtimestamp(record.created, tz=UTC)
         self._sink.append(
             UiLogEntry(
                 level_name=record.levelname,
                 message=message,
                 logger_name=record.name,
                 context=dict(context),
+                created_at=created_at,
             )
         )

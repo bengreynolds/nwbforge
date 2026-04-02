@@ -182,7 +182,7 @@ def test_nwb_viewer_window_can_launch_optional_rich_preview(qapp, tmp_path: Path
     assert rich_renderer.closed is True
 
 
-def test_main_window_opens_nwb_artifact_in_viewer_window(qapp, tmp_path: Path) -> None:
+def test_main_window_opens_nwb_artifact_in_integrated_viewer(qapp, tmp_path: Path) -> None:
     nwb_path = write_example_nwb_file(tmp_path)
     window = MainWindow(
         DesktopShellModel(),
@@ -197,7 +197,6 @@ def test_main_window_opens_nwb_artifact_in_viewer_window(qapp, tmp_path: Path) -
     qapp.processEvents()
 
     assert opened is True
-    assert len(window._viewer_windows) == 1
-    assert window._viewer_windows[0].controller.file_path == nwb_path.resolve()
-    window._viewer_windows[0].close()
+    assert window.workspace_tabs.currentWidget() is window.nwb_viewer_widget
+    assert window.nwb_viewer_widget.controller.file_path == nwb_path.resolve()
     window.close()

@@ -278,7 +278,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
 
     window._install_packages_action.trigger()
     qapp.processEvents()
-    assert window.package_dialog.isVisible() is True
+    assert window.workspace_tabs.currentWidget() is window.package_dialog
 
     window.close()
 
@@ -337,7 +337,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._artifact_count_value_label.text() == "0 artifacts"
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
-    window.package_dialog.show()
+    window.workspace_tabs.setCurrentWidget(window.package_dialog)
     qapp.processEvents()
     assert window.package_dialog._header_title_label.text() == "Install Extensions / Packages"
     assert window.package_dialog._route_list.count() > 0
@@ -514,7 +514,7 @@ def test_settings_dialog_updates_runtime_logging_preferences(qapp, tmp_path: Pat
 
     window._settings_action.trigger()
     qapp.processEvents()
-    assert window.settings_dialog.isVisible() is True
+    assert window.workspace_tabs.currentWidget() is window.settings_dialog
 
     settings_dialog = window.settings_dialog
     assert settings_dialog._header_title_label.text() == "Settings"
@@ -710,10 +710,11 @@ def test_main_window_new_and_reopen_session_actions(qapp, tmp_path: Path, monkey
     assert "desktop-" in window.conversion_widget._session_label.text()
     window._new_session_action.trigger()
     qapp.processEvents()
-    assert window.session_assembly_dialog.isVisible() is True
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
     assert "desktop-" in window.conversion_widget._session_label.text()
     window.session_assembly_dialog.reject()
     qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.conversion_widget
 
     window._reopen_last_session_action.trigger()
     qapp.processEvents()
@@ -742,7 +743,7 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
 
     window._new_session_action.trigger()
     qapp.processEvents()
-    assert window.session_assembly_dialog.isVisible() is True
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
 
     dialog = window.session_assembly_dialog
     assert dialog._workspace_tabs.count() == 3
@@ -758,7 +759,7 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     dialog._create_button.click()
     qapp.processEvents()
 
-    assert window.session_assembly_dialog.isVisible() is False
+    assert window.workspace_tabs.currentWidget() is window.conversion_widget
     assert "session-" in window.conversion_widget._session_label.text()
     assert window.conversion_widget._pathway_label.text() == "supported"
     assert window.conversion_widget._source_count_label.text() == "1"
@@ -1063,7 +1064,7 @@ def test_main_window_opens_and_saves_project_from_direct_ingest(qapp, tmp_path: 
     qapp.processEvents()
 
     assert project_path.exists() is True
-    assert dialog.windowTitle() == "Conversion Project"
+    assert dialog._header_title_label.text() == "Conversion Project"
     assert settings_screen.state.recent_project_paths[0] == str(project_path.resolve())
 
     dialog.reject()
@@ -1071,7 +1072,7 @@ def test_main_window_opens_and_saves_project_from_direct_ingest(qapp, tmp_path: 
     window._open_project_action.trigger()
     qapp.processEvents()
 
-    assert window.session_assembly_dialog.isVisible() is True
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
     assert window.session_assembly_dialog._input_list.count() == 1
     assert window.session_assembly_dialog._project_label.text() == str(project_path.resolve())
     window.close()

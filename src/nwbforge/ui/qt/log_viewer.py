@@ -24,9 +24,28 @@ class LogViewerDockWidget(QDockWidget):
         self._editor = QPlainTextEdit(self)
         self._editor.setReadOnly(True)
         self.setWidget(self._editor)
+        self._entry_count = 0
 
     def set_entries(self, entries: tuple[UiLogEntry, ...]) -> None:
+        if not entries:
+            self._editor.clear()
+            self._entry_count = 0
+            return
+
+        if self._entry_count and len(entries) >= self._entry_count:
+            new_entries = entries[self._entry_count :]
+            if new_entries:
+                text = "\n".join(format_log_entry(entry) for entry in new_entries)
+                if self._editor.document().characterCount() > 1:
+                    self._editor.appendPlainText(text)
+                else:
+                    self._editor.setPlainText(text)
+                self._entry_count = len(entries)
+                self._editor.moveCursor(QTextCursor.MoveOperation.End)
+                return
+
         self._editor.setPlainText("\n".join(format_log_entry(entry) for entry in entries))
+        self._entry_count = len(entries)
         self._editor.moveCursor(QTextCursor.MoveOperation.End)
 
     @property
