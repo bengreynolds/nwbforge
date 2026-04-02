@@ -95,6 +95,15 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
             "title": session.title,
             "lab_profile": session.lab_profile,
             "metadata_overrides": dict(session.metadata_overrides),
+            "source_metadata_overrides": {
+                str(source_id): {
+                    str(key): str(value)
+                    for key, value in overrides.items()
+                    if str(value).strip()
+                }
+                for source_id, overrides in session.source_metadata_overrides.items()
+                if overrides
+            },
             "created_at": session.created_at.isoformat(),
             "updated_at": session.updated_at.isoformat(),
             "notes": list(session.notes),
@@ -144,6 +153,14 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
                 str(key): str(value)
                 for key, value in dict(payload.get("metadata_overrides", {})).items()
                 if value is not None and str(value).strip()
+            },
+            source_metadata_overrides={
+                str(source_id): {
+                    str(key): str(value)
+                    for key, value in dict(overrides).items()
+                    if value is not None and str(value).strip()
+                }
+                for source_id, overrides in dict(payload.get("source_metadata_overrides", {})).items()
             },
             created_at=datetime.fromisoformat(str(payload["created_at"])),
             updated_at=datetime.fromisoformat(str(payload["updated_at"])),

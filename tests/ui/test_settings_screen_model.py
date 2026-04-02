@@ -58,6 +58,16 @@ def test_settings_screen_model_records_recent_session(tmp_path: Path) -> None:
     assert len(state.recent_session_paths) == 1
 
 
+def test_settings_screen_model_records_recent_project(tmp_path: Path) -> None:
+    screen = make_screen_model(tmp_path)
+    screen.load()
+
+    state = screen.record_recent_project(tmp_path / "projects" / "saved.nwbforge-project.json")
+
+    assert state.last_open_project_path.endswith("saved.nwbforge-project.json")
+    assert len(state.recent_project_paths) == 1
+
+
 def test_settings_screen_model_records_output_directory(tmp_path: Path) -> None:
     screen = make_screen_model(tmp_path)
     screen.load()

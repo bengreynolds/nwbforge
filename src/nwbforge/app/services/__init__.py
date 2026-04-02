@@ -12,6 +12,7 @@ from nwbforge.app.services.inspection import RegistrySourceInspectionService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.pipeline import ConversionPipelineService
+from nwbforge.app.services.projects import JsonSessionAssemblyProjectStore, SessionAssemblyProjectDocument
 from nwbforge.app.services.provenance import SessionProvenanceService
 from nwbforge.app.services.review import ExecutionReviewService
 from nwbforge.app.services.session_assembly import (
@@ -33,6 +34,7 @@ __all__ = [
     "ConversionPreview",
     "ExecutionReviewService",
     "JsonSessionAssemblyWorkspaceStore",
+    "JsonSessionAssemblyProjectStore",
     "NeuroConvSupportedExecutionService",
     "PackageManagementController",
     "RegistrySourceInspectionService",
@@ -40,6 +42,7 @@ __all__ = [
     "ReviewSubmission",
     "SessionAssemblyDraft",
     "SessionAssemblyIssue",
+    "SessionAssemblyProjectDocument",
     "SessionAssemblyService",
     "SessionAssemblySource",
     "SessionAssemblyWorkspace",

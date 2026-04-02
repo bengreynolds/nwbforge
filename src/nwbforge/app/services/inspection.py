@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from nwbforge.adapters import AdapterRegistry
 from nwbforge.app.services.errors import AdapterSelectionError, SourceNotFoundError
 from nwbforge.domain.contracts import SourceInspectionService
-from nwbforge.domain.models import ConversionSession, ExtractionResult, SourceReference
+from nwbforge.domain.models import ConversionSession, ExtractedField, ExtractionResult, SourceReference
 
 
 class RegistrySourceInspectionService(SourceInspectionService):
@@ -17,7 +19,8 @@ class RegistrySourceInspectionService(SourceInspectionService):
     def inspect(self, session: ConversionSession, source_id: str) -> ExtractionResult:
         source = self._find_source(session, source_id)
         adapter = self._select_adapter(source)
-        return adapter.inspect(source)
+        result = adapter.inspect(source)
+        return self._apply_source_metadata_overrides(session, source, result)
 
     @staticmethod
     def _find_source(session: ConversionSession, source_id: str) -> SourceReference:
@@ -44,3 +47,36 @@ class RegistrySourceInspectionService(SourceInspectionService):
                 f"Multiple adapters matched source '{source.source_id}': {adapter_ids}."
             )
         return matches[0]
+
+    @staticmethod
+    def _apply_source_metadata_overrides(
+        session: ConversionSession,
+        source: SourceReference,
+        result: ExtractionResult,
+    ) -> ExtractionResult:
+        overrides = session.source_metadata_overrides.get(source.source_id)
+        if not overrides:
+            return result
+
+        fields = dict(result.fields)
+        for key, value in overrides.items():
+            existing_field = fields.get(key)
+            notes = ("Applied from source-specific metadata override.",)
+            if existing_field is not None:
+                fields[key] = replace(
+                    existing_field,
+                    value=value,
+                    notes=existing_field.notes + notes,
+                    is_user_override=True,
+                )
+                continue
+
+            fields[key] = ExtractedField(
+                key=key,
+                value=value,
+                source_id=source.source_id,
+                notes=notes,
+                is_user_override=True,
+            )
+
+        return replace(result, fields=fields)

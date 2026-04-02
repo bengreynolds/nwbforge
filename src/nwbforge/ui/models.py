@@ -35,6 +35,9 @@ class FileMenuAction(StrEnum):
     """Top-level file-menu actions exposed by the desktop shell."""
 
     NEW_SESSION = "new_session"
+    OPEN_PROJECT = "open_project"
+    SAVE_PROJECT = "save_project"
+    SAVE_PROJECT_AS = "save_project_as"
     OPEN_SESSION = "open_session"
     REOPEN_LAST_SESSION = "reopen_last_session"
     SETTINGS = "settings"
@@ -107,6 +110,7 @@ class SessionAssemblySourceItem:
     source_type: str
     suggested_pathway: str
     role: str = "primary"
+    metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None
     sidecar_for_label: str | None = None
     matching_adapter_ids: tuple[str, ...] = ()
@@ -129,13 +133,16 @@ class SessionAssemblyState:
     """State consumable by a direct-ingest session-assembly screen."""
 
     selected_paths: tuple[Path, ...] = ()
+    project_path: Path | None = None
     session_id: str = ""
     title: str = ""
     suggested_pathway: str = "custom"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
+    source_metadata_overrides: dict[str, dict[str, str]] = field(default_factory=dict)
     sources: tuple[SessionAssemblySourceItem, ...] = ()
     issues: tuple[SessionAssemblyIssueItem, ...] = ()
     draft: SessionAssemblyDraft | None = None
+    has_unsaved_changes: bool = False
     error_message: str | None = None
     user_error: UserFacingError | None = None
 
@@ -221,6 +228,8 @@ class SettingsScreenState:
     verbose_logging_enabled: bool = False
     file_logging_enabled: bool = False
     log_file_path: str = str(UiSettings().log_file_path)
+    last_open_project_path: str = ""
+    recent_project_paths: tuple[str, ...] = ()
     last_open_session_path: str = ""
     recent_session_paths: tuple[str, ...] = ()
     last_output_directory: str = ""
@@ -253,6 +262,18 @@ def default_file_menu_entries() -> tuple[FileMenuEntry, ...]:
         FileMenuEntry(
             action=FileMenuAction.NEW_SESSION,
             label="New Session",
+        ),
+        FileMenuEntry(
+            action=FileMenuAction.OPEN_PROJECT,
+            label="Open Project...",
+        ),
+        FileMenuEntry(
+            action=FileMenuAction.SAVE_PROJECT,
+            label="Save Project",
+        ),
+        FileMenuEntry(
+            action=FileMenuAction.SAVE_PROJECT_AS,
+            label="Save Project As...",
         ),
         FileMenuEntry(
             action=FileMenuAction.OPEN_SESSION,

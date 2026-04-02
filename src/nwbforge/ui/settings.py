@@ -74,6 +74,10 @@ class SettingsScreenModel:
         saved = self._settings_service.record_recent_session(session_path)
         return self._set_state(self._state_from_settings(saved, status_message="Session opened."))
 
+    def record_recent_project(self, project_path: Path) -> SettingsScreenState:
+        saved = self._settings_service.record_recent_project(project_path)
+        return self._set_state(self._state_from_settings(saved, status_message="Project opened."))
+
     def record_output_directory(self, output_path: Path) -> SettingsScreenState:
         saved = self._settings_service.record_output_directory(output_path)
         return self._set_state(self._state_from_settings(saved, status_message="Output directory updated."))
@@ -84,10 +88,16 @@ class SettingsScreenModel:
             raise ValueError("Log file path is required when file logging is enabled.")
 
         log_file_path = Path(path_text) if path_text else UiSettings().log_file_path
+        applied = self._state.applied_settings
         return UiSettings(
             verbose_logging_enabled=self._state.verbose_logging_enabled,
             file_logging_enabled=self._state.file_logging_enabled,
             log_file_path=log_file_path,
+            last_open_project_path=applied.last_open_project_path,
+            recent_project_paths=applied.recent_project_paths,
+            last_open_session_path=applied.last_open_session_path,
+            recent_session_paths=applied.recent_session_paths,
+            last_output_directory=applied.last_output_directory,
         )
 
     def _set_draft(self, **changes) -> SettingsScreenState:
@@ -106,6 +116,8 @@ class SettingsScreenModel:
             verbose_logging_enabled=settings.verbose_logging_enabled,
             file_logging_enabled=settings.file_logging_enabled,
             log_file_path=str(settings.log_file_path),
+            last_open_project_path=str(settings.last_open_project_path) if settings.last_open_project_path else "",
+            recent_project_paths=tuple(str(path) for path in settings.recent_project_paths),
             last_open_session_path=str(settings.last_open_session_path) if settings.last_open_session_path else "",
             recent_session_paths=tuple(str(path) for path in settings.recent_session_paths),
             last_output_directory=str(settings.last_output_directory) if settings.last_output_directory else "",

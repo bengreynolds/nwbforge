@@ -10,6 +10,7 @@ import logging
 from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.services import (
     JsonSessionAssemblyWorkspaceStore,
+    JsonSessionAssemblyProjectStore,
     SessionAssemblyService,
     SessionAssemblyWorkspace,
 )
@@ -33,6 +34,7 @@ class SessionAssemblyScreenModel:
         *,
         error_presenter: UiErrorPresenter | None = None,
         workspace_store: JsonSessionAssemblyWorkspaceStore | None = None,
+        project_store: JsonSessionAssemblyProjectStore | None = None,
     ) -> None:
         self._assembly_service = assembly_service
         self._state = SessionAssemblyState()
@@ -40,6 +42,7 @@ class SessionAssemblyScreenModel:
         self._lock = Lock()
         self._error_presenter = error_presenter or DefaultUiErrorPresenter()
         self._workspace_store = workspace_store
+        self._project_store = project_store or JsonSessionAssemblyProjectStore()
         self._restore_workspace()
 
     @property
@@ -57,6 +60,63 @@ class SessionAssemblyScreenModel:
         log_event(self._logger, logging.INFO, "Reset direct-ingest session assembly state.")
         state = self._set_state(SessionAssemblyState())
         self._clear_workspace()
+        return state
+
+    def load_project(self, project_path: Path) -> SessionAssemblyState:
+        document = self._project_store.load(project_path)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Loaded direct-ingest project.",
+            project_path=str(document.project_path),
+            selected_path_count=len(document.workspace.selected_paths),
+        )
+        state = self._refresh(
+            selected_paths=document.workspace.selected_paths,
+            session_id=document.workspace.session_id,
+            title=document.workspace.title,
+            source_roles=dict(document.workspace.source_roles or {}),
+            group_overrides=dict(document.workspace.group_overrides or {}),
+            metadata_overrides=dict(document.workspace.metadata_overrides or {}),
+            source_metadata_overrides={
+                str(source_id): dict(overrides)
+                for source_id, overrides in (document.workspace.source_metadata_overrides or {}).items()
+            },
+        )
+        state = self._set_state(
+            replace(
+                state,
+                project_path=document.project_path,
+                has_unsaved_changes=False,
+            )
+        )
+        self._persist_workspace(state)
+        return state
+
+    def save_project(self, project_path: Path | None = None) -> SessionAssemblyState:
+        if project_path is None:
+            project_path = self._state.project_path
+        if project_path is None:
+            raise ValueError("Choose a project path before saving.")
+
+        workspace = self._workspace_from_state(self._state)
+        document = self._project_store.save(project_path, workspace)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Saved direct-ingest project.",
+            project_path=str(document.project_path),
+            selected_path_count=len(workspace.selected_paths),
+        )
+        state = replace(
+            self._state,
+            project_path=document.project_path,
+            has_unsaved_changes=False,
+            error_message=None,
+            user_error=None,
+        )
+        state = self._set_state(state)
+        self._persist_workspace(state)
         return state
 
     def add_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
@@ -93,6 +153,23 @@ class SessionAssemblyScreenModel:
         else:
             next_overrides.pop(key, None)
         return self._refresh(metadata_overrides=next_overrides)
+
+    def set_source_metadata_override(self, source_id: str, key: str, value: str) -> SessionAssemblyState:
+        next_overrides = {
+            item.source_id: dict(item.metadata_overrides)
+            for item in self._state.sources
+            if item.metadata_overrides
+        }
+        source_overrides = dict(next_overrides.get(source_id, {}))
+        if value.strip():
+            source_overrides[key] = value.strip()
+        else:
+            source_overrides.pop(key, None)
+        if source_overrides:
+            next_overrides[source_id] = source_overrides
+        else:
+            next_overrides.pop(source_id, None)
+        return self._refresh(source_metadata_overrides=next_overrides)
 
     def set_source_group_label(self, source_id: str, group_label: str) -> SessionAssemblyState:
         normalized_label = group_label.strip()
@@ -147,6 +224,7 @@ class SessionAssemblyScreenModel:
         source_roles: dict[str, str] | None = None,
         group_overrides: dict[str, str] | None = None,
         metadata_overrides: dict[str, str] | None = None,
+        source_metadata_overrides: dict[str, dict[str, str]] | None = None,
     ) -> SessionAssemblyState:
         next_paths = selected_paths if selected_paths is not None else self._state.selected_paths
         next_session_id = session_id if session_id is not None else self._state.session_id
@@ -170,6 +248,16 @@ class SessionAssemblyScreenModel:
         next_metadata_overrides = (
             metadata_overrides if metadata_overrides is not None else self._state.metadata_overrides
         )
+        current_source_metadata_overrides = {
+            item.source_id: dict(item.metadata_overrides)
+            for item in self._state.sources
+            if item.metadata_overrides
+        }
+        next_source_metadata_overrides = (
+            source_metadata_overrides
+            if source_metadata_overrides is not None
+            else current_source_metadata_overrides
+        )
         try:
             draft = self._assembly_service.assemble_draft(
                 next_paths,
@@ -178,6 +266,7 @@ class SessionAssemblyScreenModel:
                 source_roles=next_source_roles,
                 group_overrides=next_group_overrides,
                 metadata_overrides=next_metadata_overrides,
+                source_metadata_overrides=next_source_metadata_overrides,
             )
         except Exception as exc:
             user_error = self._error_presenter.present(exc)
@@ -198,6 +287,10 @@ class SessionAssemblyScreenModel:
                 title=draft.title or "",
                 suggested_pathway=draft.pathway.value,
                 metadata_overrides=dict(draft.metadata_overrides),
+                source_metadata_overrides={
+                    str(source_id): dict(overrides)
+                    for source_id, overrides in draft.source_metadata_overrides.items()
+                },
                 sources=tuple(
                     SessionAssemblySourceItem(
                         source_id=source.source_id,
@@ -208,6 +301,7 @@ class SessionAssemblyScreenModel:
                         source_type=source.source_type.value,
                         suggested_pathway=source.suggested_pathway.value,
                         role=source.role,
+                        metadata_overrides=dict(source.metadata_overrides or {}),
                         sidecar_for_source_id=source.sidecar_for_source_id,
                         sidecar_for_label=source.sidecar_for_label,
                         matching_adapter_ids=source.matching_adapter_ids,
@@ -226,6 +320,8 @@ class SessionAssemblyScreenModel:
                     for issue in draft.issues
                 ),
                 draft=draft,
+                project_path=self._state.project_path,
+                has_unsaved_changes=self._state.project_path is not None or bool(resolved_paths),
                 error_message=None,
                 user_error=None,
             )
@@ -273,6 +369,17 @@ class SessionAssemblyScreenModel:
             source_roles=dict(workspace.source_roles or {}),
             group_overrides=dict(workspace.group_overrides or {}),
             metadata_overrides=dict(workspace.metadata_overrides or {}),
+            source_metadata_overrides={
+                str(source_id): dict(overrides)
+                for source_id, overrides in (workspace.source_metadata_overrides or {}).items()
+            },
+        )
+        self._set_state(
+            replace(
+                self._state,
+                project_path=workspace.project_path,
+                has_unsaved_changes=workspace.has_unsaved_changes,
+            )
         )
 
     def _persist_workspace(self, state: SessionAssemblyState) -> None:
@@ -289,21 +396,30 @@ class SessionAssemblyScreenModel:
             source_count=len(state.sources),
             override_count=len(state.metadata_overrides),
         )
-        self._workspace_store.save(
-            SessionAssemblyWorkspace(
-                selected_paths=state.selected_paths,
-                session_id=state.session_id,
-                title=state.title,
-                source_roles={source.source_id: source.role for source in state.sources},
-                group_overrides={
-                    source.source_id: source.group_label
-                    for source in state.sources
-                    if source.group_key.startswith("manual:")
-                },
-                metadata_overrides=dict(state.metadata_overrides),
-            )
-        )
+        self._workspace_store.save(self._workspace_from_state(state))
 
     def _clear_workspace(self) -> None:
         if self._workspace_store is not None:
             self._workspace_store.clear()
+
+    @staticmethod
+    def _workspace_from_state(state: SessionAssemblyState) -> SessionAssemblyWorkspace:
+        return SessionAssemblyWorkspace(
+            selected_paths=state.selected_paths,
+            project_path=state.project_path,
+            has_unsaved_changes=state.has_unsaved_changes,
+            session_id=state.session_id,
+            title=state.title,
+            source_roles={source.source_id: source.role for source in state.sources},
+            group_overrides={
+                source.source_id: source.group_label
+                for source in state.sources
+                if source.group_key.startswith("manual:")
+            },
+            metadata_overrides=dict(state.metadata_overrides),
+            source_metadata_overrides={
+                source.source_id: dict(source.metadata_overrides)
+                for source in state.sources
+                if source.metadata_overrides
+            },
+        )

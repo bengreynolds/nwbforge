@@ -43,6 +43,19 @@ def test_ui_settings_service_records_recent_sessions(tmp_path: Path) -> None:
     assert third.recent_session_paths[1] == (tmp_path / "b" / "session_manifest.json").resolve()
 
 
+def test_ui_settings_service_records_recent_projects(tmp_path: Path) -> None:
+    service = UiSettingsService(tmp_path / "ui-settings.json")
+
+    first = service.record_recent_project(tmp_path / "a" / "first.nwbforge-project.json")
+    second = service.record_recent_project(tmp_path / "b" / "second.nwbforge-project.json")
+    third = service.record_recent_project(tmp_path / "a" / "first.nwbforge-project.json")
+
+    assert first.last_open_project_path is not None
+    assert second.last_open_project_path == (tmp_path / "b" / "second.nwbforge-project.json").resolve()
+    assert third.recent_project_paths[0] == (tmp_path / "a" / "first.nwbforge-project.json").resolve()
+    assert third.recent_project_paths[1] == (tmp_path / "b" / "second.nwbforge-project.json").resolve()
+
+
 def test_ui_settings_service_records_output_directory(tmp_path: Path) -> None:
     service = UiSettingsService(tmp_path / "ui-settings.json")
 

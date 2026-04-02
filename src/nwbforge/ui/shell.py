@@ -44,6 +44,9 @@ class DesktopShellModel:
 
     def invoke_file_menu_action(self, action: FileMenuAction) -> DesktopShellState:
         if action in {
+            FileMenuAction.OPEN_PROJECT,
+            FileMenuAction.SAVE_PROJECT,
+            FileMenuAction.SAVE_PROJECT_AS,
             FileMenuAction.OPEN_SESSION,
             FileMenuAction.REOPEN_LAST_SESSION,
         }:

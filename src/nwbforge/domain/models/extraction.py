@@ -14,6 +14,7 @@ class ExtractedField:
     source_id: str
     path: str | None = None
     notes: tuple[str, ...] = ()
+    is_user_override: bool = False
 
 
 @dataclass(frozen=True, slots=True)

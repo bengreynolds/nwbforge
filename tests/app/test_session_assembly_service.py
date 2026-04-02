@@ -69,6 +69,27 @@ def test_session_assembly_service_preserves_roles_and_metadata_overrides(tmp_pat
     }
 
 
+def test_session_assembly_service_preserves_source_metadata_overrides(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (manifest_path, custom_path),
+        source_metadata_overrides={
+            "session-manifest": {"subject.subject_id": "manifest-mouse-01"},
+            "custom-session": {"subject.subject_id": "custom-mouse-01"},
+        },
+    )
+    session = service.create_session(draft)
+
+    assert draft.source_metadata_overrides["session-manifest"]["subject.subject_id"] == "manifest-mouse-01"
+    assert draft.sources[0].metadata_overrides["subject.subject_id"] == "manifest-mouse-01"
+    assert session.source_metadata_overrides["custom-session"]["subject.subject_id"] == "custom-mouse-01"
+
+
 def test_session_assembly_service_treats_unmatched_source_as_custom_review(tmp_path: Path) -> None:
     unknown_path = tmp_path / "notes.txt"
     unknown_path.write_text("freeform operator notes", encoding="utf-8")

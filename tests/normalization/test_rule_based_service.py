@@ -241,6 +241,43 @@ def test_rule_based_normalizer_applies_session_wide_metadata_overrides_after_nor
     assert bundle.session.experimenter.origin is ValueOrigin.USER_SUPPLIED
 
 
+def test_rule_based_normalizer_marks_source_specific_override_as_user_supplied() -> None:
+    session = ConversionSession(
+        session_id="sess-source-override-001",
+        pathway=ConversionPathway.HYBRID,
+        sources=(
+            SourceReference(
+                source_id="primary-source",
+                location=Path("data/source-primary"),
+                source_type=SourceType.DIRECTORY,
+                label="primary source",
+                role="primary",
+            ),
+        ),
+    )
+    extraction = ExtractionResult(
+        source_id="primary-source",
+        adapter_id="alpha",
+        record_type="session",
+        fields={
+            "subject.subject_id": ExtractedField(
+                "subject.subject_id",
+                "override-mouse-01",
+                "primary-source",
+                is_user_override=True,
+                notes=("Applied from source-specific metadata override.",),
+            ),
+        },
+    )
+
+    bundle = RuleBasedNormalizationService().normalize(session, (extraction,))
+
+    assert bundle.subject.subject_id is not None
+    assert bundle.subject.subject_id.value == "override-mouse-01"
+    assert bundle.subject.subject_id.origin is ValueOrigin.USER_SUPPLIED
+    assert "Applied from source-specific metadata override." in bundle.subject.subject_id.notes
+
+
 def test_rule_based_normalizer_falls_back_to_conversion_session_id() -> None:
     bundle = RuleBasedNormalizationService().normalize(make_session(), ())
 

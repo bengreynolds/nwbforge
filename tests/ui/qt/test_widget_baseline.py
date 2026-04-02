@@ -792,6 +792,47 @@ def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, t
     window.close()
 
 
+def test_session_assembly_dialog_edits_source_metadata_override(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    session = make_hybrid_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path), str(custom_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+
+    dialog._source_list.setCurrentRow(1)
+    qapp.processEvents()
+    dialog._source_metadata_override_edits["subject.subject_id"].setText("custom-source-qt-01")
+    qapp.processEvents()
+    dialog._create_button.click()
+    qapp.processEvents()
+
+    assert (
+        window.conversion_widget._screen_model.state.session.source_metadata_overrides["custom-session"]["subject.subject_id"]
+        == "custom-source-qt-01"
+    )
+    window.close()
+
+
 def test_session_assembly_dialog_edits_group_label_and_shows_sidecar_association(
     qapp, tmp_path: Path, monkeypatch
 ) -> None:
@@ -832,6 +873,60 @@ def test_session_assembly_dialog_edits_group_label_and_shows_sidecar_association
     assert dialog._source_list.currentItem() is not None
     assert "Manual Metadata Group" in dialog._source_list.currentItem().text()
     assert dialog._selected_sidecar_label.text() == "recording.tif"
+    window.close()
+
+
+def test_main_window_opens_and_saves_project_from_direct_ingest(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    project_path = tmp_path / "projects" / "session.nwbforge-project.json"
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    settings_screen = make_settings_screen(tmp_path)
+    window = MainWindow(
+        DesktopShellModel(),
+        settings_screen,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path)], "All supported inputs (*.*)"),
+    )
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (str(project_path), "NWB Forge projects (*.nwbforge-project.json)"),
+    )
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(project_path), "NWB Forge projects (*.nwbforge-project.json)")
+        if args[1] == "Open Conversion Project"
+        else (str(manifest_path), "session_manifest.json"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    window._save_project_as_action.trigger()
+    qapp.processEvents()
+
+    assert project_path.exists() is True
+    assert dialog.windowTitle() == "Conversion Project"
+    assert settings_screen.state.recent_project_paths[0] == str(project_path.resolve())
+
+    dialog.reject()
+    qapp.processEvents()
+    window._open_project_action.trigger()
+    qapp.processEvents()
+
+    assert window.session_assembly_dialog.isVisible() is True
+    assert window.session_assembly_dialog._input_list.count() == 1
+    assert window.session_assembly_dialog._project_label.text() == str(project_path.resolve())
     window.close()
 
 

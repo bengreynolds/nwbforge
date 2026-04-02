@@ -68,6 +68,8 @@ class SessionAssemblyDialog(QDialog):
         self._group_edit.setPlaceholderText("Group label")
         self._group_edit.editingFinished.connect(self._apply_selected_group)
         self._pathway_label = QLabel("custom", self)
+        self._project_label = QLabel("Unsaved project", self)
+        self._project_label.setWordWrap(True)
         self._grouping_label = QLabel("No grouping suggestions yet.", self)
         self._grouping_label.setWordWrap(True)
         self._summary_label = QLabel("Add files or folders to build a conversion session.", self)
@@ -80,6 +82,7 @@ class SessionAssemblyDialog(QDialog):
         self._selected_sidecar_label = QLabel("None", self)
         self._selected_sidecar_label.setWordWrap(True)
         self._metadata_override_edits: dict[str, QLineEdit] = {}
+        self._source_metadata_override_edits: dict[str, QLineEdit] = {}
 
         self._add_files_button = QPushButton("Add Files...", self)
         self._add_files_button.clicked.connect(self._add_files)
@@ -96,6 +99,7 @@ class SessionAssemblyDialog(QDialog):
         summary_layout = QFormLayout(summary_group)
         summary_layout.addRow("Session ID", self._session_id_edit)
         summary_layout.addRow("Title", self._title_edit)
+        summary_layout.addRow("Project", self._project_label)
         summary_layout.addRow("Pathway", self._pathway_label)
         summary_layout.addRow("Grouping", self._grouping_label)
         summary_layout.addRow("Status", self._summary_label)
@@ -129,6 +133,17 @@ class SessionAssemblyDialog(QDialog):
             metadata_layout.addRow(label, edit)
             self._metadata_override_edits[key] = edit
 
+        source_metadata_group = QGroupBox("Selected Source Metadata Overrides", self)
+        source_metadata_layout = QFormLayout(source_metadata_group)
+        for key, label in self._METADATA_OVERRIDE_FIELDS:
+            edit = QLineEdit(self)
+            edit.setPlaceholderText(f"{label} for selected source")
+            edit.textChanged.connect(
+                lambda value, field_key=key: self._apply_selected_source_metadata_override(field_key, value)
+            )
+            source_metadata_layout.addRow(label, edit)
+            self._source_metadata_override_edits[key] = edit
+
         issue_group = QGroupBox("Assembly Issues", self)
         issue_layout = QVBoxLayout(issue_group)
         issue_layout.addWidget(self._issue_list)
@@ -144,6 +159,7 @@ class SessionAssemblyDialog(QDialog):
         layout.addWidget(input_group, stretch=1)
         layout.addWidget(source_group, stretch=1)
         layout.addWidget(metadata_group)
+        layout.addWidget(source_metadata_group)
         layout.addWidget(issue_group, stretch=1)
         layout.addLayout(action_row)
 
@@ -202,6 +218,14 @@ class SessionAssemblyDialog(QDialog):
                 self._title_edit.setText(state.title)
 
         self._pathway_label.setText(state.suggested_pathway)
+        project_text = "Unsaved project"
+        if state.project_path is not None:
+            project_text = str(state.project_path)
+            if state.has_unsaved_changes:
+                project_text += " (modified)"
+        elif state.has_unsaved_changes and state.selected_paths:
+            project_text = "Unsaved project (modified)"
+        self._project_label.setText(project_text)
         unique_groups = sorted({source.group_label for source in state.sources})
         self._grouping_label.setText(", ".join(unique_groups) if unique_groups else "No grouping suggestions yet.")
         self._summary_label.setText(
@@ -253,6 +277,12 @@ class SessionAssemblyDialog(QDialog):
 
         self._remove_selected_button.setEnabled(self._input_list.count() > 0)
         self._create_button.setEnabled(state.can_create_session)
+        self.setWindowTitle(
+            "New Conversion Session"
+            if state.project_path is None and not state.has_unsaved_changes
+            else "Conversion Project"
+            + (" *" if state.has_unsaved_changes else "")
+        )
 
     def _sync_selected_source(self, *_args) -> None:
         selected_item = self._source_list.currentItem()
@@ -264,8 +294,13 @@ class SessionAssemblyDialog(QDialog):
                 self._role_combo.setCurrentText("primary")
             with QSignalBlocker(self._group_edit):
                 self._group_edit.setText("")
+            for edit in self._source_metadata_override_edits.values():
+                with QSignalBlocker(edit):
+                    edit.setText("")
             self._role_combo.setEnabled(False)
             self._group_edit.setEnabled(False)
+            for edit in self._source_metadata_override_edits.values():
+                edit.setEnabled(False)
             return
 
         source_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -278,8 +313,13 @@ class SessionAssemblyDialog(QDialog):
                 self._role_combo.setCurrentText("primary")
             with QSignalBlocker(self._group_edit):
                 self._group_edit.setText("")
+            for edit in self._source_metadata_override_edits.values():
+                with QSignalBlocker(edit):
+                    edit.setText("")
             self._role_combo.setEnabled(False)
             self._group_edit.setEnabled(False)
+            for edit in self._source_metadata_override_edits.values():
+                edit.setEnabled(False)
             return
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
@@ -290,8 +330,13 @@ class SessionAssemblyDialog(QDialog):
             self._role_combo.setCurrentText(source.role)
         with QSignalBlocker(self._group_edit):
             self._group_edit.setText(source.group_label)
+        for key, edit in self._source_metadata_override_edits.items():
+            with QSignalBlocker(edit):
+                edit.setText(source.metadata_overrides.get(key, ""))
         self._role_combo.setEnabled(True)
         self._group_edit.setEnabled(True)
+        for edit in self._source_metadata_override_edits.values():
+            edit.setEnabled(True)
 
     def _apply_selected_role(self, role: str) -> None:
         selected_item = self._source_list.currentItem()
@@ -310,3 +355,12 @@ class SessionAssemblyDialog(QDialog):
         if source_id is None:
             return
         self._screen_model.set_source_group_label(str(source_id), self._group_edit.text())
+
+    def _apply_selected_source_metadata_override(self, key: str, value: str) -> None:
+        selected_item = self._source_list.currentItem()
+        if selected_item is None:
+            return
+        source_id = selected_item.data(Qt.ItemDataRole.UserRole)
+        if source_id is None:
+            return
+        self._screen_model.set_source_metadata_override(str(source_id), key, value)

@@ -28,6 +28,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to a session_manifest.json, custom_session.json, or hybrid_session.json file, or a directory containing one.",
     )
     parser.add_argument(
+        "--project",
+        type=Path,
+        default=None,
+        help="Path to an explicit NWB Forge direct-ingest project file (*.nwbforge-project.json).",
+    )
+    parser.add_argument(
         "--manifest",
         type=Path,
         default=None,
@@ -41,6 +47,7 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     services = build_desktop_services(repo_root)
     requested_session = args.session or args.manifest
+    requested_project = args.project
 
     app = ensure_application()
     window = MainWindow(
@@ -52,7 +59,18 @@ def main() -> int:
         log_file_path=build_default_log_file_path(repo_root),
     )
     window.show()
-    if requested_session is not None:
+    if requested_project is not None:
+        project_path = requested_project.resolve()
+        services.session_assembly_screen_model.load_project(project_path)
+        services.settings_screen_model.record_recent_project(project_path)
+        services.shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        log_event(
+            LOGGER,
+            logging.INFO,
+            "Temporary desktop launcher started with explicit project.",
+            project_path=str(project_path),
+        )
+    elif requested_session is not None:
         session_path = requested_session.resolve()
         session = load_desktop_session(session_path)
         window.conversion_widget.load_session(session)

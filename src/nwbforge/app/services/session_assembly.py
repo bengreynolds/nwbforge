@@ -38,6 +38,7 @@ class SessionAssemblySource:
     suggested_adapter_id: str | None
     suggested_pathway: ConversionPathway
     role: str = "primary"
+    metadata_overrides: dict[str, str] | None = None
     sidecar_for_source_id: str | None = None
     sidecar_for_label: str | None = None
     needs_review: bool = False
@@ -53,6 +54,7 @@ class SessionAssemblyDraft:
     sources: tuple[SessionAssemblySource, ...]
     issues: tuple[SessionAssemblyIssue, ...]
     metadata_overrides: dict[str, str]
+    source_metadata_overrides: dict[str, dict[str, str]]
 
     @property
     def can_create_session(self) -> bool:
@@ -64,11 +66,14 @@ class SessionAssemblyWorkspace:
     """Persistable in-progress state for the direct-ingest session builder."""
 
     selected_paths: tuple[Path, ...]
+    project_path: Path | None = None
+    has_unsaved_changes: bool = False
     session_id: str = ""
     title: str = ""
     source_roles: dict[str, str] | None = None
     group_overrides: dict[str, str] | None = None
     metadata_overrides: dict[str, str] | None = None
+    source_metadata_overrides: dict[str, dict[str, str]] | None = None
 
 
 class JsonSessionAssemblyWorkspaceStore:
@@ -80,11 +85,22 @@ class JsonSessionAssemblyWorkspaceStore:
     def save(self, workspace: SessionAssemblyWorkspace) -> None:
         payload = {
             "selected_paths": [str(path) for path in workspace.selected_paths],
+            "project_path": str(workspace.project_path) if workspace.project_path is not None else None,
+            "has_unsaved_changes": workspace.has_unsaved_changes,
             "session_id": workspace.session_id,
             "title": workspace.title,
             "source_roles": dict(workspace.source_roles or {}),
             "group_overrides": dict(workspace.group_overrides or {}),
             "metadata_overrides": dict(workspace.metadata_overrides or {}),
+            "source_metadata_overrides": {
+                str(source_id): {
+                    str(key): str(value)
+                    for key, value in overrides.items()
+                    if str(value).strip()
+                }
+                for source_id, overrides in (workspace.source_metadata_overrides or {}).items()
+                if overrides
+            },
         }
         self._workspace_path.parent.mkdir(parents=True, exist_ok=True)
         self._workspace_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -95,12 +111,21 @@ class JsonSessionAssemblyWorkspaceStore:
         payload = json.loads(self._workspace_path.read_text(encoding="utf-8"))
         return SessionAssemblyWorkspace(
             selected_paths=tuple(Path(path) for path in payload.get("selected_paths", ())),
+            project_path=Path(payload["project_path"]) if payload.get("project_path") else None,
+            has_unsaved_changes=bool(payload.get("has_unsaved_changes", False)),
             session_id=str(payload.get("session_id", "")),
             title=str(payload.get("title", "")),
             source_roles={str(key): str(value) for key, value in dict(payload.get("source_roles", {})).items()},
             group_overrides={str(key): str(value) for key, value in dict(payload.get("group_overrides", {})).items()},
             metadata_overrides={
                 str(key): str(value) for key, value in dict(payload.get("metadata_overrides", {})).items()
+            },
+            source_metadata_overrides={
+                str(source_id): {
+                    str(key): str(value)
+                    for key, value in dict(overrides).items()
+                }
+                for source_id, overrides in dict(payload.get("source_metadata_overrides", {})).items()
             },
         )
 
@@ -129,6 +154,7 @@ class SessionAssemblyService:
         source_roles: dict[str, str] | None = None,
         group_overrides: dict[str, str] | None = None,
         metadata_overrides: dict[str, str] | None = None,
+        source_metadata_overrides: dict[str, dict[str, str]] | None = None,
     ) -> SessionAssemblyDraft:
         """Build a suggested session draft from one or more selected files or folders."""
 
@@ -165,6 +191,15 @@ class SessionAssemblyService:
             str(key): str(value).strip()
             for key, value in (metadata_overrides or {}).items()
             if str(value).strip()
+        }
+        normalized_source_metadata_overrides = {
+            str(source_id): {
+                str(key): str(value).strip()
+                for key, value in dict(overrides).items()
+                if str(value).strip()
+            }
+            for source_id, overrides in (source_metadata_overrides or {}).items()
+            if overrides
         }
 
         for index, path in enumerate(normalized_paths, start=1):
@@ -238,6 +273,7 @@ class SessionAssemblyService:
                     suggested_adapter_id=suggested_adapter_id,
                     suggested_pathway=suggested_pathway,
                     role=role,
+                    metadata_overrides=dict(normalized_source_metadata_overrides.get(source_id, {})),
                     sidecar_for_source_id=source_ids_by_path.get(sidecar_anchor) if sidecar_anchor is not None else None,
                     sidecar_for_label=sidecar_anchor.name if sidecar_anchor is not None else None,
                     needs_review=needs_review,
@@ -296,6 +332,7 @@ class SessionAssemblyService:
             sources=tuple(draft_sources),
             issues=tuple(issues),
             metadata_overrides=normalized_metadata_overrides,
+            source_metadata_overrides=normalized_source_metadata_overrides,
         )
 
     def create_session(self, draft: SessionAssemblyDraft) -> ConversionSession:
@@ -303,6 +340,14 @@ class SessionAssemblyService:
 
         if not draft.can_create_session:
             raise ValueError("Session draft is not ready to create.")
+
+        sidecar_ids_by_anchor: dict[str, tuple[str, ...]] = {}
+        for source in draft.sources:
+            if source.sidecar_for_source_id is None:
+                continue
+            sidecar_ids_by_anchor[source.sidecar_for_source_id] = tuple(
+                dict.fromkeys(sidecar_ids_by_anchor.get(source.sidecar_for_source_id, ()) + (source.source_id,))
+            )
 
         sources = tuple(
             SourceReference(
@@ -318,6 +363,7 @@ class SessionAssemblyService:
                     "session_assembly.sidecar_for_source_id": source.sidecar_for_source_id or "",
                     "session_assembly.sidecar_for_label": source.sidecar_for_label or "",
                 },
+                sidecar_ids=sidecar_ids_by_anchor.get(source.source_id, ()),
             )
             for source in draft.sources
         )
@@ -327,6 +373,11 @@ class SessionAssemblyService:
             sources=sources,
             title=draft.title,
             metadata_overrides=dict(draft.metadata_overrides),
+            source_metadata_overrides={
+                str(source_id): dict(overrides)
+                for source_id, overrides in draft.source_metadata_overrides.items()
+                if overrides
+            },
         ).transition(status=SessionStatus.SOURCES_ADDED)
         log_event(
             self._logger,

@@ -24,7 +24,13 @@ from nwbforge.ui import (
     UserFacingError,
 )
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
-from nwbforge.ui.models import ConversionSessionScreenState, PackageInstallerState, SettingsScreenState, StatusBarState
+from nwbforge.ui.models import (
+    ConversionSessionScreenState,
+    PackageInstallerState,
+    SessionAssemblyState,
+    SettingsScreenState,
+    StatusBarState,
+)
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
 from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 from nwbforge.ui.settings import SettingsScreenModel
@@ -70,6 +76,7 @@ class MainWindow(QMainWindow):
         self._conversion_screen_model = conversion_screen_model
         self._session_loader = session_loader or self._default_session_loader
         self._recent_session_actions: list[QAction] = []
+        self._recent_project_actions: list[QAction] = []
         self._last_recorded_output_directory: Path | None = None
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
         self._viewer_log_sink = log_sink or InMemoryUiLogSink()
@@ -118,6 +125,10 @@ class MainWindow(QMainWindow):
         self._package_bridge = StateBridge(self)
         self._package_bridge.state_changed.connect(self._apply_package_state)
         self._package_screen_model.subscribe(self._package_bridge.publish)
+
+        self._session_assembly_bridge = StateBridge(self)
+        self._session_assembly_bridge.state_changed.connect(self._apply_session_assembly_state)
+        self._session_assembly_screen_model.subscribe(self._session_assembly_bridge.publish)
 
         self._conversion_bridge = StateBridge(self)
         self._conversion_bridge.state_changed.connect(self._apply_conversion_state)
@@ -185,9 +196,24 @@ class MainWindow(QMainWindow):
         )
         self._file_menu.addAction(self._new_session_action)
 
+        self._open_project_action = QAction("Open Project...", self)
+        self._open_project_action.triggered.connect(self._open_project_from_dialog)
+        self._file_menu.addAction(self._open_project_action)
+
+        self._save_project_action = QAction("Save Project", self)
+        self._save_project_action.triggered.connect(self._save_project)
+        self._file_menu.addAction(self._save_project_action)
+
+        self._save_project_as_action = QAction("Save Project As...", self)
+        self._save_project_as_action.triggered.connect(self._save_project_as)
+        self._file_menu.addAction(self._save_project_as_action)
+
         self._open_session_action = QAction("Open Session...", self)
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
         self._file_menu.addAction(self._open_session_action)
+
+        self._recent_projects_menu = self._file_menu.addMenu("Open Recent Project")
+        self._recent_projects_menu.setEnabled(False)
 
         self._reopen_last_session_action = QAction("Reopen Last Session", self)
         self._reopen_last_session_action.triggered.connect(self._reopen_last_session)
@@ -239,6 +265,45 @@ class MainWindow(QMainWindow):
         log_event(self._logger, logging.INFO, "Selected session file from desktop dialog.", session_path=selected_path)
         self._load_session(Path(selected_path))
 
+    def _open_project_from_dialog(self) -> None:
+        selected_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Conversion Project",
+            str(Path.cwd()),
+            "NWB Forge projects (*.nwbforge-project.json);;JSON files (*.json)",
+        )
+        if not selected_path:
+            log_event(self._logger, logging.DEBUG, "Open Project dialog canceled.")
+            return
+
+        self._load_project(Path(selected_path))
+
+    def _save_project(self) -> None:
+        project_path = self._session_assembly_screen_model.state.project_path
+        if project_path is None:
+            self._save_project_as()
+            return
+        self._save_project_to_path(project_path)
+
+    def _save_project_as(self) -> None:
+        current_project_path = self._session_assembly_screen_model.state.project_path
+        start_location = str(current_project_path) if current_project_path is not None else str(
+            Path.cwd() / ".nwbforge-project.json"
+        )
+        selected_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Conversion Project",
+            start_location,
+            "NWB Forge projects (*.nwbforge-project.json);;JSON files (*.json)",
+        )
+        if not selected_path:
+            log_event(self._logger, logging.DEBUG, "Save Project As dialog canceled.", start_location=start_location)
+            return
+        save_path = Path(selected_path)
+        if "".join(save_path.suffixes[-2:]).lower() != ".nwbforge-project.json":
+            save_path = save_path.with_name(f"{save_path.stem}.nwbforge-project.json")
+        self._save_project_to_path(save_path)
+
     def _choose_output_path(self, current_path: Path | None) -> Path | None:
         initial_path = current_path
         if initial_path is None:
@@ -283,6 +348,90 @@ class MainWindow(QMainWindow):
 
         log_event(self._logger, logging.INFO, "Reopening last desktop session.", session_path=str(last_path))
         self._load_session(last_path)
+
+    def _load_project(self, project_path: Path) -> None:
+        log_event(self._logger, logging.INFO, "Loading direct-ingest project.", project_path=str(project_path))
+        try:
+            self._session_assembly_screen_model.load_project(project_path)
+            self._settings_screen_model.record_recent_project(project_path)
+            self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        except Exception as exc:
+            log_event(
+                self._logger,
+                logging.ERROR,
+                "Direct-ingest project load failed.",
+                project_path=str(project_path),
+                error=str(exc),
+            )
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="project:open:error",
+                    message=str(exc),
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                ),
+                user_error=UserFacingError(
+                    title="Open Project Error",
+                    message=str(exc),
+                    detail=f"Could not load project from {project_path}.",
+                    category="project",
+                ),
+            )
+            return
+
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="project:loaded",
+                message=f"Loaded project {project_path.name}.",
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+
+    def _save_project_to_path(self, project_path: Path) -> None:
+        try:
+            state = self._session_assembly_screen_model.save_project(project_path)
+            if state.project_path is not None:
+                self._settings_screen_model.record_recent_project(state.project_path)
+        except Exception as exc:
+            log_event(
+                self._logger,
+                logging.ERROR,
+                "Direct-ingest project save failed.",
+                project_path=str(project_path),
+                error=str(exc),
+            )
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="project:save:error",
+                    message=str(exc),
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                ),
+                user_error=UserFacingError(
+                    title="Save Project Error",
+                    message=str(exc),
+                    detail=f"Could not save project to {project_path}.",
+                    category="project",
+                ),
+            )
+            return
+
+        log_event(self._logger, logging.INFO, "Saved direct-ingest project.", project_path=str(project_path))
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="project:saved",
+                message=f"Saved project {project_path.name}.",
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+        if not self._session_assembly_dialog.isVisible():
+            self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
 
     def _load_session(self, session_path: Path) -> None:
         log_event(self._logger, logging.INFO, "Loading desktop session.", session_path=str(session_path))
@@ -391,6 +540,20 @@ class MainWindow(QMainWindow):
             action.triggered.connect(lambda checked=False, value=path_text: self._load_session(Path(value)))
             self._recent_sessions_menu.addAction(action)
             self._recent_session_actions.append(action)
+
+    def _rebuild_recent_projects_menu(self, recent_paths: tuple[str, ...]) -> None:
+        self._recent_projects_menu.clear()
+        self._recent_project_actions.clear()
+        if not recent_paths:
+            self._recent_projects_menu.setEnabled(False)
+            return
+
+        self._recent_projects_menu.setEnabled(True)
+        for path_text in recent_paths:
+            action = QAction(path_text, self)
+            action.triggered.connect(lambda checked=False, value=path_text: self._load_project(Path(value)))
+            self._recent_projects_menu.addAction(action)
+            self._recent_project_actions.append(action)
 
     def _open_artifact_path(self, path: Path) -> bool:
         return self._open_desktop_path(
@@ -533,6 +696,7 @@ class MainWindow(QMainWindow):
         message_box.open()
 
     def _apply_settings_state(self, state: SettingsScreenState) -> None:
+        self._rebuild_recent_projects_menu(state.recent_project_paths)
         self._rebuild_recent_sessions_menu(state.recent_session_paths)
         self._reopen_last_session_action.setEnabled(bool(state.last_open_session_path))
         if state.applied_settings != self._applied_settings:
@@ -629,3 +793,8 @@ class MainWindow(QMainWindow):
                     is_error=state.execution.session.status.value == "failed",
                 )
             )
+            return
+
+    def _apply_session_assembly_state(self, state: SessionAssemblyState) -> None:
+        self._save_project_action.setEnabled(bool(state.selected_paths))
+        self._save_project_as_action.setEnabled(bool(state.selected_paths))

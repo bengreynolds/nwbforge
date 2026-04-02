@@ -39,6 +39,7 @@ class ConversionSession:
     title: str | None = None
     lab_profile: str | None = None
     metadata_overrides: dict[str, str] = field(default_factory=dict)
+    source_metadata_overrides: dict[str, dict[str, str]] = field(default_factory=dict)
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
     notes: tuple[str, ...] = ()

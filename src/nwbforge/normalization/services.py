@@ -411,7 +411,7 @@ class RuleBasedNormalizationService(NormalizationService):
     ) -> NormalizedValue[object]:
         return NormalizedValue(
             value=extracted_field.value,
-            origin=ValueOrigin.ADAPTER_EXTRACTED,
+            origin=ValueOrigin.USER_SUPPLIED if extracted_field.is_user_override else ValueOrigin.ADAPTER_EXTRACTED,
             source_ids=(extracted_field.source_id,),
             review_status=review_status,
             notes=notes + extracted_field.notes,
