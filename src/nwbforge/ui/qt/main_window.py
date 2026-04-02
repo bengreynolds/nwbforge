@@ -37,6 +37,7 @@ from nwbforge.ui.settings import SettingsScreenModel
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.qt.conversion_session_widget import ConversionSessionWidget
 from nwbforge.ui.qt.log_viewer import LogViewerDockWidget
+from nwbforge.ui.qt.nwb_viewer_window import NwbViewerWindow
 from nwbforge.ui.qt.package_dialog import PackageInstallerDialog
 from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.ui.qt.settings_dialog import SettingsDialog
@@ -77,6 +78,7 @@ class MainWindow(QMainWindow):
         self._session_loader = session_loader or self._default_session_loader
         self._recent_session_actions: list[QAction] = []
         self._recent_project_actions: list[QAction] = []
+        self._viewer_windows: list[NwbViewerWindow] = []
         self._last_recorded_output_directory: Path | None = None
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
         self._viewer_log_sink = log_sink or InMemoryUiLogSink()
@@ -212,6 +214,10 @@ class MainWindow(QMainWindow):
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
         self._file_menu.addAction(self._open_session_action)
 
+        self._open_nwb_viewer_action = QAction("Open NWB Viewer...", self)
+        self._open_nwb_viewer_action.triggered.connect(self._open_nwb_viewer_from_dialog)
+        self._file_menu.addAction(self._open_nwb_viewer_action)
+
         self._recent_projects_menu = self._file_menu.addMenu("Open Recent Project")
         self._recent_projects_menu.setEnabled(False)
 
@@ -264,6 +270,18 @@ class MainWindow(QMainWindow):
 
         log_event(self._logger, logging.INFO, "Selected session file from desktop dialog.", session_path=selected_path)
         self._load_session(Path(selected_path))
+
+    def _open_nwb_viewer_from_dialog(self) -> None:
+        selected_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open NWB Viewer",
+            str(Path.cwd()),
+            "NWB files (*.nwb);;All files (*)",
+        )
+        if not selected_path:
+            log_event(self._logger, logging.DEBUG, "Open NWB Viewer dialog canceled.")
+            return
+        self.open_nwb_viewer(Path(selected_path))
 
     def _open_project_from_dialog(self) -> None:
         selected_path, _ = QFileDialog.getOpenFileName(
@@ -556,6 +574,9 @@ class MainWindow(QMainWindow):
             self._recent_project_actions.append(action)
 
     def _open_artifact_path(self, path: Path) -> bool:
+        if path.suffix.lower() == ".nwb":
+            self.open_nwb_viewer(path)
+            return True
         return self._open_desktop_path(
             path,
             title="Artifact Open Error",
@@ -642,6 +663,19 @@ class MainWindow(QMainWindow):
             ),
         )
         return False
+
+    def open_nwb_viewer(self, file_path: Path | None = None) -> NwbViewerWindow:
+        viewer = NwbViewerWindow(file_path=file_path, parent=None)
+        viewer.destroyed.connect(lambda _: self._viewer_windows.remove(viewer) if viewer in self._viewer_windows else None)
+        self._viewer_windows.append(viewer)
+        viewer.show()
+        viewer.raise_()
+        viewer.activateWindow()
+        if file_path is not None:
+            log_event(self._logger, logging.INFO, "Opened standalone NWB viewer window.", nwb_path=str(file_path))
+        else:
+            log_event(self._logger, logging.INFO, "Opened standalone NWB viewer window.")
+        return viewer
 
     @staticmethod
     def _default_session_loader(session_path: Path) -> ConversionSession:

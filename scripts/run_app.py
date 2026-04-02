@@ -34,6 +34,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to an explicit NWB Forge direct-ingest project file (*.nwbforge-project.json).",
     )
     parser.add_argument(
+        "--view-nwb",
+        type=Path,
+        default=None,
+        help="Open a standalone read-only NWB viewer window for the given .nwb file.",
+    )
+    parser.add_argument(
         "--manifest",
         type=Path,
         default=None,
@@ -48,6 +54,7 @@ def main() -> int:
     services = build_desktop_services(repo_root)
     requested_session = args.session or args.manifest
     requested_project = args.project
+    requested_nwb_view = args.view_nwb
 
     app = ensure_application()
     window = MainWindow(
@@ -59,6 +66,8 @@ def main() -> int:
         log_file_path=build_default_log_file_path(repo_root),
     )
     window.show()
+    if requested_nwb_view is not None:
+        window.open_nwb_viewer(requested_nwb_view.resolve())
     if requested_project is not None:
         project_path = requested_project.resolve()
         services.session_assembly_screen_model.load_project(project_path)
