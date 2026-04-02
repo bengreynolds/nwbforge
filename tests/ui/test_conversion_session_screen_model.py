@@ -352,3 +352,76 @@ def test_conversion_session_screen_model_persists_preview_execution_and_review()
         assert review_snapshot is not None
         assert review_snapshot.review_record is not None
         assert review_snapshot.review_record.decision == ReviewStatus.APPROVED
+
+
+def test_conversion_session_screen_model_recovers_latest_snapshot_on_load() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    issue = ValidationIssue(
+        code="nwbinspector-warning",
+        message="Subject metadata should be reviewed.",
+        severity=IssueSeverity.WARNING,
+        location="/general/subject",
+        tool="nwbinspector",
+    )
+    report_artifact = ProvenanceArtifact(
+        artifact_type="validation_report",
+        location=Path("C:/tmp/validation-report.json"),
+        description="Validation report artifact",
+    )
+    nwb_artifact = ProvenanceArtifact(
+        artifact_type="nwb",
+        location=Path("C:/tmp/recovered-output.nwb"),
+        description="Recovered NWB output",
+    )
+    execution = make_execution(
+        preview,
+        issues=(issue,),
+        generated_artifacts=(nwb_artifact, report_artifact),
+        review_outcome=ValidationReviewOutcome(
+            status=ValidationReviewStatus.REVIEW,
+            blocks_completion=False,
+            requires_manual_review=True,
+            error_count=0,
+            warning_count=1,
+        ),
+    )
+
+    with TemporaryDirectory() as temp_dir:
+        persistence_service = SessionPersistenceService(
+            JsonSessionSnapshotStore(Path(temp_dir) / "session-state")
+        )
+        persistence_service.persist_execution(execution)
+        review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
+        review_submission = review_service.submit_review(
+            execution,
+            reviewer="alice",
+            decision=ReviewStatus.APPROVED,
+            acknowledged_issue_refs=(execution.validation_summary.issue_refs()[0],),
+        )
+        persistence_service.persist_review_submission(review_submission)
+
+        screen = ConversionSessionScreenModel(
+            FakeConversionExecutor(preview_result=preview, execution_result=execution),
+            review_service=review_service,
+            persistence_service=persistence_service,
+        )
+
+        state = screen.load_session(session)
+
+        assert state.session is not None
+        assert state.session.status == execution.session.status
+        assert state.recovery_message == "Recovered latest saved session state."
+        assert state.output_path == Path("C:/tmp/recovered-output.nwb")
+        assert len(state.generated_artifacts) == 3
+        assert {artifact.artifact_type for artifact in state.generated_artifacts} == {
+            "nwb",
+            "validation_report",
+            "review_decision",
+        }
+        assert state.persisted_validation_summary == execution.validation_summary
+        assert state.persisted_review_outcome == execution.review_outcome
+        assert len(state.validation_issues) == 1
+        assert state.validation_issues[0].is_acknowledged is True
+        assert state.reviewer_name == "alice"
+        assert "Recovered review approved by alice." == state.review_message

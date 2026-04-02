@@ -234,6 +234,8 @@ class ConversionSessionWidget(QWidget):
             self._status_label.setText(state.user_error.message)
         elif state.progress_event is not None:
             self._status_label.setText(state.progress_event.message)
+        elif state.recovery_message is not None:
+            self._status_label.setText(state.recovery_message)
         elif state.execution is not None:
             self._status_label.setText("Execution finished.")
         elif state.preview is not None:
@@ -245,6 +247,10 @@ class ConversionSessionWidget(QWidget):
             self._result_label.setText(f"Execution status: {state.execution.session.status.value}")
         elif state.preview is not None:
             self._result_label.setText(f"Preview status: {state.preview.session.status.value}")
+        elif state.recovery_message is not None and state.session is not None:
+            self._result_label.setText(
+                f"Recovered session status: {state.session.status.value}"
+            )
         else:
             self._result_label.setText("No preview or execution yet.")
 
@@ -367,9 +373,9 @@ class ConversionSessionWidget(QWidget):
 
     @staticmethod
     def _validation_summary_text(state: ConversionSessionScreenState) -> str:
-        if state.execution is None:
+        summary = state.execution.validation_summary if state.execution is not None else state.persisted_validation_summary
+        if summary is None:
             return "Validation summary: not available."
-        summary = state.execution.validation_summary
         return (
             "Validation summary: "
             f"{len(summary.errors())} errors, {len(summary.warnings())} warnings"
@@ -377,9 +383,9 @@ class ConversionSessionWidget(QWidget):
 
     @staticmethod
     def _review_outcome_text(state: ConversionSessionScreenState) -> str:
-        if state.execution is None:
+        outcome = state.execution.review_outcome if state.execution is not None else state.persisted_review_outcome
+        if outcome is None:
             return "Review outcome: not available."
-        outcome = state.execution.review_outcome
         return (
             "Review outcome: "
             f"{outcome.status.value}"

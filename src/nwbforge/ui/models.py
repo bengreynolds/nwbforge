@@ -20,7 +20,12 @@ from nwbforge.app.runtime import PipelineProgressEvent
 from nwbforge.app.services import UiSettings
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.domain.enums import ReviewStatus
-from nwbforge.domain.models import ConversionSession, SourceReference
+from nwbforge.domain.models import (
+    ConversionSession,
+    SourceReference,
+    ValidationReviewOutcome,
+    ValidationSummary,
+)
 from nwbforge.ui.errors import UserFacingError
 from nwbforge.ui.logs import UiLogEntry
 
@@ -119,6 +124,8 @@ class ConversionSessionScreenState:
     sources: tuple[ConversionSourceItem, ...] = ()
     preview: ConversionPreview | None = None
     execution: ConversionExecution | None = None
+    persisted_validation_summary: ValidationSummary | None = None
+    persisted_review_outcome: ValidationReviewOutcome | None = None
     progress_event: PipelineProgressEvent | None = None
     output_path: Path | None = None
     generated_artifacts: tuple[GeneratedArtifactItem, ...] = ()
@@ -128,6 +135,7 @@ class ConversionSessionScreenState:
     override_blocks_completion: bool = False
     last_review_submission: ReviewSubmission | None = None
     review_message: str | None = None
+    recovery_message: str | None = None
     error_message: str | None = None
     user_error: UserFacingError | None = None
     is_preview_running: bool = False

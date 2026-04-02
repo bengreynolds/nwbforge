@@ -53,6 +53,16 @@ def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path
     services.conversion_screen_model.shutdown(wait=False)
     services.package_screen_model.shutdown(wait=False)
 
+    recovered_services = build_desktop_services(tmp_path, package_command_runner=FakeRunner())
+    recovered_services.conversion_screen_model.load_session(session)
+
+    assert recovered_services.conversion_screen_model.state.recovery_message == "Recovered latest saved session state."
+    assert recovered_services.conversion_screen_model.state.generated_artifacts
+    assert recovered_services.conversion_screen_model.state.output_path == output_path
+
+    recovered_services.conversion_screen_model.shutdown(wait=False)
+    recovered_services.package_screen_model.shutdown(wait=False)
+
 
 def test_desktop_services_run_real_custom_preview_and_execution(tmp_path: Path) -> None:
     custom_path = tmp_path / "custom_session.json"

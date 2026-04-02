@@ -9,7 +9,12 @@ from PySide6.QtCore import Qt
 
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
-from nwbforge.app.services import ExecutionReviewService, PackageManagementController, UiSettingsService
+from nwbforge.app.services import (
+    ExecutionReviewService,
+    PackageManagementController,
+    SessionPersistenceService,
+    UiSettingsService,
+)
 from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus, SourceType, ValidationReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
@@ -29,6 +34,7 @@ from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, Settings
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.qt import MainWindow
 from nwbforge.validation import JsonExecutionReviewArtifactService
+from nwbforge.persistence import JsonSessionSnapshotStore
 
 
 class FakeRunner:
@@ -357,6 +363,72 @@ def test_conversion_widget_chooses_output_path(qapp, tmp_path: Path, monkeypatch
     qapp.processEvents()
 
     assert window.conversion_widget._output_path_edit.text().endswith("chosen-output.nwb")
+    window.close()
+
+
+def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    validation_summary = ValidationSummary(
+        issues=(
+            ValidationIssue(
+                code="nwbinspector-warning",
+                message="Subject metadata should be reviewed.",
+                severity=IssueSeverity.WARNING,
+                location="/general/subject",
+                tool="nwbinspector",
+            ),
+        )
+    )
+    review_outcome = ValidationReviewOutcome(
+        status=ValidationReviewStatus.REVIEW,
+        blocks_completion=False,
+        requires_manual_review=True,
+        error_count=0,
+        warning_count=1,
+    )
+    preview, execution = make_preview_and_execution(
+        session,
+        validation_summary=validation_summary,
+        review_outcome=review_outcome,
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="nwb",
+                location=tmp_path / "outputs" / "recovered-output.nwb",
+                description="Recovered NWB output",
+            ),
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=tmp_path / "outputs" / "validation-report.json",
+                description="Recovered validation report",
+            ),
+        ),
+    )
+    persistence_service = SessionPersistenceService(JsonSessionSnapshotStore(tmp_path / "session-state"))
+    persistence_service.persist_execution(execution)
+
+    screen = ConversionSessionScreenModel(
+        FakeConversionExecutor(preview, execution),
+        persistence_service=persistence_service,
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    qapp.processEvents()
+
+    assert window.conversion_widget._status_label.text() == "Recovered latest saved session state."
+    assert window.conversion_widget._result_label.text() == "Recovered session status: completed"
+    assert window.conversion_widget._validation_summary_label.text() == "Validation summary: 0 errors, 1 warnings"
+    assert "manual review=True" in window.conversion_widget._review_outcome_label.text()
+    assert window.conversion_widget._artifact_count_value_label.text() == "2 artifacts"
+    assert window.conversion_widget._output_path_edit.text().endswith("recovered-output.nwb")
+
     window.close()
 
 

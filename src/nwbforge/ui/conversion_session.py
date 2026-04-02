@@ -12,7 +12,7 @@ from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.app.runtime import ConversionExecutor
 from nwbforge.domain.enums import ReviewStatus
-from nwbforge.domain.models import ConversionSession
+from nwbforge.domain.models import ConversionSession, SessionSnapshot
 from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import (
     ConversionSessionScreenState,
@@ -54,16 +54,16 @@ class ConversionSessionScreenModel:
             listener(state)
 
     def load_session(self, session: ConversionSession) -> ConversionSessionScreenState:
-        return self._set_state(
-            ConversionSessionScreenState(
-                session=session,
-                sources=conversion_source_items(session.sources),
-                generated_artifacts=(),
-                error_message=None,
-                review_message=None,
-                user_error=None,
-            )
+        base_state = ConversionSessionScreenState(
+            session=session,
+            sources=conversion_source_items(session.sources),
+            generated_artifacts=(),
+            error_message=None,
+            review_message=None,
+            recovery_message=None,
+            user_error=None,
         )
+        return self._set_state(self._recover_state(base_state))
 
     def clear_session(self) -> ConversionSessionScreenState:
         return self._set_state(ConversionSessionScreenState())
@@ -81,6 +81,7 @@ class ConversionSessionScreenModel:
                 validation_issues=(),
                 last_review_submission=None,
                 review_message=None,
+                recovery_message=None,
                 progress_event=None,
                 user_error=None,
             )
@@ -101,6 +102,7 @@ class ConversionSessionScreenModel:
                 generated_artifacts=(),
                 last_review_submission=None,
                 review_message=None,
+                recovery_message=None,
                 progress_event=None,
                 user_error=None,
             )
@@ -204,8 +206,11 @@ class ConversionSessionScreenModel:
                 last_review_submission=submission,
                 generated_artifacts=generated_artifact_items(submission.provenance_record.generated_artifacts),
                 review_message=f"Review {submission.review_record.decision.value} by {submission.review_record.reviewer}.",
+                recovery_message=None,
                 error_message=None,
                 user_error=None,
+                persisted_validation_summary=submission.execution.validation_summary,
+                persisted_review_outcome=submission.execution.review_outcome,
             )
         )
         self._persist_review_submission(submission)
@@ -241,9 +246,12 @@ class ConversionSessionScreenModel:
                 validation_issues=(),
                 last_review_submission=None,
                 review_message=None,
+                recovery_message=None,
                 is_preview_running=False,
                 error_message=None,
                 user_error=None,
+                persisted_validation_summary=None,
+                persisted_review_outcome=None,
             )
         )
         self._persist_preview(preview)
@@ -275,9 +283,12 @@ class ConversionSessionScreenModel:
                 validation_issues=validation_issue_items(execution),
                 last_review_submission=None,
                 review_message=None,
+                recovery_message=None,
                 is_execution_running=False,
                 error_message=None,
                 user_error=None,
+                persisted_validation_summary=execution.validation_summary,
+                persisted_review_outcome=execution.review_outcome,
             )
         )
         self._persist_execution(execution)
@@ -351,21 +362,72 @@ class ConversionSessionScreenModel:
                 )
             )
 
+    def _recover_state(self, base_state: ConversionSessionScreenState) -> ConversionSessionScreenState:
+        if self._persistence_service is None or base_state.session is None:
+            return base_state
+        try:
+            snapshot = self._persistence_service.load(base_state.session.session_id)
+        except Exception as exc:
+            user_error = self._error_presenter.present(exc)
+            return replace(
+                base_state,
+                error_message=f"Session loaded, but saved state recovery failed: {user_error.message}",
+                user_error=user_error,
+            )
+        if snapshot is None:
+            return base_state
+        return replace(
+            base_state,
+            session=snapshot.session,
+            sources=conversion_source_items(snapshot.session.sources),
+            output_path=recovered_output_path(snapshot),
+            generated_artifacts=generated_artifact_items(
+                snapshot.provenance_record.generated_artifacts if snapshot.provenance_record is not None else ()
+            ),
+            validation_issues=validation_issue_items_from_snapshot(snapshot),
+            reviewer_name=snapshot.review_record.reviewer if snapshot.review_record is not None else "",
+            review_rationale=snapshot.review_record.rationale or "" if snapshot.review_record is not None else "",
+            override_blocks_completion=(
+                snapshot.review_record.override_blocks_completion if snapshot.review_record is not None else False
+            ),
+            review_message=recovered_review_message(snapshot),
+            recovery_message="Recovered latest saved session state.",
+            persisted_validation_summary=snapshot.validation_summary,
+            persisted_review_outcome=snapshot.review_outcome,
+        )
+
 
 def validation_issue_items(execution: ConversionExecution) -> tuple[ValidationIssueItem, ...]:
     """Project validation issues into UI-facing issue items."""
 
+    return validation_issue_items_from_snapshot(
+        SessionSnapshot(
+            session=execution.session,
+            validation_summary=execution.validation_summary,
+        )
+    )
+
+
+def validation_issue_items_from_snapshot(snapshot: SessionSnapshot) -> tuple[ValidationIssueItem, ...]:
+    """Project snapshot validation issues into UI-facing acknowledgement items."""
+
+    summary = snapshot.validation_summary
+    if summary is None:
+        return ()
+    acknowledged_issue_refs = (
+        snapshot.review_record.acknowledged_issue_refs if snapshot.review_record is not None else ()
+    )
     return tuple(
         ValidationIssueItem(
-            issue_ref=execution.validation_summary.issue_ref(issue),
+            issue_ref=summary.issue_ref(issue),
             code=issue.code,
             message=issue.message,
             severity=issue.severity.value,
             location=issue.location,
             tool=issue.tool,
-            is_acknowledged=False,
+            is_acknowledged=summary.issue_ref(issue) in acknowledged_issue_refs,
         )
-        for issue in execution.validation_summary.issues
+        for issue in summary.issues
     )
 
 
@@ -380,3 +442,27 @@ def generated_artifact_items(artifacts) -> tuple[GeneratedArtifactItem, ...]:
         )
         for artifact in artifacts
     )
+
+
+def recovered_review_message(snapshot: SessionSnapshot) -> str | None:
+    """Summarize recovered review state for UI display."""
+
+    if snapshot.review_record is not None:
+        return (
+            f"Recovered review {snapshot.review_record.decision.value} "
+            f"by {snapshot.review_record.reviewer}."
+        )
+    if snapshot.validation_summary is not None or snapshot.provenance_record is not None:
+        return "Recovered saved validation and artifact state."
+    return "Recovered saved preview state."
+
+
+def recovered_output_path(snapshot: SessionSnapshot) -> Path | None:
+    """Best-effort NWB output path recovered from snapshot provenance."""
+
+    if snapshot.provenance_record is None:
+        return None
+    for artifact in snapshot.provenance_record.generated_artifacts:
+        if artifact.artifact_type == "nwb":
+            return artifact.location
+    return None
