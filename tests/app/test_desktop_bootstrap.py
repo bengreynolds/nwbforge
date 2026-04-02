@@ -28,6 +28,23 @@ def test_build_adapter_registry_includes_manifest_adapter() -> None:
     assert "custom_json_session" in registry.registered_ids()
 
 
+def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "nwbforge.app.desktop.route_dependencies_available",
+        lambda route_name: route_name == "excel",
+    )
+
+    registry = build_adapter_registry()
+    registered = set(registry.registered_ids())
+
+    assert "neuroconv_excel_time_intervals" in registered
+    assert "neuroconv_deeplabcut" not in registered
+    assert "neuroconv_audio" not in registered
+    assert "neuroconv_image" not in registered
+    assert "neuroconv_sleap" not in registered
+    assert "neuroconv_scanimage" not in registered
+
+
 def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path) -> None:
     manifest_path = ensure_demo_manifest(tmp_path)
     session = load_manifest_session(manifest_path)

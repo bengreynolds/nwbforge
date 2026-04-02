@@ -14,10 +14,11 @@ def test_package_management_service_lists_available_routes() -> None:
     route_names = {route.route_name for route in service.list_available_routes()}
 
     assert "deeplabcut" in route_names
+    assert "sleap" in route_names
     assert "scanimage" in route_names
 
 
-def test_package_management_service_preview_warns_for_unimplemented_route(tmp_path: Path) -> None:
+def test_package_management_service_preview_accepts_implemented_optional_route(tmp_path: Path) -> None:
     service = PackageManagementService(selection_path=tmp_path / "selection.json")
 
     preview = service.preview_install(
@@ -29,7 +30,7 @@ def test_package_management_service_preview_warns_for_unimplemented_route(tmp_pa
     )
 
     assert preview.is_installable is True
-    assert any(issue.code == "package-route-not-yet-implemented" for issue in preview.issues)
+    assert not any(issue.code == "package-route-not-yet-implemented" for issue in preview.issues)
 
 
 def test_package_management_service_blocks_empty_custom_selection(tmp_path: Path) -> None:

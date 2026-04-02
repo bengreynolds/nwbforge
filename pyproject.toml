@@ -32,6 +32,9 @@ excel = [
 image = [
   "pillow>=10,<12",
 ]
+sleap = [
+  "neuroconv[sleap]>=0.9,<0.10",
+]
 viewer_rich = [
   "nwbwidgets>=0.11,<0.12",
   "panel>=1.8,<2",

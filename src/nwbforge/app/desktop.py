@@ -9,6 +9,7 @@ import logging
 
 from nwbforge.adapters import AdapterRegistry, CustomJsonSessionAdapter, SessionManifestAdapter
 from nwbforge.app.logging import get_logger, log_event
+from nwbforge.app.packages.catalog import route_dependencies_available
 from nwbforge.app.packages import (
     PackageCommandRunner,
     PackageInstallationService,
@@ -77,14 +78,40 @@ def build_adapter_registry() -> AdapterRegistry:
 
     for adapter_name in (
         "NeuroConvCsvTimeIntervalsAdapter",
-        "NeuroConvExcelTimeIntervalsAdapter",
-        "NeuroConvImageAdapter",
         "NeuroConvFicTracAdapter",
-        "NeuroConvDeepLabCutAdapter",
-        "NeuroConvAudioAdapter",
     ):
         adapter_cls = getattr(adapters_module, adapter_name, None)
         if adapter_cls is None:
+            continue
+        registry.register(adapter_cls())
+
+    optional_routes = (
+        ("excel", "NeuroConvExcelTimeIntervalsAdapter"),
+        ("image", "NeuroConvImageAdapter"),
+        ("audio", "NeuroConvAudioAdapter"),
+        ("deeplabcut", "NeuroConvDeepLabCutAdapter"),
+        ("sleap", "NeuroConvSLEAPAdapter"),
+        ("scanimage", "NeuroConvScanImageAdapter"),
+    )
+    for route_name, adapter_name in optional_routes:
+        if not route_dependencies_available(route_name):
+            log_event(
+                LOGGER,
+                logging.DEBUG,
+                "Skipping optional supported adapter because route dependencies are not installed.",
+                route_name=route_name,
+                adapter_name=adapter_name,
+            )
+            continue
+        adapter_cls = getattr(adapters_module, adapter_name, None)
+        if adapter_cls is None:
+            log_event(
+                LOGGER,
+                logging.WARNING,
+                "Route dependencies are installed but the adapter export is unavailable.",
+                route_name=route_name,
+                adapter_name=adapter_name,
+            )
             continue
         registry.register(adapter_cls())
 

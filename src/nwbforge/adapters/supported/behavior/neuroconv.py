@@ -7,6 +7,11 @@ from pathlib import Path
 import pandas as pd
 from neuroconv.datainterfaces import DeepLabCutInterface, FicTracDataInterface
 
+try:
+    from neuroconv.datainterfaces import SLEAPInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    SLEAPInterface = None
+
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.neuroconv import (
     NeuroConvDirectConversionAdapter,
@@ -130,3 +135,62 @@ class NeuroConvDeepLabCutAdapter(NeuroConvDirectConversionAdapter):
         else:
             subject_count = 1
         return len(bodyparts), subject_count
+
+
+if SLEAPInterface is not None:
+
+    class NeuroConvSLEAPAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert SLEAP `.slp` sources through NeuroConv."""
+
+        adapter_id = "neuroconv_sleap"
+        display_name = "NeuroConv SLEAP adapter"
+        version = "0.1.0"
+        interface_cls = SLEAPInterface
+        record_type = "neuroconv_sleap"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".slp",)
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {self.source_path_kwarg: source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            if "video_file_path" not in interface_kwargs:
+                candidate = source.location.with_suffix(".mp4")
+                if candidate.is_file():
+                    interface_kwargs["video_file_path"] = candidate
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            pose_metadata = metadata.get("PoseEstimation", {}).get("PoseEstimationContainers", {})
+            pose_names = tuple(str(name) for name in pose_metadata.keys())
+            has_video_file = str(config.interface_kwargs.get("video_file_path", "")) != "" or source.location.with_suffix(
+                ".mp4"
+            ).is_file()
+            fields = extracted_fields_from_mapping(
+                prefix="behavior.sleap",
+                payload={
+                    "source_format": "slp",
+                    "pose_container_count": len(pose_names),
+                    "pose_container_name": pose_names[0] if pose_names else "PoseEstimation",
+                    "has_video_file": has_video_file,
+                    "frames_per_second": config.interface_kwargs.get("frames_per_second"),
+                },
+                source_id=source.source_id,
+            )
+            notes = ("Prepared NeuroConv SLEAP conversion into pose-estimation processing data.",)
+            return fields, [], notes

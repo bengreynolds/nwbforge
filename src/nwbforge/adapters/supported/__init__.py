@@ -39,3 +39,5 @@ def _try_import_optional(module_name: str, export_name: str) -> None:
 
 
 _try_import_optional("nwbforge.adapters.supported.media", "NeuroConvAudioAdapter")
+_try_import_optional("nwbforge.adapters.supported.behavior", "NeuroConvSLEAPAdapter")
+_try_import_optional("nwbforge.adapters.supported.imaging", "NeuroConvScanImageAdapter")

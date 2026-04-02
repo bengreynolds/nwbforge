@@ -70,7 +70,7 @@ def test_package_installer_screen_model_updates_custom_routes(tmp_path: Path) ->
     assert state.install_preset is InstallPreset.CUSTOM
     assert state.selected_routes == ("image", "scanimage")
     assert state.preview is not None
-    assert any(issue.route_names == ("scanimage",) for issue in state.issues)
+    assert not any(issue.route_names == ("scanimage",) for issue in state.issues)
     screen.shutdown()
 
 
