@@ -1054,6 +1054,77 @@ Current status:
 - The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
 - The first supported-path direct-ingest slice can now assemble manifest-backed sessions from file/folder selection through `New Session`, with initial session-wide metadata overrides and persisted draft reopen behavior in place
 
+## Critical Review: Current Plan-Code Deviations
+
+The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
+
+### 1. Startup path still defaults to a loaded session, not a true direct-ingest-first shell
+- Target direction:
+  - the primary user flow should start from `New Conversion Session`
+  - users should add files/folders directly and build a session from there
+- Current implementation:
+  - `scripts/run_app.py` still resolves a startup session path and loads a session immediately
+  - this keeps JSON/bootstrap fixtures and last-session reopen behavior more central than the target product UX intends
+- Why this matters:
+  - the current launcher still makes the app feel session-file-driven at startup even though the long-term UX is direct ingest
+
+### 2. Direct ingest is still flat path-to-source assembly, not real dataset grouping
+- Target direction:
+  - the app should help users load combinations of files/folders and organize them into one session intentionally
+  - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
+- Current implementation:
+  - `SessionAssemblyService` currently treats each selected path as one draft source
+  - there is no explicit grouping UI, no sidecar association workflow, and no dataset-level grouping confirmation step
+- Why this matters:
+  - the current ingest path is a good first pass for testing, but it is still too shallow for heterogeneous lab datasets
+
+### 3. Source-role assignment is mostly descriptive today
+- Target direction:
+  - source roles should eventually help drive grouping, provenance interpretation, and mixed-source workflow behavior
+- Current implementation:
+  - source roles are persisted and surfaced in the UI
+  - the only enforced semantic today is that at least one source must be `primary`
+  - inspection, normalization, mapping, and execution do not yet branch materially on `primary` vs `supplemental` vs `metadata`
+- Why this matters:
+  - the UI now exposes a meaningful-looking control whose downstream behavioral impact is still limited
+
+### 4. Metadata overrides are session-wide and currently injected through the first source inspection result
+- Target direction:
+  - users should be able to review and override metadata before preview/build in a way that remains correct for supported, custom, and hybrid sessions
+  - mixed-source disagreement handling should be explicit rather than accidental
+- Current implementation:
+  - `ConversionSession.metadata_overrides` is session-wide only
+  - `RegistrySourceInspectionService` applies those overrides only when inspecting the first session source
+- Why this matters:
+  - this is acceptable for the current first pass, but it is an architectural shortcut for hybrid sessions and not the final semantics
+
+### 5. Category-first adapter cleanup is still incomplete
+- Target direction:
+  - supported routes should prefer category-first family packaging when semantics are shared
+- Current implementation:
+  - `supported/behavior/` and `supported/tabular/` follow the intended pattern
+  - image and audio routes still live in top-level `supported/neuroconv_images.py` and `supported/neuroconv_audio.py`
+- Why this matters:
+  - the package layout is drifting toward two patterns at once, which will get harder to clean up as more supported routes land
+
+### 6. Structured logging is still concentrated in the runtime core, not all actionable paths
+- Target direction:
+  - actionable code paths should emit structured logging rather than relying on only UI state or exceptions
+- Current implementation:
+  - logging is present in the core runtime path, supported execution, and executor layers
+  - session assembly, persistence, settings, and several desktop/UI flows are still lightly logged or unlogged
+- Why this matters:
+  - internal testing will generate harder-to-triage failures if only the conversion runtime is well instrumented
+
+### 7. `Open Session...` is still a JSON/bootstrap compatibility path, not a general project model
+- Target direction:
+  - app-owned project/session files may exist later for reopen and saved work, but they should not define the primary ingest story
+- Current implementation:
+  - `Open Session...` is still constrained around `session_manifest.json`, `custom_session.json`, and `hybrid_session.json`
+  - there is no explicit `Save Project` / `Open Project` workflow yet
+- Why this matters:
+  - the app currently has a compatibility path without a fully articulated long-term project-state model
+
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
 - Support manual metadata mapping and persistent templates
@@ -1093,8 +1164,12 @@ Current status:
 - How should lab vocabularies be versioned and reviewed?
 - Which validation findings should block export by default for each lab profile or deployment mode?
 - Should app-owned saved state remain internal-only at first, or become an explicit `Save Project` / `Open Project` workflow after direct file/folder ingest lands?
+- Should the desktop app start on an empty shell / `New Session` workflow by default, or continue to reopen/load a session automatically at startup during internal testing?
 - How much of source grouping should be automatic versus explicitly confirmed by the user before preview/build?
+- When should source-role assignment become semantically meaningful beyond validation that at least one source is `primary`?
 - Which metadata overrides should remain session-wide versus becoming source-specific when mixed inputs disagree?
+- Should image and audio routes be moved into category-first family packages now, or only when a broader `media/` or `imaging/` family lands?
+- How broad does structured logging need to be before internal testing is considered adequately instrumented?
 
 ## Decisions Log
 

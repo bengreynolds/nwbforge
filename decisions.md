@@ -997,6 +997,19 @@ Consequences:
 - direct-ingest draft state now persists under app state and reopens when `New Session` is shown again
 - source-specific metadata disagreement handling and explicit saved-project semantics remain follow-on work
 
+### DEC-080: Maintain an explicit plan-code deviation audit during internal testing
+Status: Accepted
+
+Reasoning:
+- The repository is now mature enough that product-shaping shortcuts can be mistaken for settled architecture if they are not called out directly.
+- Internal testing should validate the real product direction, not only the current implementation artifacts.
+- Startup flow, ingest grouping, metadata-override scope, source-role semantics, category-first package layout, and logging coverage are all areas where the current code still contains deliberate interim behavior.
+
+Consequences:
+- `planning.md` must keep an explicit critical-review section for current plan-code deviations during the internal-testing phase
+- agent summaries should distinguish implemented behavior from target product behavior when they differ materially
+- architectural shortcuts that affect user-facing workflow should trigger a decision checkpoint before more dependent features are built on top of them
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 

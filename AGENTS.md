@@ -90,6 +90,13 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Update [README.md](README.md) once at the end of each working session to reflect current state, major changes, usage, and next steps
 - Do not update [README.md](README.md) on every commit
 
+## Deviation Review Rule
+
+- During internal testing, keep an explicit audit in [planning.md](planning.md) of meaningful plan-code deviations rather than smoothing them over in status summaries
+- Do not present temporary shortcuts as settled architecture just because they are currently implemented
+- If a shortcut materially affects startup UX, ingest grouping, metadata-override scope, source-role semantics, package layout, persistence model, or logging coverage, surface it and get a decision before expanding dependent behavior
+- Prefer documenting the deviation and open decision clearly over implying the target product behavior already exists
+
 ## Safety Rule
 
 - Do not invent unsupported scientific mappings silently
