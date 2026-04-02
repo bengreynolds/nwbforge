@@ -79,6 +79,11 @@ class ConversionSessionWidget(QWidget):
         self._issue_list = QListWidget(self)
         self._issue_list.itemChanged.connect(self._on_issue_item_changed)
         self._review_guidance_label = QLabel("Run preview or execution to unlock review guidance.", self)
+        self._role_policy_label = QLabel(
+            "Conflict precedence: primary sources override metadata sources, which override supplemental sources.",
+            self,
+        )
+        self._role_policy_label.setWordWrap(True)
         self._acknowledgement_summary_label = QLabel("Acknowledged 0 of 0 issues.", self)
         self._reviewer_edit = QLineEdit(self)
         self._reviewer_edit.setPlaceholderText("Reviewer name")
@@ -167,6 +172,7 @@ class ConversionSessionWidget(QWidget):
 
         review_layout = QVBoxLayout()
         review_layout.addWidget(self._review_guidance_label)
+        review_layout.addWidget(self._role_policy_label)
         review_layout.addWidget(self._acknowledgement_summary_label)
         review_layout.addWidget(QLabel("Validation issues", self))
         review_layout.addWidget(self._issue_list, stretch=1)
@@ -444,9 +450,14 @@ class ConversionSessionWidget(QWidget):
             return "Run preview or execution to unlock review guidance."
         outcome = state.execution.review_outcome
         if outcome.blocks_completion:
-            return "Completion is blocked. Provide rationale and enable override only if the result is acceptable."
+            return (
+                "Completion is blocked. Provide rationale and enable override only if the result is acceptable."
+            )
         if outcome.requires_manual_review:
-            return "Manual review is required. Acknowledge issues, add rationale if needed, then approve or reject."
+            return (
+                "Manual review is required. Conflicting fields retain primary-source values first, then metadata, "
+                "then supplemental values. Acknowledge issues, add rationale if needed, then approve or reject."
+            )
         return "No blocking review actions are currently required."
 
     @staticmethod

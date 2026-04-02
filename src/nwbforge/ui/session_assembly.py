@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from threading import Lock
+import logging
 
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.services import (
     JsonSessionAssemblyWorkspaceStore,
     SessionAssemblyService,
@@ -22,6 +24,8 @@ from nwbforge.ui.models import (
 
 class SessionAssemblyScreenModel:
     """Drive direct file/folder ingestion and draft session assembly for the desktop UI."""
+
+    _logger = get_logger(__name__)
 
     def __init__(
         self,
@@ -50,15 +54,28 @@ class SessionAssemblyScreenModel:
             listener(state)
 
     def reset(self) -> SessionAssemblyState:
+        log_event(self._logger, logging.INFO, "Reset direct-ingest session assembly state.")
         state = self._set_state(SessionAssemblyState())
         self._clear_workspace()
         return state
 
     def add_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Adding paths to direct-ingest workspace.",
+            added_path_count=len(paths),
+        )
         combined = self._state.selected_paths + tuple(path.resolve() for path in paths)
         return self._refresh(selected_paths=combined)
 
     def remove_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Removing paths from direct-ingest workspace.",
+            removed_path_count=len(paths),
+        )
         removed = {path.resolve() for path in paths}
         remaining = tuple(path for path in self._state.selected_paths if path.resolve() not in removed)
         return self._refresh(selected_paths=remaining)
@@ -185,6 +202,13 @@ class SessionAssemblyScreenModel:
         return state
 
     def set_source_role(self, source_id: str, role: str) -> SessionAssemblyState:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Updated source role in direct-ingest workspace.",
+            source_id=source_id,
+            role=role,
+        )
         next_roles = {source.source_id: source.role for source in self._state.sources}
         next_roles[source_id] = role
         return self._refresh(source_roles=next_roles)
@@ -195,6 +219,12 @@ class SessionAssemblyScreenModel:
         workspace = self._workspace_store.load()
         if workspace is None:
             return
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Restoring persisted direct-ingest workspace.",
+            selected_path_count=len(workspace.selected_paths),
+        )
         self._refresh(
             selected_paths=workspace.selected_paths,
             session_id=workspace.session_id,
@@ -209,6 +239,14 @@ class SessionAssemblyScreenModel:
         if not state.selected_paths and not state.metadata_overrides:
             self._workspace_store.clear()
             return
+        log_event(
+            self._logger,
+            logging.DEBUG,
+            "Persisting direct-ingest workspace.",
+            selected_path_count=len(state.selected_paths),
+            source_count=len(state.sources),
+            override_count=len(state.metadata_overrides),
+        )
         self._workspace_store.save(
             SessionAssemblyWorkspace(
                 selected_paths=state.selected_paths,

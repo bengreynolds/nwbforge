@@ -26,6 +26,11 @@ from nwbforge.normalization.rules import DEFAULT_FIELD_ALIASES, NormalizationRul
 class RuleBasedNormalizationService(NormalizationService):
     """Normalize extracted fields with a conservative alias-driven rule set."""
 
+    _SOURCE_ROLE_PRIORITY = {
+        "primary": 3,
+        "metadata": 2,
+        "supplemental": 1,
+    }
     _DEVICE_FIELD_PATTERN = re.compile(r"^devices\.(?P<device_key>[^.]+)\.(?P<field_name>[^.]+)$")
     _STREAM_FIELD_PATTERN = re.compile(
         r"^acquisition_streams\.(?P<stream_key>[^.]+)\.(?P<field_name>[^.]+)$"
@@ -45,6 +50,7 @@ class RuleBasedNormalizationService(NormalizationService):
         session: ConversionSession,
         extraction_results: tuple[ExtractionResult, ...],
     ) -> NormalizedMetadataBundle:
+        source_roles = {source.source_id: source.role for source in session.sources}
         subject = NormalizedSubject()
         session_metadata = NormalizedSessionMetadata()
         devices: dict[str, NormalizedDevice] = {}
@@ -63,6 +69,7 @@ class RuleBasedNormalizationService(NormalizationService):
                         device_key=device_key,
                         field_name=field_name,
                         extracted_field=extracted_field,
+                        source_roles=source_roles,
                     )
                     continue
 
@@ -75,6 +82,7 @@ class RuleBasedNormalizationService(NormalizationService):
                         stream_key=stream_key,
                         field_name=field_name,
                         extracted_field=extracted_field,
+                        source_roles=source_roles,
                     )
                     continue
 
@@ -87,6 +95,7 @@ class RuleBasedNormalizationService(NormalizationService):
                         table_key=table_key,
                         field_name=field_name,
                         extracted_field=extracted_field,
+                        source_roles=source_roles,
                     )
                     continue
 
@@ -101,6 +110,7 @@ class RuleBasedNormalizationService(NormalizationService):
                         row_key=row_key,
                         field_name=field_name,
                         extracted_field=extracted_field,
+                        source_roles=source_roles,
                     )
                     continue
 
@@ -115,12 +125,17 @@ class RuleBasedNormalizationService(NormalizationService):
 
                 if canonical_key.startswith("subject."):
                     field_name = canonical_key.removeprefix("subject.")
-                    subject = self._assign_subject(subject, field_name, extracted_field)
+                    subject = self._assign_subject(subject, field_name, extracted_field, source_roles=source_roles)
                     continue
 
                 if canonical_key.startswith("session."):
                     field_name = canonical_key.removeprefix("session.")
-                    session_metadata = self._assign_session(session_metadata, field_name, extracted_field)
+                    session_metadata = self._assign_session(
+                        session_metadata,
+                        field_name,
+                        extracted_field,
+                        source_roles=source_roles,
+                    )
                     continue
 
         if session_metadata.session_id is None:
@@ -133,7 +148,7 @@ class RuleBasedNormalizationService(NormalizationService):
                 ),
             )
 
-        return NormalizedMetadataBundle(
+        bundle = NormalizedMetadataBundle(
             subject=subject,
             session=session_metadata,
             devices=tuple(devices[key] for key in sorted(devices)),
@@ -145,15 +160,18 @@ class RuleBasedNormalizationService(NormalizationService):
             ),
             additional_metadata=additional_metadata,
         )
+        return self._apply_session_metadata_overrides(session, bundle)
 
     def _assign_subject(
         self,
         subject: NormalizedSubject,
         field_name: str,
         extracted_field: ExtractedField,
+        *,
+        source_roles: dict[str, str],
     ) -> NormalizedSubject:
         current_value = getattr(subject, field_name)
-        normalized_value = self._merge_value(current_value, extracted_field)
+        normalized_value = self._merge_value(current_value, extracted_field, source_roles=source_roles)
         return replace(subject, **{field_name: normalized_value})
 
     def _assign_session(
@@ -161,6 +179,8 @@ class RuleBasedNormalizationService(NormalizationService):
         session_metadata: NormalizedSessionMetadata,
         field_name: str,
         extracted_field: ExtractedField,
+        *,
+        source_roles: dict[str, str],
     ) -> NormalizedSessionMetadata:
         if field_name == "keywords":
             existing_keywords = session_metadata.keywords
@@ -168,7 +188,7 @@ class RuleBasedNormalizationService(NormalizationService):
             return replace(session_metadata, keywords=existing_keywords + next_keywords)
 
         current_value = getattr(session_metadata, field_name)
-        normalized_value = self._merge_value(current_value, extracted_field)
+        normalized_value = self._merge_value(current_value, extracted_field, source_roles=source_roles)
         return replace(session_metadata, **{field_name: normalized_value})
 
     def _assign_device(
@@ -178,6 +198,7 @@ class RuleBasedNormalizationService(NormalizationService):
         device_key: str,
         field_name: str,
         extracted_field: ExtractedField,
+        source_roles: dict[str, str],
     ) -> NormalizedDevice:
         normalized_field_name = field_name.strip().lower().replace("-", "_")
         device = device or NormalizedDevice(
@@ -194,7 +215,7 @@ class RuleBasedNormalizationService(NormalizationService):
             return replace(device, device_id=str(extracted_field.value))
         if normalized_field_name in {"name", "description", "manufacturer"}:
             current_value = getattr(device, normalized_field_name)
-            normalized_value = self._merge_value(current_value, extracted_field)
+            normalized_value = self._merge_value(current_value, extracted_field, source_roles=source_roles)
             return replace(device, **{normalized_field_name: normalized_value})
         if normalized_field_name == "modality":
             modality = str(extracted_field.value)
@@ -215,6 +236,7 @@ class RuleBasedNormalizationService(NormalizationService):
         stream_key: str,
         field_name: str,
         extracted_field: ExtractedField,
+        source_roles: dict[str, str],
     ) -> AcquisitionStream:
         normalized_field_name = field_name.strip().lower().replace("-", "_")
         stream = stream or AcquisitionStream(
@@ -233,13 +255,13 @@ class RuleBasedNormalizationService(NormalizationService):
         if normalized_field_name == "stream_id":
             return replace(stream, stream_id=str(extracted_field.value), source_ids=merged_source_ids)
         if normalized_field_name == "name":
-            normalized_value = self._merge_value(stream.name, extracted_field)
+            normalized_value = self._merge_value(stream.name, extracted_field, source_roles=source_roles)
             return replace(stream, name=normalized_value, source_ids=merged_source_ids)
         if normalized_field_name == "modality":
             return replace(stream, modality=str(extracted_field.value), source_ids=merged_source_ids)
         if normalized_field_name in {"description", "start_time", "end_time"}:
             current_value = getattr(stream, normalized_field_name)
-            normalized_value = self._merge_value(current_value, extracted_field)
+            normalized_value = self._merge_value(current_value, extracted_field, source_roles=source_roles)
             return replace(stream, **{normalized_field_name: normalized_value}, source_ids=merged_source_ids)
 
         metadata = dict(stream.metadata)
@@ -253,6 +275,7 @@ class RuleBasedNormalizationService(NormalizationService):
         table_key: str,
         field_name: str,
         extracted_field: ExtractedField,
+        source_roles: dict[str, str],
     ) -> NormalizedTimeIntervalTable:
         table = table or NormalizedTimeIntervalTable(
             table_id=table_key,
@@ -264,11 +287,18 @@ class RuleBasedNormalizationService(NormalizationService):
             ),
         )
         if field_name == "table_name":
-            return replace(table, table_name=self._merge_value(table.table_name, extracted_field))
+            return replace(
+                table,
+                table_name=self._merge_value(table.table_name, extracted_field, source_roles=source_roles),
+            )
         if field_name == "table_description":
             return replace(
                 table,
-                table_description=self._merge_value(table.table_description, extracted_field),
+                table_description=self._merge_value(
+                    table.table_description,
+                    extracted_field,
+                    source_roles=source_roles,
+                ),
             )
         return table
 
@@ -280,6 +310,7 @@ class RuleBasedNormalizationService(NormalizationService):
         row_key: str,
         field_name: str,
         extracted_field: ExtractedField,
+        source_roles: dict[str, str],
     ) -> NormalizedTimeIntervalTable:
         table = table or NormalizedTimeIntervalTable(
             table_id=table_key,
@@ -298,13 +329,13 @@ class RuleBasedNormalizationService(NormalizationService):
         if normalized_field_name == "start_time":
             row = replace(
                 row,
-                start_time=self._merge_value(row.start_time, extracted_field),
+                start_time=self._merge_value(row.start_time, extracted_field, source_roles=source_roles),
                 source_ids=merged_source_ids,
             )
         elif normalized_field_name == "stop_time":
             row = replace(
                 row,
-                stop_time=self._merge_value(row.stop_time, extracted_field),
+                stop_time=self._merge_value(row.stop_time, extracted_field, source_roles=source_roles),
                 source_ids=merged_source_ids,
             )
         else:
@@ -334,17 +365,39 @@ class RuleBasedNormalizationService(NormalizationService):
         self,
         current_value: NormalizedValue[object] | None,
         extracted_field: ExtractedField,
+        *,
+        source_roles: dict[str, str],
     ) -> NormalizedValue[object]:
         next_value = self._to_value(extracted_field)
         if current_value is None:
             return next_value
+        if current_value.value == next_value.value:
+            return replace(
+                current_value,
+                source_ids=tuple(dict.fromkeys(current_value.source_ids + next_value.source_ids)),
+            )
+        if current_value.origin is ValueOrigin.COMPUTED and next_value.origin is not ValueOrigin.COMPUTED:
+            return next_value
 
-        merged_notes = current_value.notes + (
-            f"Multiple extracted fields mapped to the same canonical value: {extracted_field.key}",
+        current_rank = self._source_priority(current_value.source_ids, source_roles)
+        next_rank = self._source_priority(next_value.source_ids, source_roles)
+        if next_rank >= current_rank:
+            retained_value = next_value
+            retained_role = self._role_name(next_value.source_ids, source_roles)
+            discarded_role = self._role_name(current_value.source_ids, source_roles)
+        else:
+            retained_value = current_value
+            retained_role = self._role_name(current_value.source_ids, source_roles)
+            discarded_role = self._role_name(next_value.source_ids, source_roles)
+
+        merged_notes = retained_value.notes + (
+            "Multiple extracted fields mapped to the same canonical value.",
+            f"Retained value from {retained_role} source over {discarded_role} source.",
+            f"Conflicting extracted field: {extracted_field.key}",
         )
         merged_sources = tuple(dict.fromkeys(current_value.source_ids + next_value.source_ids))
         return replace(
-            next_value,
+            retained_value,
             review_status=ReviewStatus.NEEDS_REVIEW,
             source_ids=merged_sources,
             notes=merged_notes,
@@ -385,3 +438,112 @@ class RuleBasedNormalizationService(NormalizationService):
                 )
             )
         return tuple(keywords)
+
+    def _apply_session_metadata_overrides(
+        self,
+        session: ConversionSession,
+        bundle: NormalizedMetadataBundle,
+    ) -> NormalizedMetadataBundle:
+        if not session.metadata_overrides:
+            return bundle
+
+        subject = bundle.subject
+        session_metadata = bundle.session
+        additional_metadata = dict(bundle.additional_metadata)
+
+        for key, value in session.metadata_overrides.items():
+            canonical_key = self._rules.canonical_key_for(key) or key
+            override_value = NormalizedValue(
+                value=value,
+                origin=ValueOrigin.USER_SUPPLIED,
+                review_status=ReviewStatus.NOT_REVIEWED,
+                notes=("Applied from session-wide metadata override.",),
+            )
+
+            if canonical_key.startswith("subject.") and hasattr(subject, canonical_key.removeprefix("subject.")):
+                field_name = canonical_key.removeprefix("subject.")
+                current_value = getattr(subject, field_name)
+                subject = replace(
+                    subject,
+                    **{
+                        field_name: self._merge_override_value(
+                            override_value,
+                            current_value,
+                            canonical_key,
+                        )
+                    },
+                )
+                continue
+
+            if canonical_key.startswith("session.") and hasattr(session_metadata, canonical_key.removeprefix("session.")):
+                field_name = canonical_key.removeprefix("session.")
+                if field_name == "keywords":
+                    session_metadata = replace(session_metadata, keywords=(override_value,))
+                    continue
+                current_value = getattr(session_metadata, field_name)
+                session_metadata = replace(
+                    session_metadata,
+                    **{
+                        field_name: self._merge_override_value(
+                            override_value,
+                            current_value,
+                            canonical_key,
+                        )
+                    },
+                )
+                continue
+
+            existing_value = additional_metadata.get(canonical_key)
+            additional_metadata[canonical_key] = self._merge_override_value(
+                override_value,
+                existing_value,
+                canonical_key,
+            )
+
+        return replace(
+            bundle,
+            subject=subject,
+            session=session_metadata,
+            additional_metadata=additional_metadata,
+        )
+
+    @staticmethod
+    def _merge_override_value(
+        override_value: NormalizedValue[object],
+        current_value: NormalizedValue[object] | None,
+        canonical_key: str,
+    ) -> NormalizedValue[object]:
+        if current_value is None:
+            return override_value
+        if current_value.value == override_value.value:
+            return replace(
+                override_value,
+                notes=override_value.notes + ("Confirmed existing normalized value.",),
+            )
+        return replace(
+            override_value,
+            notes=override_value.notes
+            + (
+                f"Overrode normalized value for {canonical_key}.",
+                f"Previous value came from source(s): {', '.join(current_value.source_ids) or 'session merge'}.",
+            ),
+        )
+
+    @classmethod
+    def _source_priority(cls, source_ids: tuple[str, ...], source_roles: dict[str, str]) -> int:
+        if not source_ids:
+            return 0
+        return max(cls._SOURCE_ROLE_PRIORITY.get(source_roles.get(source_id, "supplemental"), 1) for source_id in source_ids)
+
+    @classmethod
+    def _role_name(cls, source_ids: tuple[str, ...], source_roles: dict[str, str]) -> str:
+        if not source_ids:
+            return "unknown"
+        ranked = sorted(
+            (
+                cls._SOURCE_ROLE_PRIORITY.get(source_roles.get(source_id, "supplemental"), 1),
+                source_roles.get(source_id, "supplemental"),
+            )
+            for source_id in source_ids
+        )
+        return ranked[-1][1]

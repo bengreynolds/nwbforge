@@ -6,7 +6,7 @@ from nwbforge.adapters.supported.behavior import (
     NeuroConvDeepLabCutAdapter,
     NeuroConvFicTracAdapter,
 )
-from nwbforge.adapters.supported.neuroconv_images import NeuroConvImageAdapter
+from nwbforge.adapters.supported.media import NeuroConvImageAdapter
 from nwbforge.adapters.supported.tabular import (
     EXCEL_TIME_INTERVAL_ROUTE,
     TABULAR_TIME_INTERVAL_ROUTES,
@@ -38,4 +38,4 @@ def _try_import_optional(module_name: str, export_name: str) -> None:
     __all__.append(export_name)
 
 
-_try_import_optional("nwbforge.adapters.supported.neuroconv_audio", "NeuroConvAudioAdapter")
+_try_import_optional("nwbforge.adapters.supported.media", "NeuroConvAudioAdapter")

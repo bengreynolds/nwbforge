@@ -6,13 +6,17 @@ import argparse
 import logging
 from pathlib import Path
 
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.desktop import (
     build_default_log_file_path,
     build_desktop_services,
     load_desktop_session,
-    resolve_startup_session_path,
 )
+from nwbforge.ui import FileMenuAction
 from nwbforge.ui.qt import MainWindow, ensure_application
+
+
+LOGGER = get_logger("nwbforge.desktop")
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,12 +40,7 @@ def main() -> int:
     args = parse_args()
     repo_root = Path(__file__).resolve().parents[1]
     services = build_desktop_services(repo_root)
-    session_path = resolve_startup_session_path(
-        repo_root,
-        services.settings_screen_model.state.applied_settings,
-        requested_manifest=args.session or args.manifest,
-    )
-    session = load_desktop_session(session_path)
+    requested_session = args.session or args.manifest
 
     app = ensure_application()
     window = MainWindow(
@@ -53,11 +52,25 @@ def main() -> int:
         log_file_path=build_default_log_file_path(repo_root),
     )
     window.show()
-    window.conversion_widget.load_session(session)
-    logging.getLogger("nwbforge.desktop").info(
-        "Temporary desktop launcher started.",
-        extra={"nwbforge_context": {"session_id": session.session_id, "session_path": str(session_path)}},
-    )
+    if requested_session is not None:
+        session_path = requested_session.resolve()
+        session = load_desktop_session(session_path)
+        window.conversion_widget.load_session(session)
+        log_event(
+            LOGGER,
+            logging.INFO,
+            "Temporary desktop launcher started with explicit session.",
+            session_id=session.session_id,
+            session_path=str(session_path),
+        )
+    else:
+        services.shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        log_event(
+            LOGGER,
+            logging.INFO,
+            "Temporary desktop launcher started in direct-ingest mode.",
+            startup_mode="new_session",
+        )
     try:
         return app.exec()
     finally:

@@ -6,8 +6,10 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
+import logging
 
 from nwbforge.adapters import AdapterRegistry
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
 
@@ -103,6 +105,7 @@ class JsonSessionAssemblyWorkspaceStore:
 class SessionAssemblyService:
     """Inspect selected paths and assemble a suggested conversion-session draft."""
 
+    _logger = get_logger(__name__)
     _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
 
     def __init__(self, registry: AdapterRegistry) -> None:
@@ -120,6 +123,13 @@ class SessionAssemblyService:
         """Build a suggested session draft from one or more selected files or folders."""
 
         normalized_paths = self._normalize_paths(selected_paths)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Assembling direct-ingest session draft.",
+            selected_path_count=len(normalized_paths),
+            requested_session_id=session_id or "",
+        )
         draft_sources: list[SessionAssemblySource] = []
         issues: list[SessionAssemblyIssue] = []
         normalized_source_roles = {
@@ -232,13 +242,22 @@ class SessionAssemblyService:
             )
             for source in draft.sources
         )
-        return ConversionSession(
+        session = ConversionSession(
             session_id=draft.session_id,
             pathway=draft.pathway,
             sources=sources,
             title=draft.title,
             metadata_overrides=dict(draft.metadata_overrides),
         ).transition(status=SessionStatus.SOURCES_ADDED)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Created conversion session from direct-ingest draft.",
+            session_id=session.session_id,
+            pathway=session.pathway.value,
+            source_count=len(session.sources),
+        )
+        return session
 
     @staticmethod
     def _normalize_paths(selected_paths: tuple[Path, ...]) -> tuple[Path, ...]:

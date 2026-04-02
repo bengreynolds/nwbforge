@@ -5,6 +5,8 @@ from __future__ import annotations
 import ndx_sound  # noqa: F401
 import scipy  # noqa: F401
 
+from neuroconv.datainterfaces import AudioInterface
+
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.neuroconv import (
     NeuroConvDirectConversionAdapter,
@@ -13,8 +15,6 @@ from nwbforge.adapters.neuroconv import (
 )
 from nwbforge.domain.enums import ConversionPathway, SourceType
 from nwbforge.domain.models import ExtractedField, ReviewIssue, SourceReference
-
-from neuroconv.datainterfaces import AudioInterface
 
 
 class NeuroConvAudioAdapter(NeuroConvDirectConversionAdapter):

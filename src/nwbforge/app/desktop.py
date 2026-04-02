@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import logging
 
 from nwbforge.adapters import AdapterRegistry, CustomJsonSessionAdapter, SessionManifestAdapter
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.packages import (
     PackageCommandRunner,
     PackageInstallationService,
@@ -59,6 +61,9 @@ class DesktopAppServices:
     package_screen_model: PackageInstallerScreenModel
     session_assembly_screen_model: SessionAssemblyScreenModel
     conversion_screen_model: ConversionSessionScreenModel
+
+
+LOGGER = get_logger(__name__)
 
 
 def build_adapter_registry() -> AdapterRegistry:
@@ -124,6 +129,13 @@ def build_desktop_services(
     """Compose the real desktop service/model stack."""
 
     app_state_dir = repo_root / ".nwbforge"
+    log_event(
+        LOGGER,
+        logging.INFO,
+        "Building desktop service stack.",
+        repo_root=str(repo_root),
+        app_state_dir=str(app_state_dir),
+    )
     settings_service = UiSettingsService(settings_path or app_state_dir / "ui-settings.json")
     settings_screen_model = SettingsScreenModel(settings_service)
     settings_screen_model.load()

@@ -5,8 +5,15 @@ from pathlib import Path
 import pytest
 
 from nwbforge.adapters import AdapterRegistry, SessionManifestAdapter
+from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import ThreadedConversionExecutor
-from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService
+from nwbforge.app.services import (
+    ConversionPipelineService,
+    RegistrySourceInspectionService,
+    SessionAssemblyService,
+    SessionProvenanceService,
+    UiSettingsService,
+)
 from nwbforge.domain.enums import ConversionPathway, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
 from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
@@ -113,3 +120,31 @@ def test_executor_logs_structured_failure_context(tmp_path: Path, caplog: pytest
     assert failure_record.nwbforge_context["session_id"] == "sess-missing-log"
     assert failure_record.nwbforge_context["detail"] == "No adapter matched source 'missing'."
     executor.shutdown()
+
+
+def test_session_assembly_service_logs_structured_draft_context(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO)
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text('{"session": {"session_id": "supported-01"}}', encoding="utf-8")
+
+    draft = SessionAssemblyService(build_adapter_registry()).assemble_draft((manifest_path,))
+
+    assert draft.session_id.startswith("session-")
+    records = [record for record in caplog.records if hasattr(record, "nwbforge_context")]
+    assembly_record = next(record for record in records if record.message == "Assembling direct-ingest session draft.")
+    assert assembly_record.nwbforge_context["selected_path_count"] == 1
+
+
+def test_ui_settings_service_logs_save_context(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+    service = UiSettingsService(tmp_path / "ui-settings.json")
+
+    saved = service.record_output_directory(tmp_path / "outputs" / "result.nwb")
+
+    assert saved.last_output_directory == (tmp_path / "outputs").resolve()
+    records = [record for record in caplog.records if hasattr(record, "nwbforge_context")]
+    save_record = next(record for record in records if record.message == "Saved desktop settings.")
+    assert save_record.nwbforge_context["settings_path"].endswith("ui-settings.json")

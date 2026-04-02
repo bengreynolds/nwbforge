@@ -296,6 +296,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._source_role_label.text() == "primary"
     assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
+    assert (
+        window.conversion_widget._role_policy_label.text()
+        == "Conflict precedence: primary sources override metadata sources, which override supplemental sources."
+    )
     assert window.conversion_widget._workspace_tabs.count() == 3
     assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
     assert window.conversion_widget._workspace_tabs.tabText(1) == "Review Workspace"

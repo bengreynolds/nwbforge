@@ -5,7 +5,7 @@ from pathlib import Path
 from dateutil.tz import tzlocal
 from nwbforge.adapters import AdapterRegistry, CustomJsonSessionAdapter, SessionManifestAdapter
 from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService
-from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType
+from nwbforge.domain.enums import ConversionPathway, SessionStatus, SourceType, ValueOrigin
 from nwbforge.domain.models import ConversionSession, ProvenanceArtifact, SourceReference
 from nwbforge.mapping import PyNWBAssemblyService, RuleBasedMappingPlanner
 from nwbforge.normalization import RuleBasedNormalizationService
@@ -333,6 +333,7 @@ def test_pipeline_build_preview_applies_session_metadata_overrides(tmp_path: Pat
 
     assert preview.normalized_metadata.subject.subject_id is not None
     assert preview.normalized_metadata.subject.subject_id.value == "override-mouse-01"
+    assert preview.normalized_metadata.subject.subject_id.origin is ValueOrigin.USER_SUPPLIED
     assert preview.normalized_metadata.session.experimenter is not None
     assert preview.normalized_metadata.session.experimenter.value == "Reviewer, Alice"
 

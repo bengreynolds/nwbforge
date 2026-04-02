@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
+import logging
+
+from nwbforge.app.logging import get_logger, log_event
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +25,8 @@ class UiSettings:
 class UiSettingsService:
     """Load and save desktop UI settings from a JSON file."""
 
+    _logger = get_logger(__name__)
+
     def __init__(self, settings_path: Path) -> None:
         self._settings_path = settings_path
 
@@ -31,12 +36,18 @@ class UiSettingsService:
 
     def load(self) -> UiSettings:
         if not self._settings_path.exists():
+            log_event(
+                self._logger,
+                logging.DEBUG,
+                "Desktop settings file not found; using defaults.",
+                settings_path=str(self._settings_path),
+            )
             return UiSettings()
 
         payload = json.loads(self._settings_path.read_text(encoding="utf-8"))
         recent_paths = tuple(Path(value) for value in payload.get("recent_session_paths", ()))
         last_path = payload.get("last_open_session_path")
-        return UiSettings(
+        settings = UiSettings(
             verbose_logging_enabled=bool(payload.get("verbose_logging_enabled", False)),
             file_logging_enabled=bool(payload.get("file_logging_enabled", False)),
             log_file_path=Path(payload.get("log_file_path", UiSettings().log_file_path)),
@@ -44,6 +55,16 @@ class UiSettingsService:
             recent_session_paths=recent_paths,
             last_output_directory=Path(payload["last_output_directory"]) if payload.get("last_output_directory") else None,
         )
+        log_event(
+            self._logger,
+            logging.DEBUG,
+            "Loaded desktop settings.",
+            settings_path=str(self._settings_path),
+            recent_session_count=len(settings.recent_session_paths),
+            file_logging_enabled=settings.file_logging_enabled,
+            verbose_logging_enabled=settings.verbose_logging_enabled,
+        )
+        return settings
 
     def save(self, settings: UiSettings) -> UiSettings:
         payload = asdict(settings)
@@ -59,6 +80,15 @@ class UiSettingsService:
         self._settings_path.write_text(
             json.dumps(payload, indent=2, sort_keys=True),
             encoding="utf-8",
+        )
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Saved desktop settings.",
+            settings_path=str(self._settings_path),
+            recent_session_count=len(settings.recent_session_paths),
+            file_logging_enabled=settings.file_logging_enabled,
+            verbose_logging_enabled=settings.verbose_logging_enabled,
         )
         return settings
 

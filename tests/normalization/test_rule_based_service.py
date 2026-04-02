@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from nwbforge.domain.enums import ConversionPathway, SourceType
+from nwbforge.domain.enums import ConversionPathway, ReviewStatus, SourceType, ValueOrigin
 from nwbforge.domain.models import ConversionSession, ExtractedField, ExtractionResult, SourceReference
 from nwbforge.normalization import RuleBasedNormalizationService
 
@@ -143,6 +143,102 @@ def test_rule_based_normalizer_marks_duplicate_aliases_for_review() -> None:
     assert bundle.session.session_id is not None
     assert bundle.session.session_id.value == "s-two"
     assert bundle.session.session_id.needs_review is True
+
+
+def test_rule_based_normalizer_prefers_primary_source_over_supplemental_on_conflict() -> None:
+    session = ConversionSession(
+        session_id="sess-roles-001",
+        pathway=ConversionPathway.HYBRID,
+        sources=(
+            SourceReference(
+                source_id="supplemental-source",
+                location=Path("data/source-supplemental"),
+                source_type=SourceType.DIRECTORY,
+                label="supplemental source",
+                role="supplemental",
+            ),
+            SourceReference(
+                source_id="primary-source",
+                location=Path("data/source-primary"),
+                source_type=SourceType.DIRECTORY,
+                label="primary source",
+                role="primary",
+            ),
+        ),
+    )
+    extraction_results = (
+        ExtractionResult(
+            source_id="supplemental-source",
+            adapter_id="custom_json_session",
+            record_type="custom",
+            fields={
+                "subject.subject_id": ExtractedField(
+                    "subject.subject_id",
+                    "supplemental-mouse-01",
+                    "supplemental-source",
+                ),
+            },
+        ),
+        ExtractionResult(
+            source_id="primary-source",
+            adapter_id="session_manifest",
+            record_type="manifest",
+            fields={
+                "subject.subject_id": ExtractedField(
+                    "subject.subject_id",
+                    "primary-mouse-01",
+                    "primary-source",
+                ),
+            },
+        ),
+    )
+
+    bundle = RuleBasedNormalizationService().normalize(session, extraction_results)
+
+    assert bundle.subject.subject_id is not None
+    assert bundle.subject.subject_id.value == "primary-mouse-01"
+    assert bundle.subject.subject_id.review_status is ReviewStatus.NEEDS_REVIEW
+    assert bundle.subject.subject_id.source_ids == ("supplemental-source", "primary-source")
+    assert "Retained value from primary source over supplemental source." in bundle.subject.subject_id.notes
+
+
+def test_rule_based_normalizer_applies_session_wide_metadata_overrides_after_normalization() -> None:
+    session = ConversionSession(
+        session_id="sess-overrides-001",
+        pathway=ConversionPathway.HYBRID,
+        sources=(
+            SourceReference(
+                source_id="source-1",
+                location=Path("data/source-1"),
+                source_type=SourceType.DIRECTORY,
+                label="source 1",
+            ),
+        ),
+        metadata_overrides={
+            "subject.subject_id": "override-mouse-01",
+            "session.experimenter": "Researcher, Alice",
+        },
+    )
+    extraction = ExtractionResult(
+        source_id="source-1",
+        adapter_id="alpha",
+        record_type="session",
+        fields={
+            "subject.subject_id": ExtractedField("subject.subject_id", "source-mouse-01", "source-1"),
+            "session.experimenter": ExtractedField("session.experimenter", "Source, Bob", "source-1"),
+        },
+    )
+
+    bundle = RuleBasedNormalizationService().normalize(session, (extraction,))
+
+    assert bundle.subject.subject_id is not None
+    assert bundle.subject.subject_id.value == "override-mouse-01"
+    assert bundle.subject.subject_id.origin is ValueOrigin.USER_SUPPLIED
+    assert bundle.subject.subject_id.review_status is ReviewStatus.NOT_REVIEWED
+    assert "Applied from session-wide metadata override." in bundle.subject.subject_id.notes
+    assert bundle.session.experimenter is not None
+    assert bundle.session.experimenter.value == "Researcher, Alice"
+    assert bundle.session.experimenter.origin is ValueOrigin.USER_SUPPLIED
 
 
 def test_rule_based_normalizer_falls_back_to_conversion_session_id() -> None:
