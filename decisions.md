@@ -1403,3 +1403,17 @@ Consequences:
 - UI log entries now use the originating `logging` record timestamp when rendered or mirrored to file
 - the docked log viewer now appends incrementally when possible instead of redrawing the entire visible log buffer for every update
 - future high-volume UI observability work should prefer incremental rendering and stable event timestamps over convenience rebuilds
+
+### DEC-110: Gate optional supported-route availability on installed route dependencies
+Status: Accepted
+
+Reasoning:
+- Supported-route growth now needs to scale, but the local app should not expose every route unconditionally just because code exists in the repository.
+- Route-based package installation already exists for setup and later UI installs, so adapter registration should respect those same route boundaries.
+- The desktop registry is the cleanest first enforcement point because it controls what direct ingest can detect and what supported execution can select.
+
+Consequences:
+- optional supported routes now carry curated dependency gates through the route package catalog
+- the desktop adapter registry now skips optional adapters whose required route dependencies are not installed in the current environment
+- newly implemented optional routes should be wired through both the package catalog and the registry gate, not added as unconditional app surface area
+- the first routes added under this rule are `ScanImage` and `SLEAP`

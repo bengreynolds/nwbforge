@@ -38,6 +38,8 @@ Completed:
 - Added a NeuroConv-backed audio route using `AudioInterface`
 - Added a NeuroConv-backed FicTrac behavior route using `FicTracDataInterface`
 - Added a NeuroConv-backed DeepLabCut pose-estimation route using `DeepLabCutInterface`
+- Added a NeuroConv-backed SLEAP pose-estimation route using `SLEAPInterface`
+- Added a NeuroConv-backed ScanImage imaging route using `ScanImageImagingInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -119,6 +121,8 @@ In progress:
 - Snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
+- Availability-gated supported-route expansion so newly implemented NeuroConv routes only appear in the app when their route packages are actually installed
+- Broader supported-route implementation work to start scaling beyond the current CSV, Excel, image, audio, FicTrac, and DeepLabCut baseline
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
 - Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, group-confirmation, and current group-action baseline
@@ -130,7 +134,8 @@ Next:
 - Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and current session/source override actions toward fuller field-by-field conflict resolution
 - Expand the integrated NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
 - Keep the optional `nwbwidgets + Panel` path additive and avoid turning notebook/web tooling into a hard dependency of the base viewer path
-- Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
+- Add more availability-gated NeuroConv routes behind optional package installs so supported-path growth can scale without turning every route into an unconditional app dependency
+- Start that scaling pass with realistic next routes from the approved catalog, prioritizing `ScanImage` and `SLEAP`
 - Keep release engineering planned but defer implementation until after first-pass internal testing
 
 ### Current application baseline
@@ -138,6 +143,8 @@ Next:
 - The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
 - Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
+- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP` and `ScanImage` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
+- The next supported-route scaling step should add more NeuroConv-backed acquisition and behavior routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
 - The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.

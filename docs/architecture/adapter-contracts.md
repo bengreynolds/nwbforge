@@ -30,6 +30,8 @@ Implemented adapters now include:
 - `NeuroConvAudioAdapter` for real NeuroConv-backed audio sources
 - `NeuroConvFicTracAdapter` for real NeuroConv-backed FicTrac behavior sources
 - `NeuroConvDeepLabCutAdapter` for real NeuroConv-backed DeepLabCut pose-estimation sources
+- `NeuroConvSLEAPAdapter` for real NeuroConv-backed SLEAP pose-estimation sources
+- `NeuroConvScanImageAdapter` for real NeuroConv-backed ScanImage imaging sources
 
 Current package direction:
 - category-first supported packages should hold family modules and route declarations
@@ -53,6 +55,7 @@ Implemented framework pieces:
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
+- the SLEAP and ScanImage adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
 - the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:
@@ -80,6 +83,7 @@ These protocols define what higher-level services must do without choosing concr
 - Supported-path adapters should prefer NeuroConv interfaces when documented support exists
 - Custom supported-path adapter work should start only after checking the NeuroConv Conversion Gallery for an existing route
 - Supported behavior and media routes may write directly into their documented NWB processing or stimulus targets through NeuroConv, with the repository providing orchestration, metadata overrides, and validation around that write path
+- Optional supported routes should only be registered into the active desktop adapter registry when the curated route dependencies for that route are installed in the current environment
 
 ## Immediate follow-on work
 

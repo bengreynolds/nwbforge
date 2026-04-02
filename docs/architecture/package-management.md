@@ -33,6 +33,7 @@ Current route package catalog examples:
 - `deeplabcut`
 - `excel`
 - `image`
+- `sleap`
 - `scanimage`
 
 ## Setup modes
@@ -86,6 +87,22 @@ Current service responsibilities:
 - emit install progress events and structured failure information
 - expose one thin UI-facing binding for route listing, preview, saved selection loading, and background install submission
 - run install execution off the UI thread for future setup and extension-install screens
+
+## Availability gating
+
+The route package catalog is now also used as the first runtime availability gate for optional supported adapters.
+
+Current rule:
+- optional supported routes are implemented in code only when useful
+- they are only registered into the active desktop adapter registry when the current environment satisfies the curated dependency gate for that route
+- package installation and route availability therefore use the same route names and the same shared catalog
+
+Examples:
+- `deeplabcut` depends on `ndx_pose`
+- `sleap` depends on `sleap_io` and `ndx_pose`
+- `scanimage` depends on `roiextractors` and `tifffile`
+
+This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.
 
 ## Future UI expectations
 
