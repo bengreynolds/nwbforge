@@ -82,6 +82,7 @@ Responsibilities:
 - support lightweight dataset-level grouping actions over selected sources on top of those heuristics
 - persist explicit group-confirmation state for draft groups and project files
 - expose dataset-kind and anchor-path context for direct-ingest groups
+- expose grouping-reason text and group-member summaries for direct-ingest bundles
 - require confirmation for reviewable grouped bundles before draft session creation can complete
 - detect simple same-stem metadata sidecars before session creation
 - carry both session-wide and source-specific metadata overrides into the assembled session model

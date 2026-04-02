@@ -101,6 +101,9 @@ Completed:
 - Added explicit dataset-group kind and anchor-path summaries to direct ingest so groups read more like real bundles than loose labels
 - Added a direct-ingest confirmation gate so reviewable grouped bundles must be confirmed before a session can be created
 - Added manual session-override entry and one-click source-to-source override actions in the metadata-review workspace
+- Added direct-ingest grouping reasons and member summaries so detected bundles explain why they exist
+- Added selected-group split actions so whole grouped bundles can be broken back into individual dataset groups
+- Added metadata-review filtering, resolution-status/history summaries, and a clear-all-overrides action for one canonical field
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
 - Focused tests for session, normalization, mapping, provenance, and validation models
@@ -215,6 +218,7 @@ Required direction:
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
 - current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, grouping-reason/member summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source and selected-group split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
@@ -1138,9 +1142,9 @@ The repository is now in internal-testing mode. The following deviations between
   - `ConversionSession.metadata_overrides` remains the session-wide path for simple canonical overrides
   - direct ingest now also supports per-source overrides for the same core canonical field set, and those overrides are applied at the inspection boundary and normalized as user-supplied values
   - the desktop conversion workspace now includes a dedicated metadata-review tab that surfaces pending normalized conflicts, their retained canonical values, contributing source values, and normalization notes after preview or execution
-  - the metadata-review tab now lets users promote a selected source value into a session-wide override, apply a source-specific override, clear either override path, and then rebuild preview
-  - the desktop UI now also shows explicit session/source override status in the metadata-review workspace
-  - the desktop UI still does not offer fuller field-by-field resolution policy or a richer conflict-resolution history beyond current override state and notes
+- the metadata-review tab now lets users promote a selected source value into a session-wide override, apply a source-specific override, clear either override path, and then rebuild preview
+- the desktop UI now also shows explicit session/source override status, resolution-status summaries, resolution-history notes, filterable pending/resolved conflicts, and a clear-all-overrides action for one canonical field
+- the desktop UI still does not offer fuller field-by-field resolution policy or durable conflict-resolution history beyond current override state and derived review notes
 - Why this matters:
   - the architectural shortcut is gone and a real disagreement-review surface now exists, but resolution is still narrower than a fuller mixed-source conflict workspace
 

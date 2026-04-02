@@ -1350,3 +1350,16 @@ Consequences:
 - reviewable auto-grouped or mixed-pathway bundles now block session creation until they are explicitly confirmed
 - the metadata-review workspace now supports manual session overrides, one-click source-to-source override actions, and clearer override-count summaries
 - fuller dataset/session modeling and true conflict-resolution history remain follow-on work
+
+### DEC-106: Explain heuristic dataset bundles explicitly and add per-field metadata review controls before deeper dataset modeling
+Status: Accepted
+
+Reasoning:
+- Heuristic grouping had become actionable, but users still lacked enough context to understand why a bundle existed or what was inside it.
+- The metadata-review workspace surfaced conflicts, but it still needed stronger review ergonomics before a fuller conflict engine existed.
+- The next local-app step should improve explanation and control, not jump prematurely into a larger rewrite of dataset/session modeling.
+
+Consequences:
+- direct-ingest groups now surface grouping reason text, member labels, and whole-group split actions in the `New Session` workflow
+- the metadata-review workspace now supports pending/resolved filtering, explicit resolution-status/history display, and clearing all overrides for one canonical field
+- richer dataset/session modeling and durable field-resolution history remain follow-on work rather than being hidden behind current UI state

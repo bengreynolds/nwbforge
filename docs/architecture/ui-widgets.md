@@ -42,6 +42,7 @@ Responsibilities:
 - show saved-project path and clean/dirty status
 - show detected dataset-group summaries with pathway and role composition
 - show detected dataset-group kind and anchor-path context
+- show detected dataset-group reasons and member summaries
 - support lightweight dataset-level grouping actions for selected groups and selected sources
 - persist and surface explicit group-confirmation state for detected groups
 - block session creation until required grouped bundles are explicitly confirmed
@@ -74,6 +75,9 @@ Responsibilities:
 - let users type a manual session-wide override directly from the metadata-review workspace
 - let users apply and clear source-specific overrides from the metadata-review workspace
 - show summary counts for pending conflicts, session overrides, and source overrides
+- filter metadata conflicts between pending and resolved states
+- clear all override state for one canonical field from the metadata-review workspace
+- show resolution-status and derived override-history detail for the selected metadata conflict
 
 ### `PackageInstallerDialog`
 
@@ -164,14 +168,16 @@ Responsibilities:
   - conversion-session section layout for summary, execution, review, and artifacts
   - direct-ingest detected-group summaries in the `New Session` dialog
   - direct-ingest dataset-group kind/anchor summaries in the `New Session` dialog
+  - direct-ingest dataset-group reason/member summaries in the `New Session` dialog
   - create-session blocking until required grouped bundles are confirmed
-  - direct-ingest group rename, confirmation, split, and selected-source create/move actions in the `New Session` dialog
+  - direct-ingest group rename, confirmation, split-group, split-selection, and selected-source create/move actions in the `New Session` dialog
   - conversion-session source-detail presentation for pathway, source count, and selected-source metadata
   - conversion-session run-overview and review-guidance summaries
   - conversion-session workspace-tab structure and state-driven tab selection, including metadata-review focus for pending mixed-source conflicts
   - conversion-session metadata-resolution actions that clear stale preview/execution state and require rebuild
   - conversion-session source-specific metadata-resolution actions from the metadata-review workspace
   - conversion-session manual session-override actions and metadata-resolution summaries
+  - conversion-session metadata-review filtering and clear-all-field-override actions
   - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
