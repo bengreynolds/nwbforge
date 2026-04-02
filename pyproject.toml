@@ -23,8 +23,15 @@ audio = [
   "ndx-sound>=0.2,<0.3",
   "scipy>=1.13,<2",
 ]
+axon = [
+  "spikeinterface>=0.103,<0.104",
+]
 deeplabcut = [
   "ndx-pose>=0.2,<0.3",
+]
+edf = [
+  "spikeinterface>=0.103,<0.104",
+  "pyedflib>=0.1,<0.2",
 ]
 intan = [
   "neuroconv[intan]>=0.9,<0.10",
@@ -57,6 +64,15 @@ sleap = [
 ]
 thor = [
   "neuroconv[thor]>=0.9,<0.10",
+]
+openephys_binary = [
+  "spikeinterface>=0.103,<0.104",
+]
+spikegadgets = [
+  "spikeinterface>=0.103,<0.104",
+]
+spikeglx = [
+  "spikeinterface>=0.103,<0.104",
 ]
 videos = [
   "opencv-python-headless>=4.10,<5",

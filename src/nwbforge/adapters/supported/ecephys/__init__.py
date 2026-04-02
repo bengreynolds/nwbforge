@@ -18,3 +18,8 @@ def _try_import_optional(export_name: str) -> None:
 
 
 _try_import_optional("NeuroConvIntanAdapter")
+_try_import_optional("NeuroConvAxonAdapter")
+_try_import_optional("NeuroConvEdfAdapter")
+_try_import_optional("NeuroConvOpenEphysBinaryAdapter")
+_try_import_optional("NeuroConvSpikeGadgetsAdapter")
+_try_import_optional("NeuroConvSpikeGLXAdapter")

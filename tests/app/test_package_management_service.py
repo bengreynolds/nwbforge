@@ -13,11 +13,16 @@ def test_package_management_service_lists_available_routes() -> None:
 
     route_names = {route.route_name for route in service.list_available_routes()}
 
+    assert "axon" in route_names
     assert "deeplabcut" in route_names
+    assert "edf" in route_names
     assert "lightningpose" in route_names
     assert "medpc" in route_names
     assert "sleap" in route_names
     assert "intan" in route_names
+    assert "openephys_binary" in route_names
+    assert "spikegadgets" in route_names
+    assert "spikeglx" in route_names
     assert "videos" in route_names
     assert "hdf5" in route_names
     assert "micromanager" in route_names

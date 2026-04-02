@@ -6,15 +6,29 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
         "nwbforge.app.packages.catalog.find_spec",
         lambda module_name: object()
         if module_name
-        in {"sleap_io", "ndx_pose", "cv2", "roiextractors", "tifffile", "ndx_events", "spikeinterface"}
+        in {
+            "sleap_io",
+            "ndx_pose",
+            "cv2",
+            "roiextractors",
+            "tifffile",
+            "ndx_events",
+            "spikeinterface",
+            "pyedflib",
+        }
         else None,
     )
 
+    assert route_dependencies_available("axon") is True
     assert route_dependencies_available("sleap") is True
     assert route_dependencies_available("lightningpose") is True
     assert route_dependencies_available("medpc") is True
+    assert route_dependencies_available("edf") is True
     assert route_dependencies_available("micromanager") is True
     assert route_dependencies_available("thor") is True
     assert route_dependencies_available("intan") is True
+    assert route_dependencies_available("openephys_binary") is True
     assert route_dependencies_available("scanimage") is True
+    assert route_dependencies_available("spikegadgets") is True
+    assert route_dependencies_available("spikeglx") is True
     assert route_dependencies_available("hdf5") is False
