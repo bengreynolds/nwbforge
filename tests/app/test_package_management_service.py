@@ -19,6 +19,7 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "biocam" in route_names
     assert "blackrock" in route_names
     assert "brukertiff" in route_names
+    assert "cellexplorer" in route_names
     assert "deeplabcut" in route_names
     assert "edf" in route_names
     assert "femtonics" in route_names
@@ -30,12 +31,14 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "medpc" in route_names
     assert "sleap" in route_names
     assert "intan" in route_names
+    assert "kilosort" in route_names
     assert "neuralynx" in route_names
     assert "neuroscope" in route_names
     assert "openephys_binary" in route_names
     assert "openephys_legacy" in route_names
     assert "plexon" in route_names
     assert "plexon2" in route_names
+    assert "phy" in route_names
     assert "scanbox" in route_names
     assert "spikegadgets" in route_names
     assert "spike2" in route_names

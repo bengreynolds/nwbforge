@@ -12,6 +12,7 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
             "lxml",
             "MEArec",
             "natsort",
+            "pymatreader",
             "sleap_io",
             "sonpy",
             "ndx_pose",
@@ -30,6 +31,7 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
     assert route_dependencies_available("axona") is True
     assert route_dependencies_available("biocam") is True
     assert route_dependencies_available("blackrock") is True
+    assert route_dependencies_available("cellexplorer") is True
     assert route_dependencies_available("brukertiff") is True
     assert route_dependencies_available("sleap") is True
     assert route_dependencies_available("lightningpose") is True
@@ -45,10 +47,12 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
     assert route_dependencies_available("neuroscope") is True
     assert route_dependencies_available("thor") is True
     assert route_dependencies_available("intan") is True
+    assert route_dependencies_available("kilosort") is True
     assert route_dependencies_available("openephys_binary") is True
     assert route_dependencies_available("openephys_legacy") is True
     assert route_dependencies_available("plexon") is True
     assert route_dependencies_available("plexon2") is True
+    assert route_dependencies_available("phy") is True
     assert route_dependencies_available("scanbox") is True
     assert route_dependencies_available("scanimage") is True
     assert route_dependencies_available("scanimage_legacy") is True

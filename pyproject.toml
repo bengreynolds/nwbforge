@@ -38,6 +38,9 @@ biocam = [
 blackrock = [
   "neuroconv[blackrock]>=0.9,<0.10",
 ]
+cellexplorer = [
+  "neuroconv[cellexplorer]>=0.9,<0.10",
+]
 brukertiff = [
   "neuroconv[brukertiff]>=0.9,<0.10",
 ]
@@ -53,6 +56,9 @@ femtonics = [
 ]
 intan = [
   "neuroconv[intan]>=0.9,<0.10",
+]
+kilosort = [
+  "neuroconv[kilosort]>=0.9,<0.10",
 ]
 inscopix = [
   "neuroconv[inscopix]>=0.9,<0.10",
@@ -112,6 +118,9 @@ plexon = [
 ]
 plexon2 = [
   "neuroconv[plexon2]>=0.9,<0.10",
+]
+phy = [
+  "neuroconv[phy]>=0.9,<0.10",
 ]
 scanbox = [
   "neuroconv[ophys]>=0.9,<0.10",
