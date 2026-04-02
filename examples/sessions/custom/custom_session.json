@@ -1,0 +1,33 @@
+{
+  "recording_context": {
+    "recording_id": "example-custom-01",
+    "summary": "Checked-in custom example session",
+    "study_description": "Manual desktop testing example for custom workflow",
+    "started_at": "2026-04-01T10:00:00-06:00",
+    "operator_name": "NWB Forge Example",
+    "institute_name": "Example Lab"
+  },
+  "animal_profile": {
+    "identifier": "example-custom-mouse-01",
+    "species_name": "Mus musculus",
+    "sex_code": "U",
+    "life_stage": "P120D",
+    "birth_date": "2025-12-01T00:00:00-07:00",
+    "notes": "Example custom-workflow subject"
+  },
+  "signal_sets": [
+    {
+      "stream_key": "wheel-velocity",
+      "name": "Wheel Velocity",
+      "modality": "behavior",
+      "description": "Example custom wheel trace",
+      "data": [0.0, 0.3, 0.1, 0.4],
+      "unit": "cm/s",
+      "rate": 20.0
+    }
+  ],
+  "annotations": {
+    "keywords": ["example", "custom"],
+    "operator_note": "Use this file for manual custom-path desktop testing."
+  }
+}

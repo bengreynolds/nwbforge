@@ -260,3 +260,16 @@ def test_resolve_startup_session_path_prefers_requested_then_saved_then_demo(tmp
     assert result_requested == requested.resolve()
     assert result_saved == saved
     assert result_demo.name == "session_manifest.json"
+
+
+def test_checked_in_example_sessions_load() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+
+    supported = load_desktop_session(repo_root / "examples" / "sessions" / "supported" / "session_manifest.json")
+    custom = load_desktop_session(repo_root / "examples" / "sessions" / "custom" / "custom_session.json")
+    hybrid = load_desktop_session(repo_root / "examples" / "sessions" / "hybrid" / "hybrid_session.json")
+
+    assert supported.pathway.value == "supported"
+    assert custom.pathway.value == "custom"
+    assert hybrid.pathway.value == "hybrid"
+    assert len(hybrid.sources) == 2

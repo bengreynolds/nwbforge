@@ -1,0 +1,49 @@
+{
+  "session": {
+    "session_id": "example-supported-01",
+    "description": "Checked-in supported example session",
+    "experiment_description": "Manual desktop testing example for manifest-backed supported workflow",
+    "start_time": "2026-04-01T09:00:00-06:00",
+    "experimenter": "NWB Forge Example",
+    "institution": "Example Lab"
+  },
+  "subject": {
+    "subject_id": "example-mouse-01",
+    "species": "Mus musculus",
+    "sex": "U",
+    "age": "P90D",
+    "description": "Example supported-workflow subject"
+  },
+  "devices": [
+    {
+      "device_id": "camera-1",
+      "name": "Behavior Camera",
+      "description": "Example camera device",
+      "manufacturer": "Example Imaging"
+    }
+  ],
+  "acquisition_streams": [
+    {
+      "stream_id": "lick-trace",
+      "name": "Lick Trace",
+      "modality": "behavior",
+      "description": "Example lick signal",
+      "data": [0.1, 0.2, 0.3, 0.2],
+      "unit": "a.u.",
+      "rate": 10.0
+    },
+    {
+      "stream_id": "animal-position",
+      "name": "Animal Position",
+      "modality": "behavior",
+      "behavior_type": "position",
+      "description": "Example tracked position",
+      "data": [[0.0, 1.0], [1.0, 1.5], [2.0, 2.5], [3.0, 2.0]],
+      "unit": "meters",
+      "reference_frame": "origin at arena corner",
+      "rate": 20.0
+    }
+  ],
+  "keywords": ["example", "supported", "behavior"],
+  "operator_note": "Use this file for manual supported-path desktop testing."
+}

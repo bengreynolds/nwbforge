@@ -1,0 +1,22 @@
+{
+  "session_id": "example-hybrid-01",
+  "title": "Checked-in hybrid example session",
+  "notes": [
+    "Manual desktop testing example for hybrid workflow."
+  ],
+  "sources": [
+    {
+      "source_id": "manifest",
+      "location": "../supported/session_manifest.json",
+      "label": "Supported manifest source",
+      "role": "primary"
+    },
+    {
+      "source_id": "custom",
+      "location": "../custom/custom_session.json",
+      "label": "Custom supplemental source",
+      "role": "supplemental",
+      "adapter_hint": "custom_json_session"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ def parse_args() -> argparse.Namespace:
         "--session",
         type=Path,
         default=None,
-        help="Path to a session_manifest.json or custom_session.json file, or a directory containing one.",
+        help="Path to a session_manifest.json, custom_session.json, or hybrid_session.json file, or a directory containing one.",
     )
     parser.add_argument(
         "--manifest",
