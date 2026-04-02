@@ -147,6 +147,19 @@ conda run -n nwbforge-dev python scripts/run_app.py --session path\\to\\custom_s
 conda run -n nwbforge-dev python scripts/run_app.py --session path\\to\\hybrid_session.json
 ```
 
+Checked-in example sessions are available under:
+- `examples/sessions/supported/session_manifest.json`
+- `examples/sessions/custom/custom_session.json`
+- `examples/sessions/hybrid/hybrid_session.json`
+
+Example launch commands:
+
+```text
+conda run -n nwbforge-dev python scripts/run_app.py --session examples\sessions\supported\session_manifest.json
+conda run -n nwbforge-dev python scripts/run_app.py --session examples\sessions\custom\custom_session.json
+conda run -n nwbforge-dev python scripts/run_app.py --session examples\sessions\hybrid\hybrid_session.json
+```
+
 The temporary launcher is a development aid only. It now boots the real desktop service composition and loads either a user-provided supported/custom session source or a generated demo manifest, without changing the long-term packaging plan.
 
 ## Local development
