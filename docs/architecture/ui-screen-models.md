@@ -52,14 +52,16 @@ Responsibilities:
 - project generated provenance artifacts into UI-facing artifact items
 - capture reviewer name, rationale, override, and acknowledgement state for review submission
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
+- persist latest preview, execution, and review state through `SessionPersistenceService` when desktop persistence is configured
 
 Current scope:
 - one loaded session at a time
-- in-memory state only
+- in-memory interaction state backed by latest-state snapshot persistence in the real desktop path
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
 - review controls are intentionally attached to the same session workflow instead of a separate review screen
 - the same screen model now supports demo sessions plus real supported/custom/hybrid desktop sessions loaded through the desktop bootstrap module
+- persistence failures are surfaced as translated user-facing errors rather than being swallowed inside the screen model
 
 ### `SettingsScreenModel`
 

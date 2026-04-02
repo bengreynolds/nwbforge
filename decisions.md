@@ -914,3 +914,17 @@ Consequences:
 - `planning.md` now reports the repository as `first pass complete / ready for internal testing`
 - the next phase is structured internal testing and issue triage, not additional gate-defining feature work
 - release engineering and broader supported-route growth remain post-first-pass priorities
+
+### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
+Status: Accepted
+
+Reasoning:
+- The first-pass gate was complete, but the desktop path still treated preview persistence as a planned follow-on rather than real operational behavior.
+- Internal testing will be more credible if the app preserves latest-state progress before execution, not only after execution or review.
+- The current JSON latest-snapshot store is sufficient for this milestone without committing yet to a richer event log or database-backed history model.
+
+Consequences:
+- `SessionPersistenceService` now persists preview snapshots in addition to execution and review snapshots
+- the real desktop composition now provisions a snapshot store under `.nwbforge/session-state/`
+- `ConversionSessionScreenModel` now persists successful preview, execution, and review outcomes automatically and surfaces persistence failures as user-facing errors
+- the next persistence milestone is richer history/recovery semantics, not basic preview-state coverage

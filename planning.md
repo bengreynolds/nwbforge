@@ -79,7 +79,7 @@ Completed:
 In progress:
 - Operational hardening around persistence, recovery, reporting, and reviewability for a first serious manual-testing round
 - Modality-aware assembly expansion beyond the current behavior trace/position baseline
-- Preview-state persistence and snapshot-history design beyond the current latest-snapshot store
+- Snapshot-history design beyond the current latest-snapshot store
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
@@ -135,6 +135,7 @@ Next:
 - The desktop conversion surface now also summarizes current stage, output target, validation counts, artifact counts, and review guidance explicitly, so users can read session readiness before interacting with raw issue lists or artifact tables.
 - The desktop conversion surface now also uses a tabbed workspace for run overview, review work, and artifacts, which makes the right-hand side behave more like a desktop application workspace than a stacked panel.
 - The desktop conversion surface now also exposes pathway, source-count, and selected-source detail fields so supported and custom sessions read more like one intentional desktop workflow rather than a raw source list.
+- The real desktop path now persists latest preview, execution, and review snapshots automatically under the app-state directory, which improves resumability and operational readiness for repeated internal testing without waiting for a fuller history store.
 
 ## First-Pass Product Priorities
 
@@ -235,6 +236,10 @@ When these conditions are met, the repository should explicitly report:
 Current milestone result:
 - first pass complete
 - ready for internal testing
+
+Operational hardening after the first-pass gate:
+- The current desktop workflow now persists latest preview, execution, and review snapshots automatically.
+- The next persistence milestone is no longer preview-state coverage; it is richer history/recovery behavior on top of the current latest-state store.
 
 Only after this milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
 
