@@ -6,6 +6,7 @@
 .
 |-- AGENTS.md
 |-- README.md
+|-- decisions.md
 |-- planning.md
 |-- docs/
 |   |-- architecture/

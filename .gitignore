@@ -9,3 +9,10 @@ htmlcov/
 venv/
 build/
 dist/
+*.egg-info/
+.conda/
+conda-meta/
+.nwbforge/
+
+# Local temporary example data for manual testing
+temp/example-data/**

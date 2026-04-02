@@ -1,0 +1,8 @@
+name: nwbforge-dev
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.11
+  - pip
+  - pytest=7.4
