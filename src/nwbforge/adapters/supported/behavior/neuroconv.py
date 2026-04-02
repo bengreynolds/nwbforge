@@ -13,6 +13,11 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     LightningPoseDataInterface = None
 
 try:
+    from neuroconv.datainterfaces import MedPCInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    MedPCInterface = None
+
+try:
     from neuroconv.datainterfaces import SLEAPInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     SLEAPInterface = None
@@ -240,6 +245,75 @@ if LightningPoseDataInterface is not None:
             if candidate.is_file():
                 return candidate
             return None
+
+
+if MedPCInterface is not None:
+
+    class NeuroConvMedPCAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert MedPC task output files through NeuroConv."""
+
+        adapter_id = "neuroconv_medpc"
+        display_name = "NeuroConv MedPC adapter"
+        version = "0.1.0"
+        interface_cls = MedPCInterface
+        record_type = "neuroconv_medpc"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".txt",)
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            return source.location.suffix.lower() in self.supported_suffixes and self._has_required_config(config)
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            if not self._has_required_config(config):
+                raise ValueError(
+                    "MedPC conversion requires session_conditions, start_variable, and "
+                    "metadata_medpc_name_to_info_dict in neuroconv.interface_kwargs_json."
+                )
+            interface_kwargs = {self.source_path_kwarg: source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            medpc_metadata = metadata.get("MedPC", {})
+            metadata_mapping = config.interface_kwargs.get("metadata_medpc_name_to_info_dict", {})
+            aligned_timestamp_names = tuple(config.interface_kwargs.get("aligned_timestamp_names", ()))
+            fields = extracted_fields_from_mapping(
+                prefix="behavior.medpc",
+                payload={
+                    "source_format": "txt",
+                    "mapped_variable_count": len(metadata_mapping),
+                    "aligned_timestamp_count": len(aligned_timestamp_names),
+                    "start_variable": config.interface_kwargs.get("start_variable"),
+                    "has_session_conditions": bool(config.interface_kwargs.get("session_conditions")),
+                    "metadata_key_count": len(medpc_metadata),
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv MedPC conversion into behavior events and intervals.",
+                "MedPC route matching is configuration-driven and requires explicit session selection metadata.",
+            )
+            return fields, [], notes
+
+        @staticmethod
+        def _has_required_config(config: NeuroConvSourceConfig) -> bool:
+            interface_kwargs = config.interface_kwargs
+            return all(
+                key in interface_kwargs
+                for key in ("session_conditions", "start_variable", "metadata_medpc_name_to_info_dict")
+            )
 
 
 if SLEAPInterface is not None:

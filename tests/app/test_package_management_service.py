@@ -15,7 +15,9 @@ def test_package_management_service_lists_available_routes() -> None:
 
     assert "deeplabcut" in route_names
     assert "lightningpose" in route_names
+    assert "medpc" in route_names
     assert "sleap" in route_names
+    assert "intan" in route_names
     assert "videos" in route_names
     assert "hdf5" in route_names
     assert "micromanager" in route_names

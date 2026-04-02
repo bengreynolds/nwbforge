@@ -25,6 +25,14 @@ ROUTE_PACKAGE_CATALOG: tuple[RoutePackageSpec, ...] = (
         implemented_in_code=True,
     ),
     RoutePackageSpec(
+        route_name="medpc",
+        display_name="MedPC",
+        extra_name="medpc",
+        description="MedPC task/event support through NeuroConv's medpc extra and ndx-events.",
+        required_modules=("ndx_events",),
+        implemented_in_code=True,
+    ),
+    RoutePackageSpec(
         route_name="lightningpose",
         display_name="LightningPose",
         extra_name="lightningpose",
@@ -102,6 +110,14 @@ ROUTE_PACKAGE_CATALOG: tuple[RoutePackageSpec, ...] = (
         extra_name="thor",
         description="ThorImageLS TIFF imaging support through NeuroConv's thor extra.",
         required_modules=("roiextractors", "tifffile"),
+        implemented_in_code=True,
+    ),
+    RoutePackageSpec(
+        route_name="intan",
+        display_name="Intan",
+        extra_name="intan",
+        description="Intan ecephys support through NeuroConv's intan extra and SpikeInterface.",
+        required_modules=("spikeinterface",),
         implemented_in_code=True,
     ),
 )
