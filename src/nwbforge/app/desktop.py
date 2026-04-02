@@ -320,7 +320,7 @@ def ensure_demo_manifest(repo_root: Path) -> Path:
                     "description": "Demo NWB Forge desktop session",
                     "experiment_description": "Manifest-backed manual UI test",
                     "start_time": "2026-04-01T09:00:00-06:00",
-                    "experimenter": "NWB Forge Demo",
+                    "experimenter": "Researcher, Alice",
                     "institution": "Test Lab",
                 },
                 "subject": {

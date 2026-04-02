@@ -215,8 +215,10 @@ class MainWindow(QMainWindow):
             output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
             if output_directory is not None and self._conversion_screen_model.state.session is not None:
                 initial_path = output_directory / f"{self._conversion_screen_model.state.session.session_id}.nwb"
+            elif self._conversion_screen_model.state.session is not None:
+                initial_path = self._default_output_path_for_session(self._conversion_screen_model.state.session)
 
-        start_location = str(initial_path) if initial_path is not None else str(Path.cwd())
+        start_location = str(initial_path) if initial_path is not None else str(self._default_output_directory())
         selected_path, _ = QFileDialog.getSaveFileName(
             self,
             "Choose NWB Output Path",
@@ -298,8 +300,14 @@ class MainWindow(QMainWindow):
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
         output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
         if output_directory is None:
-            output_directory = Path.cwd()
+            output_directory = self._default_output_directory()
         return output_directory / f"{session.session_id}.nwb"
+
+    @staticmethod
+    def _default_output_directory() -> Path:
+        output_directory = (Path.cwd() / ".nwbforge" / "outputs").resolve()
+        output_directory.mkdir(parents=True, exist_ok=True)
+        return output_directory
 
     def _rebuild_recent_sessions_menu(self, recent_paths: tuple[str, ...]) -> None:
         self._recent_sessions_menu.clear()

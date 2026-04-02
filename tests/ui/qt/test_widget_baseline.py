@@ -720,6 +720,39 @@ def test_main_window_applies_last_output_directory_default(qapp, tmp_path: Path,
     window.close()
 
 
+def test_main_window_uses_app_state_output_directory_when_no_prior_output_exists(
+    qapp, tmp_path: Path, monkeypatch
+) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    settings_screen = make_settings_screen(tmp_path)
+    settings_screen.load()
+    monkeypatch.chdir(tmp_path)
+    window = MainWindow(
+        DesktopShellModel(),
+        settings_screen,
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (str(session.sources[0].location), "session_manifest.json"),
+    )
+    window._open_session_action.trigger()
+    qapp.processEvents()
+
+    expected_directory = (tmp_path / ".nwbforge" / "outputs").resolve()
+    expected_name = "desktop-" + session.sources[0].location.parent.name + ".nwb"
+    assert window.conversion_widget._output_path_edit.text().endswith(expected_name)
+    assert str(expected_directory) in window.conversion_widget._output_path_edit.text()
+    assert expected_directory.exists() is True
+
+    window.close()
+
+
 def test_main_window_tracks_recent_sessions_menu(qapp, tmp_path: Path, monkeypatch) -> None:
     first = make_session(tmp_path / "first")
     second = make_session(tmp_path / "second")

@@ -4,7 +4,7 @@
     "description": "Checked-in supported example session",
     "experiment_description": "Manual desktop testing example for manifest-backed supported workflow",
     "start_time": "2026-04-01T09:00:00-06:00",
-    "experimenter": "NWB Forge Example",
+    "experimenter": "Researcher, Alice",
     "institution": "Example Lab"
   },
   "subject": {
