@@ -1457,3 +1457,16 @@ Consequences:
 - the `behavior` family now includes `MedPC` as a configuration-gated task/events route
 - the new `ecephys` family now starts with `Intan` as a distinctive acquisition-file route
 - optional route scaling should continue to prefer strong path/config signatures before exposing broader ambiguous behavior or ecephys backbones
+
+### DEC-114: Extend the ecephys family with distinctive file and folder signatures before broader ecephys catch-alls
+Status: Accepted
+
+Reasoning:
+- After `Intan`, the next scaling value comes from routes that remain honest under direct ingest without forcing generic multi-format ecephys matching.
+- `Axon / ABF`, `EDF`, `SpikeGadgets`, `OpenEphys Binary`, and `SpikeGLX` all have stronger file or folder signatures than broader ecephys families such as generic HDF5-like or multi-layout acquisitions.
+- Multi-stream folder routes such as `OpenEphys Binary` and `SpikeGLX` should only claim compatibility when stream selection is unambiguous or explicitly configured.
+
+Consequences:
+- the `ecephys` family now also includes `Axon / ABF`, `EDF`, `OpenEphys Binary`, `SpikeGadgets`, and `SpikeGLX`
+- package-gated route growth should continue preferring distinctive suffixes, manifests, and folder-layout signals before broader ambiguous ecephys backbones
+- multi-stream folder routes should stay conservative in `can_handle` and require explicit configuration when stream selection is not unambiguous

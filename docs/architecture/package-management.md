@@ -1,6 +1,6 @@
 # Package Management Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 ## Purpose
 
@@ -10,6 +10,7 @@ This note captures the current route-based dependency-management direction for d
 
 Package installation is framed around supported route names rather than raw dependency names. Examples:
 - `DeepLabCut`
+- `Axon / ABF`
 - `MedPC`
 - `ScanImage`
 - `Audio`
@@ -31,7 +32,9 @@ The repository now includes a Python package-planning layer under `src/nwbforge/
 
 Current route package catalog examples:
 - `audio`
+- `axon`
 - `deeplabcut`
+- `edf`
 - `lightningpose`
 - `medpc`
 - `excel`
@@ -39,7 +42,10 @@ Current route package catalog examples:
 - `image`
 - `micromanager`
 - `miniscope`
+- `openephys_binary`
 - `sleap`
+- `spikegadgets`
+- `spikeglx`
 - `thor`
 - `videos`
 - `scanimage`
@@ -111,10 +117,15 @@ Examples:
 - `lightningpose` depends on `cv2` and `ndx_pose`
 - `sleap` depends on `sleap_io` and `ndx_pose`
 - `medpc` depends on `ndx_events`
+- `axon` depends on `spikeinterface`
+- `edf` depends on `spikeinterface` and `pyedflib`
 - `videos` depends on `cv2`
 - `hdf5` depends on `h5py` and `roiextractors`
 - `scanimage` depends on `roiextractors` and `tifffile`
 - `intan` depends on `spikeinterface`
+- `openephys_binary` depends on `spikeinterface`
+- `spikegadgets` depends on `spikeinterface`
+- `spikeglx` depends on `spikeinterface`
 
 This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.
 

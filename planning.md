@@ -1,6 +1,6 @@
 # NWB Forge Planning
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 Status: First pass complete / internal testing underway
 
 ## Current Execution Status
@@ -42,10 +42,15 @@ Completed:
 - Added a NeuroConv-backed LightningPose pose-estimation route using `LightningPoseDataInterface`
 - Added a NeuroConv-backed MedPC behavior/task route using `MedPCInterface`
 - Added a NeuroConv-backed external-video route using `ExternalVideoInterface`
+- Added a NeuroConv-backed Axon/ABF ecephys route using `AxonRecordingInterface`
+- Added a NeuroConv-backed EDF ecephys route using `EDFRecordingInterface`
 - Added a NeuroConv-backed HDF5 imaging route using `Hdf5ImagingInterface`
 - Added a NeuroConv-backed Micro-Manager TIFF imaging route using `MicroManagerTiffImagingInterface`
 - Added a NeuroConv-backed Miniscope imaging route using `MiniscopeImagingInterface`
+- Added a NeuroConv-backed OpenEphys Binary ecephys route using `OpenEphysBinaryRecordingInterface`
 - Added a NeuroConv-backed ScanImage imaging route using `ScanImageImagingInterface`
+- Added a NeuroConv-backed SpikeGadgets ecephys route using `SpikeGadgetsRecordingInterface`
+- Added a NeuroConv-backed SpikeGLX ecephys route using `SpikeGLXRecordingInterface`
 - Added a NeuroConv-backed Thor imaging route using `ThorImagingInterface`
 - Added a NeuroConv-backed Intan ecephys route using `IntanRecordingInterface`
 - Added first-class normalized interval-table and trial-row support
@@ -130,7 +135,7 @@ In progress:
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Availability-gated supported-route expansion so newly implemented NeuroConv routes only appear in the app when their route packages are actually installed
-- The current route-scaling slice is extending behavior/task and acquisition backbones beyond the current MedPC and Intan additions under the same optional dependency-gated model
+- The current route-scaling slice is extending distinctive ecephys backbones such as Axon/ABF, EDF, SpikeGadgets, OpenEphys Binary, and SpikeGLX under the same optional dependency-gated model
 - The next route-scaling slice should continue scaling with distinctive behavior/task and acquisition routes before broader ambiguous backbones
 - Broader supported-route implementation work to start scaling beyond the current CSV, Excel, image, audio, videos, FicTrac, and DeepLabCut baseline
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
@@ -153,7 +158,7 @@ Next:
 - The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
 - Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
-- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `Videos`, `HDF5 Imaging`, `Micro-Manager TIFF`, `Miniscope`, `ScanImage`, `Thor`, and `Intan` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
+- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `Axon/ABF`, `EDF`, `Videos`, `HDF5 Imaging`, `Micro-Manager TIFF`, `Miniscope`, `OpenEphys Binary`, `ScanImage`, `SpikeGadgets`, `SpikeGLX`, `Thor`, and `Intan` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
 - The next supported-route scaling step should add more NeuroConv-backed acquisition and behavior routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
