@@ -104,6 +104,7 @@ class SessionAssemblySourceItem:
     location: Path
     source_type: str
     suggested_pathway: str
+    role: str = "primary"
     matching_adapter_ids: tuple[str, ...] = ()
     suggested_adapter_id: str | None = None
     needs_review: bool = False
@@ -127,6 +128,7 @@ class SessionAssemblyState:
     session_id: str = ""
     title: str = ""
     suggested_pathway: str = "custom"
+    metadata_overrides: dict[str, str] = field(default_factory=dict)
     sources: tuple[SessionAssemblySourceItem, ...] = ()
     issues: tuple[SessionAssemblyIssueItem, ...] = ()
     draft: SessionAssemblyDraft | None = None

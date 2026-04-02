@@ -8,6 +8,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QFileDialog,
     QFormLayout,
@@ -30,6 +31,14 @@ from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 class SessionAssemblyDialog(QDialog):
     """Dialog bound to `SessionAssemblyScreenModel` for direct source ingestion."""
 
+    _METADATA_OVERRIDE_FIELDS = (
+        ("session.start_time", "Session Start Time"),
+        ("session.experimenter", "Experimenter"),
+        ("session.session_description", "Session Description"),
+        ("subject.subject_id", "Subject ID"),
+        ("subject.species", "Species"),
+    )
+
     def __init__(
         self,
         screen_model: SessionAssemblyScreenModel,
@@ -46,15 +55,24 @@ class SessionAssemblyDialog(QDialog):
 
         self._input_list = QListWidget(self)
         self._source_list = QListWidget(self)
+        self._source_list.currentItemChanged.connect(self._sync_selected_source)
         self._issue_list = QListWidget(self)
         self._session_id_edit = QLineEdit(self)
         self._session_id_edit.textChanged.connect(self._screen_model.set_session_id)
         self._title_edit = QLineEdit(self)
         self._title_edit.textChanged.connect(self._screen_model.set_title)
+        self._role_combo = QComboBox(self)
+        self._role_combo.addItems(["primary", "supplemental", "metadata"])
+        self._role_combo.currentTextChanged.connect(self._apply_selected_role)
         self._pathway_label = QLabel("custom", self)
         self._summary_label = QLabel("Add files or folders to build a conversion session.", self)
         self._error_label = QLabel("", self)
         self._error_label.setWordWrap(True)
+        self._selected_source_label = QLabel("No source selected.", self)
+        self._selected_source_label.setWordWrap(True)
+        self._selected_adapter_label = QLabel("No adapter match", self)
+        self._selected_adapter_label.setWordWrap(True)
+        self._metadata_override_edits: dict[str, QLineEdit] = {}
 
         self._add_files_button = QPushButton("Add Files...", self)
         self._add_files_button.clicked.connect(self._add_files)
@@ -86,6 +104,20 @@ class SessionAssemblyDialog(QDialog):
         source_group = QGroupBox("Source Assembly Preview", self)
         source_layout = QVBoxLayout(source_group)
         source_layout.addWidget(self._source_list)
+        source_details = QFormLayout()
+        source_details.addRow("Selected Source", self._selected_source_label)
+        source_details.addRow("Role", self._role_combo)
+        source_details.addRow("Adapter Match", self._selected_adapter_label)
+        source_layout.addLayout(source_details)
+
+        metadata_group = QGroupBox("Metadata Overrides", self)
+        metadata_layout = QFormLayout(metadata_group)
+        for key, label in self._METADATA_OVERRIDE_FIELDS:
+            edit = QLineEdit(self)
+            edit.setPlaceholderText(label)
+            edit.textChanged.connect(lambda value, field_key=key: self._screen_model.set_metadata_override(field_key, value))
+            metadata_layout.addRow(label, edit)
+            self._metadata_override_edits[key] = edit
 
         issue_group = QGroupBox("Assembly Issues", self)
         issue_layout = QVBoxLayout(issue_group)
@@ -101,6 +133,7 @@ class SessionAssemblyDialog(QDialog):
         layout.addWidget(summary_group)
         layout.addWidget(input_group, stretch=1)
         layout.addWidget(source_group, stretch=1)
+        layout.addWidget(metadata_group)
         layout.addWidget(issue_group, stretch=1)
         layout.addLayout(action_row)
 
@@ -172,10 +205,15 @@ class SessionAssemblyDialog(QDialog):
         for source in state.sources:
             adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "no adapter match"
             item = QListWidgetItem(
-                f"[{source.suggested_pathway}] {source.label} -> {adapter_summary}"
+                f"[{source.suggested_pathway}] {source.label} ({source.role}) -> {adapter_summary}"
             )
             item.setToolTip(str(source.location))
+            item.setData(Qt.ItemDataRole.UserRole, source.source_id)
             self._source_list.addItem(item)
+        if self._source_list.count() > 0:
+            self._source_list.setCurrentRow(0)
+        else:
+            self._sync_selected_source()
 
         self._issue_list.clear()
         for issue in state.issues:
@@ -184,5 +222,47 @@ class SessionAssemblyDialog(QDialog):
                 item.setToolTip(str(issue.location))
             self._issue_list.addItem(item)
 
+        for key, edit in self._metadata_override_edits.items():
+            with QSignalBlocker(edit):
+                next_value = state.metadata_overrides.get(key, "")
+                if edit.text() != next_value:
+                    edit.setText(next_value)
+
         self._remove_selected_button.setEnabled(self._input_list.count() > 0)
         self._create_button.setEnabled(state.can_create_session)
+
+    def _sync_selected_source(self, *_args) -> None:
+        selected_item = self._source_list.currentItem()
+        if selected_item is None:
+            self._selected_source_label.setText("No source selected.")
+            self._selected_adapter_label.setText("No adapter match")
+            with QSignalBlocker(self._role_combo):
+                self._role_combo.setCurrentText("primary")
+            self._role_combo.setEnabled(False)
+            return
+
+        source_id = selected_item.data(Qt.ItemDataRole.UserRole)
+        source = next((item for item in self._screen_model.state.sources if item.source_id == source_id), None)
+        if source is None:
+            self._selected_source_label.setText("No source selected.")
+            self._selected_adapter_label.setText("No adapter match")
+            with QSignalBlocker(self._role_combo):
+                self._role_combo.setCurrentText("primary")
+            self._role_combo.setEnabled(False)
+            return
+
+        self._selected_source_label.setText(f"{source.label}\n{source.location}")
+        adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "No adapter match"
+        self._selected_adapter_label.setText(adapter_summary)
+        with QSignalBlocker(self._role_combo):
+            self._role_combo.setCurrentText(source.role)
+        self._role_combo.setEnabled(True)
+
+    def _apply_selected_role(self, role: str) -> None:
+        selected_item = self._source_list.currentItem()
+        if selected_item is None:
+            return
+        source_id = selected_item.data(Qt.ItemDataRole.UserRole)
+        if source_id is None:
+            return
+        self._screen_model.set_source_role(str(source_id), role)

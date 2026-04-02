@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from nwbforge.adapters import AdapterRegistry
 from nwbforge.app.services.errors import AdapterSelectionError, SourceNotFoundError
 from nwbforge.domain.contracts import SourceInspectionService
-from nwbforge.domain.models import ConversionSession, ExtractionResult, SourceReference
+from nwbforge.domain.models import ConversionSession, ExtractedField, ExtractionResult, SourceReference
 
 
 class RegistrySourceInspectionService(SourceInspectionService):
@@ -17,7 +19,8 @@ class RegistrySourceInspectionService(SourceInspectionService):
     def inspect(self, session: ConversionSession, source_id: str) -> ExtractionResult:
         source = self._find_source(session, source_id)
         adapter = self._select_adapter(source)
-        return adapter.inspect(source)
+        result = adapter.inspect(source)
+        return self._apply_metadata_overrides(session, source, result)
 
     @staticmethod
     def _find_source(session: ConversionSession, source_id: str) -> SourceReference:
@@ -44,3 +47,29 @@ class RegistrySourceInspectionService(SourceInspectionService):
                 f"Multiple adapters matched source '{source.source_id}': {adapter_ids}."
             )
         return matches[0]
+
+    @staticmethod
+    def _apply_metadata_overrides(
+        session: ConversionSession,
+        source: SourceReference,
+        result: ExtractionResult,
+    ) -> ExtractionResult:
+        if not session.metadata_overrides:
+            return result
+        if not session.sources or session.sources[0].source_id != source.source_id:
+            return result
+
+        merged_fields = dict(result.fields)
+        for key, value in session.metadata_overrides.items():
+            merged_fields[key] = ExtractedField(
+                key=key,
+                value=value,
+                source_id=source.source_id,
+                path=key,
+                notes=("Applied from desktop metadata override.",),
+            )
+
+        merged_notes = result.notes + (
+            f"Applied {len(session.metadata_overrides)} desktop metadata overrides.",
+        )
+        return replace(result, fields=merged_fields, notes=merged_notes)

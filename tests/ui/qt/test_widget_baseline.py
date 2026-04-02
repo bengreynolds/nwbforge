@@ -9,10 +9,13 @@ from PySide6.QtCore import Qt
 import nwbforge.ui.qt.main_window as main_window_module
 
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
+from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
 from nwbforge.app.services import (
     ExecutionReviewService,
+    JsonSessionAssemblyWorkspaceStore,
     PackageManagementController,
+    SessionAssemblyService,
     SessionPersistenceService,
     UiSettingsService,
 )
@@ -31,7 +34,7 @@ from nwbforge.domain.models import (
     ValidationSummary,
 )
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
-from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SettingsScreenModel
+from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SessionAssemblyScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.qt import MainWindow
 from nwbforge.validation import JsonExecutionReviewArtifactService
@@ -733,6 +736,98 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     assert "session-" in window.conversion_widget._session_label.text()
     assert window.conversion_widget._pathway_label.text() == "supported"
     assert window.conversion_widget._source_count_label.text() == "1"
+    window.close()
+
+
+def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    session = make_hybrid_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path), str(custom_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+
+    dialog._source_list.setCurrentRow(0)
+    qapp.processEvents()
+    dialog._role_combo.setCurrentText("metadata")
+    qapp.processEvents()
+    dialog._source_list.setCurrentRow(1)
+    qapp.processEvents()
+    dialog._role_combo.setCurrentText("primary")
+    qapp.processEvents()
+    dialog._metadata_override_edits["subject.subject_id"].setText("qt-override-mouse-01")
+    qapp.processEvents()
+    dialog._create_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._pathway_label.text() == "hybrid"
+    assert window.conversion_widget._source_role_label.text() == "metadata"
+    assert (
+        window.conversion_widget._screen_model.state.session.metadata_overrides["subject.subject_id"]
+        == "qt-override-mouse-01"
+    )
+    window.close()
+
+
+def test_main_window_restores_new_session_draft(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=JsonSessionAssemblyWorkspaceStore(tmp_path / "state" / "session-draft.json"),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    dialog._role_combo.setCurrentText("metadata")
+    dialog._metadata_override_edits["subject.subject_id"].setText("restored-mouse-01")
+    qapp.processEvents()
+    dialog.reject()
+    qapp.processEvents()
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    assert dialog._input_list.count() == 1
+    assert dialog._role_combo.currentText() == "metadata"
+    assert dialog._metadata_override_edits["subject.subject_id"].text() == "restored-mouse-01"
     window.close()
 
 

@@ -440,7 +440,6 @@ class MainWindow(QMainWindow):
             self._settings_dialog.hide()
 
         if state.active_dialog == "new_session" and not self._session_assembly_dialog.isVisible():
-            self._session_assembly_screen_model.reset()
             self._session_assembly_dialog.show()
             self._session_assembly_dialog.raise_()
             self._session_assembly_dialog.activateWindow()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import re
 
@@ -32,6 +33,7 @@ class SessionAssemblySource:
     matching_adapter_ids: tuple[str, ...]
     suggested_adapter_id: str | None
     suggested_pathway: ConversionPathway
+    role: str = "primary"
     needs_review: bool = False
 
 
@@ -44,14 +46,64 @@ class SessionAssemblyDraft:
     pathway: ConversionPathway
     sources: tuple[SessionAssemblySource, ...]
     issues: tuple[SessionAssemblyIssue, ...]
+    metadata_overrides: dict[str, str]
 
     @property
     def can_create_session(self) -> bool:
         return bool(self.sources) and not any(issue.severity is IssueSeverity.ERROR for issue in self.issues)
 
 
+@dataclass(frozen=True, slots=True)
+class SessionAssemblyWorkspace:
+    """Persistable in-progress state for the direct-ingest session builder."""
+
+    selected_paths: tuple[Path, ...]
+    session_id: str = ""
+    title: str = ""
+    source_roles: dict[str, str] | None = None
+    metadata_overrides: dict[str, str] | None = None
+
+
+class JsonSessionAssemblyWorkspaceStore:
+    """Persist in-progress session assembly state for desktop reopen flows."""
+
+    def __init__(self, workspace_path: Path) -> None:
+        self._workspace_path = workspace_path
+
+    def save(self, workspace: SessionAssemblyWorkspace) -> None:
+        payload = {
+            "selected_paths": [str(path) for path in workspace.selected_paths],
+            "session_id": workspace.session_id,
+            "title": workspace.title,
+            "source_roles": dict(workspace.source_roles or {}),
+            "metadata_overrides": dict(workspace.metadata_overrides or {}),
+        }
+        self._workspace_path.parent.mkdir(parents=True, exist_ok=True)
+        self._workspace_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    def load(self) -> SessionAssemblyWorkspace | None:
+        if not self._workspace_path.exists():
+            return None
+        payload = json.loads(self._workspace_path.read_text(encoding="utf-8"))
+        return SessionAssemblyWorkspace(
+            selected_paths=tuple(Path(path) for path in payload.get("selected_paths", ())),
+            session_id=str(payload.get("session_id", "")),
+            title=str(payload.get("title", "")),
+            source_roles={str(key): str(value) for key, value in dict(payload.get("source_roles", {})).items()},
+            metadata_overrides={
+                str(key): str(value) for key, value in dict(payload.get("metadata_overrides", {})).items()
+            },
+        )
+
+    def clear(self) -> None:
+        if self._workspace_path.exists():
+            self._workspace_path.unlink()
+
+
 class SessionAssemblyService:
     """Inspect selected paths and assemble a suggested conversion-session draft."""
+
+    _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
 
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
@@ -62,16 +114,28 @@ class SessionAssemblyService:
         *,
         session_id: str | None = None,
         title: str | None = None,
+        source_roles: dict[str, str] | None = None,
+        metadata_overrides: dict[str, str] | None = None,
     ) -> SessionAssemblyDraft:
         """Build a suggested session draft from one or more selected files or folders."""
 
         normalized_paths = self._normalize_paths(selected_paths)
         draft_sources: list[SessionAssemblySource] = []
         issues: list[SessionAssemblyIssue] = []
+        normalized_source_roles = {
+            str(key): self._normalize_source_role(value)
+            for key, value in (source_roles or {}).items()
+        }
+        normalized_metadata_overrides = {
+            str(key): str(value).strip()
+            for key, value in (metadata_overrides or {}).items()
+            if str(value).strip()
+        }
 
         for index, path in enumerate(normalized_paths, start=1):
+            source_id = self._build_source_id(path, draft_sources)
             source_reference = SourceReference(
-                source_id=self._build_source_id(path, draft_sources),
+                source_id=source_id,
                 location=path,
                 source_type=SourceType.DIRECTORY if path.is_dir() else SourceType.FILE,
                 label=path.name,
@@ -81,6 +145,7 @@ class SessionAssemblyService:
             suggested_pathway = self._suggest_source_pathway(matches)
             suggested_adapter_id = matching_ids[0] if len(matching_ids) == 1 else None
             needs_review = len(matching_ids) != 1
+            role = normalized_source_roles.get(source_id, self._default_role_for_index(index))
 
             if not matching_ids:
                 issues.append(
@@ -116,6 +181,7 @@ class SessionAssemblyService:
                     matching_adapter_ids=matching_ids,
                     suggested_adapter_id=suggested_adapter_id,
                     suggested_pathway=suggested_pathway,
+                    role=role,
                     needs_review=needs_review,
                 )
             )
@@ -131,6 +197,14 @@ class SessionAssemblyService:
                     severity=IssueSeverity.ERROR,
                 )
             )
+        elif not any(source.role == "primary" for source in draft_sources):
+            issues.append(
+                SessionAssemblyIssue(
+                    code="session-assembly-no-primary-source",
+                    message="Select at least one primary source before creating a conversion session.",
+                    severity=IssueSeverity.ERROR,
+                )
+            )
 
         return SessionAssemblyDraft(
             session_id=suggested_session_id,
@@ -138,6 +212,7 @@ class SessionAssemblyService:
             pathway=self._suggest_session_pathway(tuple(draft_sources)),
             sources=tuple(draft_sources),
             issues=tuple(issues),
+            metadata_overrides=normalized_metadata_overrides,
         )
 
     def create_session(self, draft: SessionAssemblyDraft) -> ConversionSession:
@@ -152,7 +227,7 @@ class SessionAssemblyService:
                 location=source.location,
                 source_type=source.source_type,
                 label=source.label,
-                role="primary",
+                role=source.role,
                 adapter_hint=source.suggested_adapter_id,
             )
             for source in draft.sources
@@ -162,6 +237,7 @@ class SessionAssemblyService:
             pathway=draft.pathway,
             sources=sources,
             title=draft.title,
+            metadata_overrides=dict(draft.metadata_overrides),
         ).transition(status=SessionStatus.SOURCES_ADDED)
 
     @staticmethod
@@ -208,6 +284,19 @@ class SessionAssemblyService:
     def _slugify(value: str) -> str:
         collapsed = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
         return collapsed
+
+    @classmethod
+    def _normalize_source_role(cls, value: str | None) -> str:
+        normalized = str(value or "").strip().lower() or "primary"
+        if normalized not in cls._VALID_SOURCE_ROLES:
+            return "primary"
+        return normalized
+
+    @staticmethod
+    def _default_role_for_index(index: int) -> str:
+        if index == 1:
+            return "primary"
+        return "supplemental"
 
     @staticmethod
     def _suggest_source_pathway(matches) -> ConversionPathway:

@@ -17,6 +17,7 @@ from nwbforge.app.runtime import ThreadedConversionExecutor, ThreadedPackageInst
 from nwbforge.app.services import (
     ConversionPipelineService,
     ExecutionReviewService,
+    JsonSessionAssemblyWorkspaceStore,
     PackageManagementController,
     RegistrySourceInspectionService,
     SessionAssemblyService,
@@ -140,7 +141,10 @@ def build_desktop_services(
     package_screen_model = PackageInstallerScreenModel(package_controller)
 
     registry = build_adapter_registry()
-    session_assembly_screen_model = SessionAssemblyScreenModel(SessionAssemblyService(registry))
+    session_assembly_screen_model = SessionAssemblyScreenModel(
+        SessionAssemblyService(registry),
+        workspace_store=JsonSessionAssemblyWorkspaceStore(app_state_dir / "session-assembly" / "draft.json"),
+    )
     pipeline_service = build_desktop_pipeline_service(registry)
     conversion_executor = ThreadedConversionExecutor(pipeline_service)
     review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())

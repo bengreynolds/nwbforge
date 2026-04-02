@@ -94,6 +94,7 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
             "status": str(session.status),
             "title": session.title,
             "lab_profile": session.lab_profile,
+            "metadata_overrides": dict(session.metadata_overrides),
             "created_at": session.created_at.isoformat(),
             "updated_at": session.updated_at.isoformat(),
             "notes": list(session.notes),
@@ -139,6 +140,11 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
             ),
             title=None if payload.get("title") is None else str(payload["title"]),
             lab_profile=None if payload.get("lab_profile") is None else str(payload["lab_profile"]),
+            metadata_overrides={
+                str(key): str(value)
+                for key, value in dict(payload.get("metadata_overrides", {})).items()
+                if value is not None and str(value).strip()
+            },
             created_at=datetime.fromisoformat(str(payload["created_at"])),
             updated_at=datetime.fromisoformat(str(payload["updated_at"])),
             notes=tuple(str(note) for note in payload.get("notes", ())),

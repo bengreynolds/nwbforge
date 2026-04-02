@@ -314,6 +314,29 @@ def test_pipeline_build_preview_chains_existing_services(tmp_path: Path) -> None
     )
 
 
+def test_pipeline_build_preview_applies_session_metadata_overrides(tmp_path: Path) -> None:
+    session = make_manifest_session(tmp_path)
+    session = ConversionSession(
+        session_id=session.session_id,
+        pathway=session.pathway,
+        status=session.status,
+        sources=session.sources,
+        title=session.title,
+        metadata_overrides={
+            "subject.subject_id": "override-mouse-01",
+            "subject.species": "Mus musculus",
+            "session.experimenter": "Reviewer, Alice",
+        },
+    )
+
+    preview = make_pipeline().build_preview(session)
+
+    assert preview.normalized_metadata.subject.subject_id is not None
+    assert preview.normalized_metadata.subject.subject_id.value == "override-mouse-01"
+    assert preview.normalized_metadata.session.experimenter is not None
+    assert preview.normalized_metadata.session.experimenter.value == "Reviewer, Alice"
+
+
 def test_pipeline_evaluate_outputs_marks_completed_for_valid_artifacts(tmp_path: Path) -> None:
     pipeline = make_pipeline()
     preview = pipeline.build_preview(make_manifest_session(tmp_path))
