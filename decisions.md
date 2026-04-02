@@ -983,6 +983,20 @@ Consequences:
 - `Open Session...` remains for testing fixtures and saved-state compatibility, but `New Session` is now the intended start of the primary workflow
 - richer grouping, source-role editing, and metadata override remain explicit follow-on work rather than being implied by the first direct-ingest slice
 
+### DEC-079: Keep first-pass direct-ingest overrides session-wide and persist in-progress drafts
+Status: Accepted
+
+Reasoning:
+- The new desktop ingest path needed to move beyond path selection into real user-controlled behavior before preview/build, but a full source-specific metadata editing model would add more complexity than the current product milestone needs.
+- Session-wide overrides for core canonical fields provide a simple first pass that works across supported, custom, and hybrid sessions without inventing source-specific conflict semantics too early.
+- `New Session` should behave like a real workspace entry point, not a modal that discards in-progress work every time it is reopened.
+
+Consequences:
+- the direct-ingest workflow now supports source-role assignment for `primary`, `supplemental`, and `metadata` contributions
+- assembled `ConversionSession` objects now carry session-wide metadata overrides into preview/build, where they are applied through the inspection pipeline
+- direct-ingest draft state now persists under app state and reopens when `New Session` is shown again
+- source-specific metadata disagreement handling and explicit saved-project semantics remain follow-on work
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 

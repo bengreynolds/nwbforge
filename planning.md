@@ -177,8 +177,8 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, and draft session creation
-- richer grouping controls, role assignment, and metadata override remain follow-on work
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, and draft session creation
+- in-progress `New Session` drafts now persist under app state and reopen with their selected inputs and override values instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
 
@@ -249,7 +249,8 @@ Current status:
 - first-pass internal testing may continue to use checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` examples plus equivalent desktop session descriptors
 - this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
 - the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
-- the first concrete version of that milestone is now implemented, but it still needs richer grouping, source-role editing, and metadata override before JSON-first testing paths can be fully demoted in day-to-day use
+- the first concrete version of that milestone is now implemented and now includes initial source-role editing, session-wide metadata overrides, and persisted draft reopen behavior
+- richer grouping, source-specific metadata disagreement handling, and explicit saved-project semantics remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
 - if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
 
 ### Testing baseline for first-pass handoff
@@ -1051,7 +1052,7 @@ Current status:
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
 - This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
 - The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
-- The first supported-path direct-ingest slice can now assemble manifest-backed sessions from file/folder selection through `New Session`, but broader supported-path metadata editing remains follow-on work
+- The first supported-path direct-ingest slice can now assemble manifest-backed sessions from file/folder selection through `New Session`, with initial session-wide metadata overrides and persisted draft reopen behavior in place
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
@@ -1061,7 +1062,7 @@ Current status:
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
 - The current repo now has a representative end-to-end custom-path desktop workflow slice through `custom_session.json`, but that JSON source should be treated as a narrow bootstrap fixture and possible future saved-state compatibility path rather than the intended long-term user input model
-- The first direct-ingest session assembly slice can now also assemble unmatched or custom-looking inputs into a reviewable custom draft session, though richer custom metadata entry is still required
+- The first direct-ingest session assembly slice can now also assemble unmatched or custom-looking inputs into a reviewable custom draft session, with initial session-wide metadata overrides available before preview/build
 
 ### Phase 5: Hybrid-path MVP
 - Support multi-input conversion sessions
@@ -1071,7 +1072,7 @@ Current status:
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
 - The current repo now has a representative hybrid desktop workflow through `hybrid_session.json`, but that descriptor should be treated as a temporary composition/bootstrap artifact and possible future saved-project compatibility path rather than the intended long-term primary user input model
-- The first direct-ingest session assembly slice can now classify mixed selected inputs as hybrid drafts, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
+- The first direct-ingest session assembly slice can now classify mixed selected inputs as hybrid drafts, assign source roles, and carry session-wide metadata overrides into preview/build, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
 
 ### Phase 6: Department rollout
 - Add lab profiles
@@ -1093,7 +1094,7 @@ Current status:
 - Which validation findings should block export by default for each lab profile or deployment mode?
 - Should app-owned saved state remain internal-only at first, or become an explicit `Save Project` / `Open Project` workflow after direct file/folder ingest lands?
 - How much of source grouping should be automatic versus explicitly confirmed by the user before preview/build?
-- Which metadata overrides should be session-wide versus source-specific when mixed inputs disagree?
+- Which metadata overrides should remain session-wide versus becoming source-specific when mixed inputs disagree?
 
 ## Decisions Log
 

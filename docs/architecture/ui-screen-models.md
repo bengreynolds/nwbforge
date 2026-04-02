@@ -42,7 +42,7 @@ Location: `src/nwbforge/ui/conversion_session.py`
 
 Responsibilities:
 - load a `ConversionSession` into UI-facing state
-- clear the current session explicitly when the shell starts a new session
+- clear the current session explicitly when the desktop workflow starts over, rather than automatically wiping it when `New Session` is opened
 - track source summaries, source details, preview state, execution state, and the selected output path
 - submit preview work through `ConversionExecutor`
 - submit write/validation work through `ConversionExecutor`
@@ -71,15 +71,16 @@ Location: `src/nwbforge/ui/session_assembly.py`
 
 Responsibilities:
 - track currently selected real files and folders for a new conversion session
-- call `SessionAssemblyService` whenever selected inputs, draft session id, or draft title change
+- call `SessionAssemblyService` whenever selected inputs, draft session id, draft title, source roles, or session-wide metadata overrides change
 - expose suggested pathway, source summaries, and reviewable assembly issues to widgets
 - create a real `ConversionSession` once the assembled draft is acceptable
 
 Current scope:
 - one draft session at a time
 - additive path selection plus removal
-- suggested pathway and adapter preview only; richer grouping and metadata override remain follow-on work
-- no persistence yet for draft assembly state
+- source-role assignment is now available for `primary`, `supplemental`, and `metadata` inputs
+- session-wide metadata overrides are now available for a narrow canonical field set before preview/build
+- draft assembly state now persists so `New Session` can reopen in-progress work
 
 ### `SettingsScreenModel`
 
@@ -113,6 +114,7 @@ Responsibilities:
 - `New Session` now opens a real assembly dialog instead of clearing the current screen immediately
 - the shell's recent-session submenu is now rebuilt from settings-backed recent-session state rather than widget-local memory
 - the shell now also owns explicit `New Session` and `Reopen Last Session` actions while the app remains single-session
+- `New Session` now preserves and reopens in-progress direct-ingest drafts rather than resetting on every dialog open
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
 - `src/nwbforge/ui/qt/conversion_session_widget.py` binds one conversion-session workflow into a central panel
 - `src/nwbforge/ui/qt/settings_dialog.py` binds persisted desktop settings into a modal dialog
@@ -134,6 +136,6 @@ The current Qt layer is intentionally thin:
 
 ## Immediate follow-on work
 
-1. Expand direct session assembly into richer grouping, role assignment, and metadata-override workflows.
+1. Expand direct session assembly from the current role-assignment and session-wide override baseline into richer grouping and source-specific metadata workflows.
 2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
-3. Strengthen multi-source presentation and metadata-override workflows once direct session assembly fully replaces JSON-first startup as the primary UX.
+3. Strengthen multi-source presentation and source-specific metadata workflows once direct session assembly fully replaces JSON-first startup as the primary UX.

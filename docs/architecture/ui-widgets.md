@@ -26,6 +26,7 @@ Responsibilities:
 - rebuild the `Open Recent` submenu from persisted session-history state
 - expose explicit `New Session` and `Reopen Last Session` actions
 - route `New Session` into the direct-ingest session-assembly workflow instead of treating it as a simple screen reset
+- preserve in-progress direct-ingest drafts when `New Session` is reopened
 
 ### `SessionAssemblyDialog`
 
@@ -152,6 +153,6 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Expand the new-session assembly dialog into richer grouping, metadata-override, and saved-project workflows.
-2. Improve multi-source/hybrid provenance presentation and metadata-override UX without losing the current source/session clarity.
+1. Expand the new-session assembly dialog from the current role-assignment, narrow metadata-override, and draft-reopen baseline into richer grouping and saved-project workflows.
+2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.
