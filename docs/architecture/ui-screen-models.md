@@ -57,7 +57,9 @@ Responsibilities:
 - project validation issues into UI-facing acknowledgement items
 - project pending mixed-source normalized conflicts into a dedicated metadata-review workspace
 - apply and clear session-wide metadata overrides directly from that metadata-review workspace
+- apply manual typed session-wide metadata overrides directly from that metadata-review workspace
 - apply and clear source-specific metadata overrides directly from that metadata-review workspace
+- project override-resolution summaries so widgets can distinguish pending conflicts from already-resolved ones
 - project generated provenance artifacts into UI-facing artifact items
 - capture reviewer name, rationale, override, and acknowledgement state for review submission
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
@@ -73,6 +75,7 @@ Current scope:
 - the same screen model now supports demo sessions plus real supported/custom/hybrid desktop sessions loaded through the desktop bootstrap module
 - persistence failures are surfaced as translated user-facing errors rather than being swallowed inside the screen model
 - recovered state currently restores latest artifacts, validation issues, review status, and last known output path without attempting to recreate a full execution object
+- metadata review now supports both session-wide and source-specific override actions, but it is still not a full field-history or conflict-policy engine
 
 ### `SessionAssemblyScreenModel`
 
@@ -84,6 +87,7 @@ Responsibilities:
 - persist and restore explicit direct-ingest project files
 - carry source-specific metadata overrides for selected sources
 - carry explicit group-confirmation state for detected dataset groups
+- carry dataset-kind and anchor-path context for detected groups
 - expose suggested pathway, source summaries, and reviewable assembly issues to widgets
 - create a real `ConversionSession` once the assembled draft is acceptable
 
@@ -95,6 +99,7 @@ Current scope:
 - source-specific metadata overrides are now available for the same narrow canonical field set
 - first-class direct-ingest groups are now available for the draft workflow, including group pathway/count summaries and review flags
 - bulk group actions are now available for renaming a detected group, confirming it, splitting selected sources into individual groups, and moving selected sources into a named group
+- reviewable grouped bundles now block draft session creation until confirmed
 - draft assembly state now persists so `New Session` can reopen in-progress work
 - explicit saved-project identity now persists through reopened draft state as well
 

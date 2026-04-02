@@ -98,6 +98,9 @@ Completed:
 - Added direct-ingest split actions so selected sources can be broken back into individual dataset groups
 - Added first source-specific metadata-resolution actions from the post-preview metadata-review workspace
 - Expanded metadata-review status summaries to show both session-wide and source-specific override state
+- Added explicit dataset-group kind and anchor-path summaries to direct ingest so groups read more like real bundles than loose labels
+- Added a direct-ingest confirmation gate so reviewable grouped bundles must be confirmed before a session can be created
+- Added manual session-override entry and one-click source-to-source override actions in the metadata-review workspace
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
 - Focused tests for session, normalization, mapping, provenance, and validation models
@@ -133,6 +136,7 @@ Next:
 - Direct ingest now has explicit saved-project behavior through app-owned `.nwbforge-project.json` files, with open/save/recent project desktop flows layered on top of the in-progress draft workspace.
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
 - Direct ingest now also has first-pass dataset-level grouping actions, including selected-group rename plus create/move flows for selected sources, explicit group confirmation, and selected-source split actions on top of heuristic grouping and first-class group summaries.
+- Direct ingest groups now also surface dataset kind and anchor-path context, and reviewable multi-source bundles must be confirmed before a session can be created from `New Session`.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Supported NeuroConv routes now use category-first package layout for the `behavior`, `tabular`, and `media` families, while keeping stable public adapter exports.
@@ -210,7 +214,7 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation, per-source grouping correction, selected-source split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows

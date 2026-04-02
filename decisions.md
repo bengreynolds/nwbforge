@@ -1336,3 +1336,17 @@ Consequences:
 - the `New Session` dialog now supports confirming groups and splitting selected sources back into individual groups
 - the post-preview metadata-review workspace now supports source-specific override actions in addition to the existing session-wide override path
 - fuller dataset modeling and richer conflict-resolution history remain follow-on work
+
+### DEC-105: Require confirmation for reviewable multi-source bundles and broaden metadata-review actions before local-app signoff
+Status: Accepted
+
+Reasoning:
+- Direct-ingest grouping was still too easy to ignore; users could create sessions from heuristic multi-source bundles without explicitly acknowledging them.
+- The metadata-review workspace had become useful, but it still favored one narrow override path instead of deliberate per-field decisions.
+- A stronger local-only app needs clearer bundle semantics and a more truthful per-field resolution surface before broader internal testing.
+
+Consequences:
+- direct-ingest groups now expose dataset kind and anchor-path context in addition to label/pathway summaries
+- reviewable auto-grouped or mixed-pathway bundles now block session creation until they are explicitly confirmed
+- the metadata-review workspace now supports manual session overrides, one-click source-to-source override actions, and clearer override-count summaries
+- fuller dataset/session modeling and true conflict-resolution history remain follow-on work
