@@ -1431,3 +1431,16 @@ Consequences:
 - the `media` family now includes `Videos` alongside still-image and audio support
 - the `imaging` family now includes `HDF5 Imaging` alongside `ScanImage`
 - new optional routes should continue to land through category-first family modules plus package-catalog gates rather than unconditional registry growth
+
+### DEC-112: Prefer distinctive source-pattern routes before adding generic overlapping TIFF backbones
+Status: Accepted
+
+Reasoning:
+- Optional route growth now needs to improve practical ingest coverage without flooding direct ingest with ambiguous adapter matches.
+- Several imaging routes in NeuroConv share `.tif` or `.tiff` suffixes, but some have stronger directory or sidecar signatures that are safer to expose first.
+- A generic TIFF route is still valuable later, but it should not arrive before more distinctive imaging routes such as Micro-Manager, Miniscope, or Thor are in place.
+
+Consequences:
+- the next imaging-family scaling slice prioritizes `Micro-Manager TIFF`, `Miniscope`, and `Thor`
+- route matching should use the strongest available path/layout hints rather than only suffix matching when overlapping formats exist
+- future generic TIFF-family routes should be evaluated against direct-ingest ambiguity and may need stronger user-review affordances before being exposed

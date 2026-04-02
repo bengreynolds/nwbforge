@@ -35,7 +35,10 @@ Current route package catalog examples:
 - `excel`
 - `hdf5`
 - `image`
+- `micromanager`
+- `miniscope`
 - `sleap`
+- `thor`
 - `videos`
 - `scanimage`
 
