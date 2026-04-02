@@ -76,10 +76,11 @@ Responsibilities:
 - accept real selected files and folders instead of requiring a hand-authored app session descriptor
 - ask the adapter registry which sources can be handled directly
 - suggest a session pathway (`supported`, `custom`, or `hybrid`) from the selected inputs
+- apply first-pass automatic grouping heuristics to related selected inputs before session creation
 - surface no-match and ambiguous-match conditions as reviewable issues
 - build a real `ConversionSession` once the draft is acceptable
 
-This keeps direct-ingest session assembly in the application layer instead of scattering path grouping, source-role decisions, metadata-override handling, and adapter classification logic across widgets or desktop bootstrap helpers.
+This keeps direct-ingest session assembly in the application layer instead of scattering path grouping heuristics, source-role decisions, metadata-override handling, and adapter classification logic across widgets or desktop bootstrap helpers.
 
 ## Design constraints
 
@@ -93,6 +94,6 @@ This keeps direct-ingest session assembly in the application layer instead of sc
 
 ## Immediate follow-on work
 
-1. Expand session assembly from current path selection, source-role assignment, and session-wide metadata overrides into richer grouping and source-specific disagreement workflows.
+1. Expand session assembly from current path selection, heuristic grouping, source-role assignment, and session-wide metadata overrides into richer grouping, sidecar association, and source-specific disagreement workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.

@@ -1101,3 +1101,42 @@ Consequences:
 - direct-ingest planning should treat automatic grouping heuristics as the default first-pass grouping strategy
 - current flat selected-path assembly remains only a narrow first implementation of that direction
 - future grouping work should add confirmation and correction workflows on top of heuristic grouping rather than replacing heuristics with purely manual assembly
+
+### DEC-087: Use parent-folder grouping as the first implemented direct-ingest heuristic
+Status: Accepted
+
+Reasoning:
+- The repo needed a real grouping behavior for internal testing before a richer dataset model or correction workflow existed.
+- Parent-folder and known-session-descriptor grouping is simple, explainable, and less risky than speculative scientific grouping logic.
+- A shallow heuristic is preferable to a purely flat ingest model because it at least exposes likely related inputs early in the `New Session` workflow.
+
+Consequences:
+- `SessionAssemblyService` now assigns first-pass group keys and labels during draft assembly
+- auto-grouping stays reviewable through explicit issues rather than being treated as fully trusted interpretation
+- future grouping work should refine and correct this heuristic baseline rather than reintroducing flat path-to-source assembly as the default
+
+### DEC-088: Reflect source roles in preview provenance before deeper mixed-source policy exists
+Status: Accepted
+
+Reasoning:
+- Once roles influence normalization precedence, provenance should stop pretending that all sources are equivalent.
+- Role-aware provenance ordering and labeling is a small change that improves reviewability without overcommitting to a full mixed-source policy engine.
+- This keeps review and audit output aligned with the current direct-ingest role model.
+
+Consequences:
+- preview provenance now orders input artifacts by `primary > metadata > supplemental`
+- input-artifact descriptions now include source-role context for reviewer clarity
+- grouping behavior and deeper mapping policy remain follow-on work even though provenance is now role-aware
+
+### DEC-089: Expand structured logging into review and persistence during internal testing
+Status: Accepted
+
+Reasoning:
+- Internal testing needs more than runtime-core logs to make failures diagnosable.
+- Review submission and session persistence are core user-visible workflows, so missing logs there would leave obvious triage gaps.
+- A focused expansion into those services gives meaningful observability gains without blocking all forward feature work on complete UI-action instrumentation.
+
+Consequences:
+- review submission and snapshot persistence/loading now emit structured logs with session and decision context
+- the repository should treat logging coverage as improved but still incomplete until broader desktop/UI interaction paths are instrumented
+- future hardening should continue from this boundary instead of treating runtime-core logging as sufficient

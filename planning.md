@@ -185,7 +185,7 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, heuristic-first grouping at the selected-path level, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, heuristic-first parent-folder grouping suggestions, reviewable auto-grouping issues, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs and override values instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
@@ -206,6 +206,11 @@ Required direction:
 - logs, reports, validation output, and review artifacts should be inspectable from the application
 - background execution, progress, and user-facing error handling should be reliable enough for repeated internal use
 - the temporary desktop launcher should remain sufficient for manual testing until formal packaging begins
+
+Current status:
+- latest preview, execution, and review state now persist and recover in the real desktop workflow
+- artifact/report visibility is available from the conversion workspace and shell actions
+- structured logging now covers the runtime core, desktop bootstrap, session assembly, settings persistence, review submission, and session persistence paths, though some desktop interaction paths remain lighter than the target end state
 
 ### Priority 4: Supported-format growth
 
@@ -1068,15 +1073,16 @@ Current status:
 
 The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
 
-### 1. Direct ingest is still flat path-to-source assembly, not real dataset grouping
+### 1. Direct ingest now uses shallow folder-based heuristics, not real dataset grouping
 - Target direction:
   - the app should help users load combinations of files/folders and organize them into one session intentionally
   - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
 - Current implementation:
-  - `SessionAssemblyService` currently treats each selected path as one draft source
-  - there is no explicit grouping UI, no sidecar association workflow, and no dataset-level grouping confirmation step
+  - `SessionAssemblyService` now auto-groups selected inputs by simple path heuristics, primarily parent-folder relationships and known session-descriptor locations
+  - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group
+  - there is still no sidecar association workflow, no dataset-level grouping confirmation step, and no richer dataset model beyond grouped selected paths
 - Why this matters:
-  - the current ingest path is a good first pass for testing, but it is still too shallow for heterogeneous lab datasets
+  - the current ingest path is now proactive enough for testing, but it is still too shallow for heterogeneous lab datasets
 
 ### 2. Source-role semantics are now partial rather than purely descriptive
 - Target direction:
@@ -1085,7 +1091,8 @@ The repository is now in internal-testing mode. The following deviations between
   - source roles are persisted and surfaced in the UI
   - normalization conflicts now use `primary > metadata > supplemental` precedence
   - review UI now explains that precedence explicitly
-  - provenance weighting, grouping behavior, and deeper mapping policy are still mostly role-agnostic
+  - preview provenance now orders source artifacts by role priority and labels them with role context
+  - grouping behavior and deeper mapping policy are still mostly role-agnostic
 - Why this matters:
   - the role control is now honest enough for first-pass review, but it is not yet a full mixed-source policy model
 
@@ -1104,8 +1111,8 @@ The repository is now in internal-testing mode. The following deviations between
   - actionable code paths should emit structured logging rather than relying on only UI state or exceptions
 - Current implementation:
   - logging is present in the core runtime path, supported execution, and executor layers
-  - desktop bootstrap, session assembly, direct-ingest workspace persistence, and settings persistence now emit structured logs as well
-  - persistence, review submission, and several desktop/UI interaction paths are still lighter than the target end state
+  - desktop bootstrap, session assembly, direct-ingest workspace persistence, settings persistence, review submission, and session persistence now emit structured logs as well
+  - several desktop/UI interaction paths are still lighter than the target end state
 - Why this matters:
   - internal testing will generate harder-to-triage failures if only the conversion runtime is well instrumented
 
@@ -1136,7 +1143,7 @@ Current status:
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
 - The current repo now has a representative hybrid desktop workflow through `hybrid_session.json`, but that descriptor should be treated as a temporary composition/bootstrap artifact and possible future saved-project compatibility path rather than the intended long-term primary user input model
-- The first direct-ingest session assembly slice can now classify mixed selected inputs as hybrid drafts, assign source roles, and carry session-wide metadata overrides into preview/build, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
+- The direct-ingest session assembly baseline can now classify mixed selected inputs as hybrid drafts, assign source roles, apply shallow heuristic grouping suggestions, and carry session-wide metadata overrides into preview/build, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
 
 ### Phase 6: Department rollout
 - Add lab profiles
@@ -1157,9 +1164,9 @@ Current status:
 - How should lab vocabularies be versioned and reviewed?
 - Which validation findings should block export by default for each lab profile or deployment mode?
 - Should app-owned saved state remain internal-only at first, or become an explicit `Save Project` / `Open Project` workflow after direct file/folder ingest lands?
-- When should source-role semantics expand beyond review guidance and normalization precedence into provenance weighting, grouping, and deeper mapping policy?
+- When should source-role semantics expand beyond review guidance, normalization precedence, and provenance ordering into grouping and deeper mapping policy?
 - Which metadata overrides should remain session-wide versus becoming source-specific when mixed inputs disagree?
-- How broad does structured logging need to be before internal testing is considered adequately instrumented?
+- How broad does structured logging need to be before internal testing is considered adequately instrumented beyond the current runtime, review, persistence, and session-assembly coverage?
 
 ## Decisions Log
 
