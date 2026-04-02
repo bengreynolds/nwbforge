@@ -41,10 +41,14 @@ class ConversionSessionWidget(QWidget):
         parent=None,
         *,
         output_path_selector: Callable[[Path | None], Path | None] | None = None,
+        artifact_opener: Callable[[Path], bool] | None = None,
+        artifact_revealer: Callable[[Path], bool] | None = None,
     ) -> None:
         super().__init__(parent)
         self._screen_model = screen_model
         self._output_path_selector = output_path_selector
+        self._artifact_opener = artifact_opener
+        self._artifact_revealer = artifact_revealer
 
         self._session_label = QLabel("No session loaded.", self)
         self._pathway_label = QLabel("Not available.", self)
@@ -512,11 +516,17 @@ class ConversionSessionWidget(QWidget):
         path = self._selected_artifact_path()
         if path is None:
             return
+        if self._artifact_opener is not None:
+            self._artifact_opener(path)
+            return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
 
     def _reveal_selected_artifact(self) -> None:
         path = self._selected_artifact_path()
         if path is None:
+            return
+        if self._artifact_revealer is not None:
+            self._artifact_revealer(path)
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
 
@@ -531,5 +541,8 @@ class ConversionSessionWidget(QWidget):
     def _open_artifact_by_type(self, artifact_type: str) -> None:
         path = self._artifact_path_for_type(artifact_type)
         if path is None:
+            return
+        if self._artifact_opener is not None:
+            self._artifact_opener(path)
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))

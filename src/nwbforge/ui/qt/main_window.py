@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
 
 from nwbforge.domain.models import ConversionSession
@@ -72,6 +73,8 @@ class MainWindow(QMainWindow):
             self._conversion_screen_model,
             self,
             output_path_selector=self._choose_output_path,
+            artifact_opener=self._open_artifact_path,
+            artifact_revealer=self._reveal_artifact_path,
         )
         self.setCentralWidget(self._conversion_widget)
 
@@ -322,6 +325,73 @@ class MainWindow(QMainWindow):
             action.triggered.connect(lambda checked=False, value=path_text: self._load_session(Path(value)))
             self._recent_sessions_menu.addAction(action)
             self._recent_session_actions.append(action)
+
+    def _open_artifact_path(self, path: Path) -> bool:
+        return self._open_desktop_path(
+            path,
+            title="Artifact Open Error",
+            missing_message="The selected artifact no longer exists.",
+            failure_message="The selected artifact could not be opened.",
+            category="artifact",
+        )
+
+    def _reveal_artifact_path(self, path: Path) -> bool:
+        return self._open_desktop_path(
+            path.parent,
+            title="Artifact Folder Error",
+            missing_message="The artifact folder no longer exists.",
+            failure_message="The artifact folder could not be opened.",
+            category="artifact",
+        )
+
+    def _open_desktop_path(
+        self,
+        path: Path,
+        *,
+        title: str,
+        missing_message: str,
+        failure_message: str,
+        category: str,
+    ) -> bool:
+        resolved_path = path.resolve()
+        if not resolved_path.exists():
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="artifact:error",
+                    message=missing_message,
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                ),
+                user_error=UserFacingError(
+                    title=title,
+                    message=missing_message,
+                    detail=str(resolved_path),
+                    category=category,
+                ),
+            )
+            return False
+
+        opened = QDesktopServices.openUrl(QUrl.fromLocalFile(str(resolved_path)))
+        if opened:
+            return True
+
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="artifact:error",
+                message=failure_message,
+                percent_complete=100,
+                is_busy=False,
+                is_error=True,
+            ),
+            user_error=UserFacingError(
+                title=title,
+                message=failure_message,
+                detail=str(resolved_path),
+                category=category,
+            ),
+        )
+        return False
 
     @staticmethod
     def _default_session_loader(session_path: Path) -> ConversionSession:

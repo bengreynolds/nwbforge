@@ -6,6 +6,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 
 from PySide6.QtCore import Qt
+import nwbforge.ui.qt.main_window as main_window_module
 
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
@@ -828,6 +829,8 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
 def test_conversion_widget_opens_selected_artifact_and_folder(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     artifact_path = tmp_path / "reports" / "validation-report.json"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("{}", encoding="utf-8")
     preview, execution = make_preview_and_execution(
         session,
         generated_artifacts=(
@@ -840,7 +843,8 @@ def test_conversion_widget_opens_selected_artifact_and_folder(qapp, tmp_path: Pa
     )
     opened_urls: list[str] = []
     monkeypatch.setattr(
-        "nwbforge.ui.qt.conversion_session_widget.QDesktopServices.openUrl",
+        main_window_module.QDesktopServices,
+        "openUrl",
         lambda url: opened_urls.append(url.toLocalFile()) or True,
     )
 
@@ -873,6 +877,8 @@ def test_conversion_widget_opens_selected_artifact_and_folder(qapp, tmp_path: Pa
 def test_conversion_widget_opens_validation_and_review_artifacts(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     validation_report = tmp_path / "reports" / "validation-report.json"
+    validation_report.parent.mkdir(parents=True, exist_ok=True)
+    validation_report.write_text("{}", encoding="utf-8")
     issue = ValidationIssue(
         code="nwbinspector-warning",
         message="Review the subject metadata.",
@@ -900,7 +906,8 @@ def test_conversion_widget_opens_validation_and_review_artifacts(qapp, tmp_path:
     )
     opened_urls: list[str] = []
     monkeypatch.setattr(
-        "nwbforge.ui.qt.conversion_session_widget.QDesktopServices.openUrl",
+        main_window_module.QDesktopServices,
+        "openUrl",
         lambda url: opened_urls.append(url.toLocalFile()) or True,
     )
     conversion_screen = ConversionSessionScreenModel(
@@ -935,4 +942,91 @@ def test_conversion_widget_opens_validation_and_review_artifacts(qapp, tmp_path:
 
     assert opened_urls[0] == validation_report.as_posix()
     assert opened_urls[1].endswith("review-decision.json")
+    window.close()
+
+
+def test_conversion_widget_surfaces_missing_artifact_error(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    missing_artifact = tmp_path / "reports" / "missing-validation-report.json"
+    preview, execution = make_preview_and_execution(
+        session,
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=missing_artifact,
+                description="Missing validation report artifact",
+            ),
+        ),
+    )
+    shell_model = DesktopShellModel()
+    window = MainWindow(
+        shell_model,
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    window.conversion_widget._execute_button.click()
+    qapp.processEvents()
+
+    window.conversion_widget._open_validation_report_button.click()
+    qapp.processEvents()
+
+    assert shell_model.state.last_user_error is not None
+    assert shell_model.state.last_user_error.title == "Artifact Open Error"
+    assert shell_model.state.last_user_error.message == "The selected artifact no longer exists."
+    assert shell_model.state.status_bar.is_error is True
+    window.close()
+
+
+def test_conversion_widget_surfaces_open_failure_error(qapp, tmp_path: Path, monkeypatch) -> None:
+    session = make_session(tmp_path)
+    artifact_path = tmp_path / "reports" / "validation-report.json"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("{}", encoding="utf-8")
+    preview, execution = make_preview_and_execution(
+        session,
+        generated_artifacts=(
+            ProvenanceArtifact(
+                artifact_type="validation_report",
+                location=artifact_path,
+                description="Validation report artifact",
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        main_window_module.QDesktopServices,
+        "openUrl",
+        lambda url: False,
+    )
+    shell_model = DesktopShellModel()
+    window = MainWindow(
+        shell_model,
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    window.conversion_widget._execute_button.click()
+    qapp.processEvents()
+
+    window.conversion_widget._open_validation_report_button.click()
+    qapp.processEvents()
+
+    assert shell_model.state.last_user_error is not None
+    assert shell_model.state.last_user_error.title == "Artifact Open Error"
+    assert shell_model.state.last_user_error.message == "The selected artifact could not be opened."
+    assert shell_model.state.status_bar.is_error is True
     window.close()
