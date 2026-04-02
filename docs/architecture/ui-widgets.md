@@ -24,11 +24,13 @@ Responsibilities:
 - host a manually testable real desktop composition built from the current backend services
 - open and save explicit direct-ingest project files from the shell
 - open supported, custom, and hybrid session fixtures or saved-state descriptors from disk through `File -> Open Session...`
+- launch a standalone NWB viewer window through `File -> Open NWB Viewer...`
 - rebuild the `Open Recent Project` submenu from persisted project-history state
 - rebuild the `Open Recent` submenu from persisted session-history state
 - expose explicit `New Session` and `Reopen Last Session` actions
 - route `New Session` into the direct-ingest session-assembly workflow instead of treating it as a simple screen reset
 - preserve in-progress direct-ingest drafts when `New Session` is reopened
+- open generated `.nwb` artifacts in the app-owned viewer window instead of delegating them to the operating system
 
 ### `SessionAssemblyDialog`
 
@@ -94,6 +96,26 @@ Responsibilities:
 - render `InMemoryUiLogSink` entries as plain text
 - support the shell's optional log-viewer workflow
 
+### `NwbViewerWindow`
+
+Location: `src/nwbforge/ui/qt/nwb_viewer_window.py`
+
+Responsibilities:
+- host a standalone read-only NWB viewer lifecycle
+- support `File -> Open NWB...` and `Reload`
+- render a lazy tree over major NWB sections and child nodes
+- keep all branches collapsed by default except the initial metadata expansion
+- render selected-node details through a dedicated detail pane
+
+### `NwbDetailPane`
+
+Location: `src/nwbforge/ui/qt/nwb_detail_pane.py`
+
+Responsibilities:
+- render summary metadata for the selected NWB node
+- show text/scalar detail, table previews, and bounded array/time-series previews
+- stay backend-thin by consuming structured node-detail payloads instead of traversing the file directly
+
 ### Shell-level error presentation
 
 Location: `src/nwbforge/ui/qt/main_window.py`
@@ -120,6 +142,7 @@ Responsibilities:
 - The conversion-session widget should preserve clear workflow sections instead of collapsing status, review, and artifacts into one undifferentiated stacked form.
 - The conversion-session widget should prefer desktop navigation patterns such as tabs when they make the review and artifact workflow easier to scan.
 - The conversion-session widget should keep enough source/session context visible that supported, custom, and later hybrid sessions remain readable without opening a second inspector view.
+- The standalone NWB viewer should remain generic and read-only; validation, conversion, and workflow-specific controls should stay outside that window.
 
 ## Testing baseline
 
@@ -143,6 +166,7 @@ Responsibilities:
   - conversion-session review submission bindings
   - source-specific direct-ingest metadata override bindings
   - direct-ingest project recovery through reopened draft state
+  - standalone NWB viewer file-open behavior, default collapsed tree behavior, metadata-first initial expansion, and shell-level launch from generated `.nwb` artifacts
 
 ## Current limitations
 
@@ -150,12 +174,14 @@ Responsibilities:
 - no persisted window/layout state yet
 - file-backed logging is opt-in and does not yet have an app-level retention/configuration policy
 - no end-to-end packaged desktop entry point yet
+- standalone NWB viewing still uses generic previews rather than richer modality-specific renderers
 
 ## Temporary manual launcher
 
 - `scripts/run_app.py` provides a temporary Python entry point for manual desktop testing
 - it now bootstraps the real desktop service composition from `src/nwbforge/app/desktop.py`
 - it loads either a user-provided `session_manifest.json`, `custom_session.json`, or `hybrid_session.json` path via `--session`, a direct-ingest project via `--project`, or the default direct-ingest `New Session` workflow
+- it can also open a standalone preloaded viewer window through `--view-nwb`
 - it should be treated as a development aid, not as the final application startup path
 
 ## Ingest direction
@@ -169,4 +195,5 @@ Responsibilities:
 
 1. Expand the new-session assembly dialog from the current role-assignment, group-summary, group-action baseline, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset confirmation and field-by-field disagreement-resolution workflows.
 2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
-3. Add persisted window/layout state once the core desktop information architecture settles.
+3. Add richer NWB node renderers only where the generic viewer proves insufficient.
+4. Add persisted window/layout state once the core desktop information architecture settles.

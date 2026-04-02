@@ -99,6 +99,19 @@ Responsibilities:
 
 This gives the desktop app a truthful `Save Project` / `Open Project` path without treating JSON bootstrap fixtures as the long-term primary ingest model.
 
+### `NwbFileController`
+
+Location: `src/nwbforge/app/services/nwb_viewer.py`
+
+Responsibilities:
+- open `.nwb` files through `PyNWB` in read-only mode
+- hold the active file handle for a standalone viewer session
+- expose lazy top-level and child tree nodes over the loaded `NWBFile`
+- return structured node-detail payloads for tree selections
+- keep generic file inspection separate from validation and conversion logic
+
+This keeps standalone NWB viewing backend-first and widget-thin instead of embedding PyNWB traversal rules directly inside the Qt layer.
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
@@ -108,9 +121,11 @@ This gives the desktop app a truthful `Save Project` / `Open Project` path witho
 - package-install execution should expose progress and user-facing failure contracts rather than leaking raw subprocess behavior into callers
 - future UI setup and package-management screens should use thin controller bindings over backend services instead of embedding planning or runtime wiring in widgets
 - direct file/folder ingestion should go through `SessionAssemblyService` instead of pushing adapter-discovery logic into the Qt layer
+- standalone NWB viewing should go through `NwbFileController` instead of embedding PyNWB file traversal directly in the Qt widgets
 
 ## Immediate follow-on work
 
 1. Expand session assembly from current path selection, heuristic grouping, first-class group summaries, group actions, simple sidecar association, explicit project files, and current session/source override support into richer dataset confirmation and post-preview conflict-resolution workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.
+4. Expand standalone NWB viewing beyond the current generic lazy tree/detail baseline only when a specific richer renderer is justified.

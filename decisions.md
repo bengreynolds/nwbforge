@@ -1283,3 +1283,29 @@ Consequences:
 - `ConversionSessionScreenModel` now supports applying and clearing session-wide overrides from the conversion workspace
 - using a metadata-review resolution action clears stale preview/execution state and prompts the user to rebuild
 - fuller field-by-field conflict policy, source-specific post-preview resolution, and richer resolution history remain follow-on work
+
+### DEC-101: Add a standalone read-only NWB viewer instead of embedding file inspection into the conversion panel
+Status: Accepted
+
+Reasoning:
+- NWB inspection is a legitimate user workflow, but it is distinct from conversion-session authoring and review.
+- Generated outputs and arbitrary external `.nwb` files should use the same viewer path.
+- Keeping the viewer as a separate top-level window preserves a cleaner desktop workflow and avoids bloating the conversion surface.
+
+Consequences:
+- the desktop shell now has `File -> Open NWB Viewer...`
+- generated `.nwb` artifacts now launch an app-owned viewer window instead of delegating immediately to the operating system
+- the main conversion UI stays focused on conversion, review, and artifacts rather than becoming a generic NWB browser
+
+### DEC-102: Use PyNWB-first lazy tree/detail viewing as the baseline NWB inspection architecture
+Status: Accepted
+
+Reasoning:
+- PyNWB is the correct semantic-first access layer for `.nwb` files and should remain the source of truth for generic viewing.
+- A lightweight tree/detail model is enough for the first local-app viewer and avoids introducing notebook-oriented tooling as a hard dependency.
+- Lazy child loading and bounded previews keep the first viewer usable without committing immediately to a heavier rendering stack.
+
+Consequences:
+- `NwbFileController` now opens `.nwb` files in read-only mode through `NWBHDF5IO(..., mode="r", load_namespaces=True)`
+- viewer tree nodes are generated lazily over major NWB sections and immediate child branches
+- richer renderers such as `nwbwidgets` remain optional follow-on work rather than a base viewer dependency

@@ -94,6 +94,7 @@ Completed:
 - Added dataset-level grouping actions in `New Session`, including group rename plus create/move flows over selected sources
 - Added first actionable mixed-source conflict resolution in the metadata-review tab through session-wide override actions on selected source values
 - Polished the desktop review flow so metadata-resolution actions clear stale preview/execution state and explicitly prompt a rebuild
+- Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -111,6 +112,7 @@ Next:
 - Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
 - Deepen direct-ingest grouping from current heuristics and manual correction toward a richer dataset/session model
 - Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and session-wide override actions toward fuller field-by-field conflict resolution
+- Expand the standalone NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
 - Keep release engineering planned but defer implementation until after first-pass internal testing
 
@@ -148,6 +150,8 @@ Next:
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 - The PySide6 shell now also includes a `SessionAssemblyDialog`, so `New Session` begins the direct-ingest workflow by letting users add real files/folders and create a draft `ConversionSession`.
 - The `SessionAssemblyDialog` now also supports dataset-level grouping actions so users can rename a detected group, create a new group from selected sources, or move selected sources into the currently selected group.
+- The desktop shell still does not include a standalone NWB inspection window; NWB-file viewing remains a distinct planned slice rather than an embedded conversion-panel concern.
+- The desktop shell now includes a standalone read-only NWB viewer window that can open arbitrary `.nwb` files through `PyNWB`, launch from the main shell, and inspect generated outputs without embedding NWB browsing into the conversion panel.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
@@ -1148,6 +1152,17 @@ The repository is now in internal-testing mode. The following deviations between
 - Why this matters:
   - project-state behavior is now real, but the compatibility JSON loader is still more prominent than the long-term ingest model in some testing flows
 
+### 6. Standalone NWB viewing is present, but still at a generic first-pass baseline
+- Target direction:
+  - the app should be able to open any valid NWB file into a dedicated top-level viewer window
+  - viewing should use read-only PyNWB access, generic tree/detail browsing, and lazy node expansion rather than embedding file inspection into the conversion workflow surface
+- Current implementation:
+  - the shell now has an app-owned `Open NWB Viewer...` flow and can launch generated `.nwb` artifacts into the same standalone viewer
+  - the viewer now opens `.nwb` files through `PyNWB` in read-only mode, surfaces a generic lazy tree/detail browser, and keeps all branches collapsed by default except the initial metadata node
+  - the current viewer still uses generic text/table previews and does not yet include richer modality-specific renderers or background file-open orchestration
+- Why this matters:
+  - internal testing and local use now have a truthful in-app NWB inspection path, but richer renderers and heavier large-file polish remain follow-on work
+
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
 - Support manual metadata mapping and persistent templates
@@ -1207,6 +1222,7 @@ Implementation references:
 - Orchestration note: [docs/architecture/orchestration-services.md](docs/architecture/orchestration-services.md)
 - UI runtime note: [docs/architecture/ui-runtime-observability.md](docs/architecture/ui-runtime-observability.md)
 - UI screen-model note: [docs/architecture/ui-screen-models.md](docs/architecture/ui-screen-models.md)
+- NWB viewer note: [docs/architecture/nwb-viewer.md](docs/architecture/nwb-viewer.md)
 - Review workflow note: [docs/architecture/review-workflow.md](docs/architecture/review-workflow.md)
 - Session persistence note: [docs/architecture/session-persistence.md](docs/architecture/session-persistence.md)
 - Normalization note: [docs/architecture/normalization-services.md](docs/architecture/normalization-services.md)
