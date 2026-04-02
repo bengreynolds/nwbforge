@@ -4,7 +4,7 @@ Last updated: 2026-04-01
 
 ## Purpose
 
-This note captures the first concrete desktop widget layer under `src/nwbforge/ui/qt/`. The current goal is not full desktop polish; it is to prove that the existing UI-model and runtime contracts support a real cross-platform desktop shell.
+This note captures the current concrete desktop widget layer under `src/nwbforge/ui/qt/`. The goal is no longer only to prove widget bindings; it is also to keep the local desktop app visually coherent enough for serious internal testing.
 
 ## Implemented widgets
 
@@ -14,6 +14,7 @@ Location: `src/nwbforge/ui/qt/main_window.py`
 
 Responsibilities:
 - host the first `QMainWindow` shell
+- apply the shared desktop visual system and workspace header treatment
 - expose the current `File` menu actions
 - bind shell/package/conversion state into the status bar
 - host the conversion-session central widget
@@ -38,6 +39,7 @@ Location: `src/nwbforge/ui/qt/session_assembly_dialog.py`
 
 Responsibilities:
 - let users add files and folders to a new conversion session
+- present direct-ingest work through a cleaner split layout and dedicated grouping/metadata tabs
 - show the suggested session id, title, pathway, source preview, and assembly issues
 - show saved-project path and clean/dirty status
 - show detected dataset-group summaries with pathway and role composition
@@ -56,6 +58,7 @@ Location: `src/nwbforge/ui/qt/conversion_session_widget.py`
 
 Responsibilities:
 - render one loaded conversion session
+- present high-level pathway/stage/validation/artifact metrics before deeper workflow controls
 - show source summaries, selected-source details, and output-path entry
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
 - summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
@@ -85,6 +88,7 @@ Location: `src/nwbforge/ui/qt/package_dialog.py`
 
 Responsibilities:
 - render install mode and preset selection
+- present route-based package setup through cleaner options, route-list, and summary sections
 - render selectable route packages for custom route sets
 - show resolved extras, compatibility issues, and install status
 - submit background installs through `PackageInstallerScreenModel`
@@ -95,6 +99,7 @@ Location: `src/nwbforge/ui/qt/settings_dialog.py`
 
 Responsibilities:
 - render persisted desktop settings for verbose logging and file-log configuration
+- present desktop preferences through a cleaner settings header and grouped form layout
 - manage draft changes through `SettingsScreenModel`
 - save or discard settings without embedding persistence logic in widgets
 
@@ -112,6 +117,7 @@ Location: `src/nwbforge/ui/qt/nwb_viewer_window.py`
 
 Responsibilities:
 - host a standalone read-only NWB viewer lifecycle
+- apply the shared desktop visual system to the generic NWB browser path
 - support `File -> Open NWB...` and `Reload`
 - support an optional `Open Rich Preview` action for the selected node when richer renderer packages are installed
 - render a lazy tree over major NWB sections and child nodes
@@ -187,7 +193,6 @@ Responsibilities:
 
 ## Current limitations
 
-- no toolkit styling or visual design system yet
 - no persisted window/layout state yet
 - file-backed logging is opt-in and does not yet have an app-level retention/configuration policy
 - no end-to-end packaged desktop entry point yet

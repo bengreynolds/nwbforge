@@ -106,6 +106,7 @@ Completed:
 - Added metadata-review filtering, resolution-status/history summaries, and a clear-all-overrides action for one canonical field
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
+- Added a shared Qt visual system with reusable header cards, metric cards, restrained color treatment, and cleaner dialog/workspace composition across the desktop shell
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -130,6 +131,7 @@ Next:
 
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
+- The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner dialog hierarchy, and restrained styling across the shell, ingest flow, viewer, settings, and package-management windows.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
@@ -210,6 +212,7 @@ Required direction:
 - session loading, navigation, output selection, review, validation, settings, and logs should be reachable through clear product-level workflows
 - major conversion surfaces should present summary, status, review, and artifact information intentionally rather than as stacked debug fields
 - major conversion workspaces should use intentional desktop navigation patterns such as tabs or dedicated panes when that improves readability and task focus
+- desktop windows and dialogs should share a consistent visual system so the shell, viewer, settings, package install, and direct-ingest flows read like one product
 - the primary start flow should become `New Conversion Session`, not “prepare an app-specific JSON file by hand”
 - users should be able to add real files and folders incrementally, combine supported and custom inputs in one session, and review the resulting source grouping before preview/build
 - direct-ingest grouping should start with automatic heuristics first, then grow toward richer confirmation and correction workflows rather than starting fully manual
@@ -220,6 +223,7 @@ Current status:
 - current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, grouping-reason/member summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source and selected-group split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
+- the Qt widget layer now also has a shared polished visual treatment with page headers, metric cards, cleaner split layouts, and stronger dialog grouping instead of relying on default stacked utility layouts
 
 ### Priority 2: Custom and hybrid workflows
 

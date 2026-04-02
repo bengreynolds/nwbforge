@@ -1363,3 +1363,16 @@ Consequences:
 - direct-ingest groups now surface grouping reason text, member labels, and whole-group split actions in the `New Session` workflow
 - the metadata-review workspace now supports pending/resolved filtering, explicit resolution-status/history display, and clearing all overrides for one canonical field
 - richer dataset/session modeling and durable field-resolution history remain follow-on work rather than being hidden behind current UI state
+
+### DEC-107: Apply one shared desktop visual system before broader local-app polish
+Status: Accepted
+
+Reasoning:
+- The desktop app had enough behavior to be useful, but it still looked like separate engineering panels rather than one product.
+- A shared visual system is cheaper and more durable than continuing to hand-tune each dialog independently.
+- Local-app polish should improve hierarchy and scanability without introducing a heavy custom widget framework.
+
+Consequences:
+- the Qt layer now uses one shared application stylesheet plus reusable header-card and metric-card helpers
+- the main shell, direct-ingest dialog, package installer, settings dialog, and NWB viewer now share cleaner spacing, restrained color treatment, and stronger section hierarchy
+- future UI polish should extend the shared design system rather than adding one-off widget styling

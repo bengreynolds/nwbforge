@@ -133,6 +133,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Filterable metadata-review controls with per-field resolution status/history and a clear-all-overrides action for one canonical field
 - A standalone read-only NWB viewer window that can inspect arbitrary `.nwb` files through a lazy PyNWB-backed tree/detail browser
 - An optional `nwbwidgets + Panel` rich-preview layer for selected NWB viewer nodes, without making notebook/web tooling part of the base app path
+- A shared Qt visual system with reusable header cards, metric cards, restrained color treatment, and cleaner dialog/workspace hierarchy across the local desktop app
 - A repo-owned `custom_session.json` custom-path workflow that runs through normalization, reviewable mapping, direct PyNWB assembly, validation, provenance, and desktop execution
 - A `hybrid_session.json` hybrid-path workflow that combines supported and custom inputs into one desktop conversion session
 - Richer source/session detail presentation in the desktop conversion panel, including pathway, source count, and selected-source details
@@ -158,7 +159,7 @@ The current application state has now reached the first-pass internal-testing mi
 
 The current planning docs now also include an explicit critical-review audit of the remaining plan-code gaps for internal testing, focused mainly on ingest grouping beyond the current dataset-group action baseline, source-role semantics beyond the current precedence/provenance baseline, conflict resolution beyond the new session-wide metadata-review actions, and remaining structured-logging gaps outside the newly expanded shell/review/persistence coverage.
 
-UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, the core runtime path emits structured logs with stable context payloads, the repo has toolkit-agnostic shell/package/conversion/settings screen models plus a shared UI log-sink/error-presentation layer, and the PySide6 widget layer now renders a real File menu, status bar, progress bar, optional log viewer, settings dialog, package-install dialog, conversion-session panel, shell-level warning dialogs, and an opt-in composite viewer-plus-file logging path. Broader desktop-screen coverage, richer dialog treatment, and app-level log-retention/configuration remain next.
+UI/runtime expectations are now explicit in the plan and partially implemented: long-running conversions can now run through a threaded executor with real stage/progress events, the core runtime path emits structured logs with stable context payloads, the repo has toolkit-agnostic shell/package/conversion/settings screen models plus a shared UI log-sink/error-presentation layer, and the PySide6 widget layer now renders a real File menu, status bar, progress bar, optional log viewer, settings dialog, package-install dialog, conversion-session panel, shell-level warning dialogs, an opt-in composite viewer-plus-file logging path, and a shared polished desktop visual system. Broader desktop-screen coverage, deeper dataset modeling, and app-level log-retention/configuration remain next.
 
 For manual UI testing during development:
 
