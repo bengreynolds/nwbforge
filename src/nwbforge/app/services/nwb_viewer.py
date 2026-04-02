@@ -210,6 +210,9 @@ class NwbTreeModel:
         return self._root_nodes[0].path if self._root_nodes else None
 
     def node_for_path(self, path: str) -> NwbTreeNode:
+        if path in self._nodes:
+            return self._nodes[path]
+        self._ensure_path_loaded(path)
         return self._nodes[path]
 
     def children_for_path(self, path: str) -> tuple[NwbTreeNode, ...]:
@@ -221,6 +224,15 @@ class NwbTreeModel:
         children = loader()
         self._children_cache[path] = children
         return children
+
+    def _ensure_path_loaded(self, path: str) -> None:
+        if path in {"/", ""}:
+            return
+        parent_path, _, child_component = path.rpartition("/")
+        resolved_parent = parent_path or "/"
+        if resolved_parent != path:
+            self._ensure_path_loaded(resolved_parent)
+        self.children_for_path(resolved_parent)
 
     def _register_node(
         self,
@@ -531,6 +543,11 @@ class NwbFileController:
         if self._tree_model is None:
             return ()
         return self._tree_model.children_for_path(path)
+
+    def node_for_path(self, path: str) -> NwbTreeNode:
+        if self._tree_model is None:
+            raise NwbViewerError("No NWB file is currently loaded.")
+        return self._tree_model.node_for_path(path)
 
     def detail_for_path(self, path: str) -> NwbNodeDetail:
         if self._tree_model is None:

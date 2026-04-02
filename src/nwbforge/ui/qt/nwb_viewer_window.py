@@ -9,18 +9,27 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QSplitter, QTreeWidget, QTreeWidgetItem
 
 from nwbforge.app.services.nwb_viewer import NwbFileController, NwbTreeNode, NwbViewerError
+from nwbforge.app.services.nwb_viewer_rich import BaseRichNodeRenderer, NwbWidgetsPanelRenderer
 from nwbforge.ui.qt.nwb_detail_pane import NwbDetailPane
 
 
 class NwbViewerWindow(QMainWindow):
     """Top-level read-only NWB viewer window."""
 
-    def __init__(self, controller: NwbFileController | None = None, *, file_path: Path | None = None, parent=None) -> None:
+    def __init__(
+        self,
+        controller: NwbFileController | None = None,
+        *,
+        rich_renderer: BaseRichNodeRenderer | None = None,
+        file_path: Path | None = None,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("NWB Viewer")
         self.resize(1100, 760)
 
         self._controller = controller or NwbFileController()
+        self._rich_renderer = rich_renderer or NwbWidgetsPanelRenderer()
 
         self._tree = QTreeWidget(self)
         self._tree.setHeaderLabels(("NWB Node", "Type"))
@@ -41,6 +50,7 @@ class NwbViewerWindow(QMainWindow):
 
         if file_path is not None:
             self.open_file(file_path)
+        self._update_rich_preview_action()
 
     @property
     def controller(self) -> NwbFileController:
@@ -55,6 +65,8 @@ class NwbViewerWindow(QMainWindow):
         return self._detail_pane
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        if hasattr(self._rich_renderer, "close"):
+            self._rich_renderer.close()
         self._controller.close()
         super().closeEvent(event)
 
@@ -97,6 +109,11 @@ class NwbViewerWindow(QMainWindow):
         self._close_action = QAction("Close", self)
         self._close_action.triggered.connect(self.close)
         file_menu.addAction(self._close_action)
+
+        render_menu = self.menuBar().addMenu("&Render")
+        self._open_rich_preview_action = QAction("Open Rich Preview", self)
+        self._open_rich_preview_action.triggered.connect(self._open_rich_preview_for_current_node)
+        render_menu.addAction(self._open_rich_preview_action)
 
         view_menu = self.menuBar().addMenu("&View")
         self._expand_all_action = QAction("Expand All", self)
@@ -167,6 +184,7 @@ class NwbViewerWindow(QMainWindow):
         del previous
         if current is None:
             self._detail_pane.clear()
+            self._update_rich_preview_action()
             return
         self._populate_item_children(current)
         node_path = current.data(0, Qt.ItemDataRole.UserRole)
@@ -176,6 +194,7 @@ class NwbViewerWindow(QMainWindow):
             self._show_error("NWB Viewer Error", exc)
             return
         self._detail_pane.render_detail(detail)
+        self._update_rich_preview_action()
 
     def _expand_current_children(self) -> None:
         item = self._tree.currentItem()
@@ -223,3 +242,30 @@ class NwbViewerWindow(QMainWindow):
         if error.detail:
             message_box.setDetailedText(error.detail)
         message_box.open()
+
+    def _current_node(self) -> NwbTreeNode | None:
+        current = self._tree.currentItem()
+        if current is None:
+            return None
+        node_path = current.data(0, Qt.ItemDataRole.UserRole)
+        try:
+            return self._controller.node_for_path(node_path)
+        except Exception:
+            return None
+
+    def _update_rich_preview_action(self) -> None:
+        status = self._rich_renderer.status_for_node(self._current_node())
+        self._open_rich_preview_action.setEnabled(status.is_available and status.is_supported)
+        self._open_rich_preview_action.setStatusTip(status.message)
+        self._open_rich_preview_action.setToolTip(status.message)
+
+    def _open_rich_preview_for_current_node(self) -> None:
+        node = self._current_node()
+        if node is None:
+            return
+        try:
+            session = self._rich_renderer.launch_for_node(node)
+        except NwbViewerError as exc:
+            self._show_error("Rich Preview Error", exc)
+            return
+        self.statusBar().showMessage(f"Opened rich preview at {session.url}")

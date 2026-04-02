@@ -7,7 +7,7 @@ from pynwb import NWBHDF5IO, NWBFile, TimeSeries
 from pynwb.behavior import Position, SpatialSeries
 from pynwb.file import Subject
 
-from nwbforge.app.services import NwbFileController, NwbViewerError
+from nwbforge.app.services import NwbFileController, NwbViewerError, NwbWidgetsPanelRenderer
 
 
 def write_example_nwb_file(tmp_path: Path) -> Path:
@@ -89,3 +89,83 @@ def test_nwb_file_controller_rejects_missing_file() -> None:
         assert exc.message == "The selected NWB file does not exist."
     else:  # pragma: no cover - defensive failure branch
         raise AssertionError("Expected NwbViewerError for a missing NWB file.")
+
+
+def test_nwbwidgets_panel_renderer_reports_missing_optional_packages(tmp_path: Path) -> None:
+    nwb_path = write_example_nwb_file(tmp_path)
+    controller = NwbFileController()
+    controller.open_file(nwb_path)
+    renderer = NwbWidgetsPanelRenderer()
+
+    status = renderer.status_for_node(controller.root_nodes[0])
+
+    assert status.renderer_name == "nwbwidgets-panel"
+    assert status.is_available is False
+    assert status.is_supported is False
+    assert "nwbwidgets" in status.message
+
+
+def test_nwbwidgets_panel_renderer_launches_with_fake_modules(tmp_path: Path, monkeypatch) -> None:
+    nwb_path = write_example_nwb_file(tmp_path)
+    controller = NwbFileController()
+    controller.open_file(nwb_path)
+    node = controller.node_for_path("/acquisition/raw_trace")
+
+    opened_urls: list[str] = []
+
+    class FakeServer:
+        address = "127.0.0.1"
+        port = 8765
+
+        def __init__(self) -> None:
+            self.stopped = False
+
+        def stop(self) -> None:
+            self.stopped = True
+
+    fake_server = FakeServer()
+    fake_panel_calls: dict[str, object] = {}
+
+    class FakePanelModule:
+        def extension(self, *args):
+            fake_panel_calls["extension_args"] = args
+
+        def panel(self, widget):
+            fake_panel_calls["widget"] = widget
+            return {"wrapped": widget}
+
+        def serve(self, panel_view, *, title, show, start, threaded, port):
+            fake_panel_calls["serve"] = {
+                "panel_view": panel_view,
+                "title": title,
+                "show": show,
+                "start": start,
+                "threaded": threaded,
+                "port": port,
+            }
+            return fake_server
+
+    class FakeNwbWidgetsModule:
+        def nwb2widget(self, value):
+            return {"node_type": type(value).__name__}
+
+    def fake_import_module(name: str):
+        if name == "panel":
+            return FakePanelModule()
+        if name == "nwbwidgets":
+            return FakeNwbWidgetsModule()
+        raise ModuleNotFoundError(name)
+
+    monkeypatch.setattr("nwbforge.app.services.nwb_viewer_rich.importlib.import_module", fake_import_module)
+    monkeypatch.setattr("nwbforge.app.services.nwb_viewer_rich.webbrowser.open_new_tab", opened_urls.append)
+
+    renderer = NwbWidgetsPanelRenderer()
+    session = renderer.launch_for_node(node)
+
+    assert session.url == "http://127.0.0.1:8765/"
+    assert opened_urls == ["http://127.0.0.1:8765/"]
+    assert fake_panel_calls["extension_args"] == ("ipywidgets",)
+    assert fake_panel_calls["serve"]["title"].startswith("NWB Rich Preview")
+
+    renderer.close()
+    assert fake_server.stopped is True
