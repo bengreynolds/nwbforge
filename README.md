@@ -237,6 +237,12 @@ powershell -ExecutionPolicy Bypass -File scripts/setup-conda-dev.ps1
 powershell -ExecutionPolicy Bypass -File scripts/test-conda-dev.ps1
 ```
 
+The checked-in Conda spec now also supports a direct reproducible local install path, including the editable repo install plus the current broad local route-support profile:
+
+```text
+conda env update -n nwbforge-dev -f environment.yml
+```
+
 Example route-based setup flows:
 
 ```text

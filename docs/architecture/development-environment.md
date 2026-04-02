@@ -1,6 +1,6 @@
 # Development Environment Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 ## Purpose
 
@@ -16,6 +16,12 @@ For now, project installs and test runs should use a dedicated Conda environment
 - persisted selection state: `.nwbforge/install-selection.json`
 
 The helpers explicitly disable Python user-site package resolution so development work does not silently depend on unrelated local installs.
+
+The checked-in `environment.yml` now also includes:
+- the editable local repository install via `pip`
+- a broad local route-support profile for the currently implemented optional NeuroConv backbones
+
+That means `conda env update -n nwbforge-dev -f environment.yml` is now a valid direct way to reproduce the current local development environment, not just the PowerShell helper path.
 
 ## Bootstrap modes
 
