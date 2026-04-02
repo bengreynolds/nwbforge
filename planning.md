@@ -83,6 +83,12 @@ Completed:
 - Added a NeuroConv-backed NeuroScope sorting route using `NeuroScopeSortingInterface`
 - Added a NeuroConv-backed Phy sorting route using `PhySortingInterface`
 - Added a NeuroConv-backed Plexon sorting route using `PlexonSortingInterface`
+- Added a NeuroConv-backed Caiman segmentation route using `CaimanSegmentationInterface`
+- Added a NeuroConv-backed CNMFE segmentation route using `CnmfeSegmentationInterface`
+- Added a NeuroConv-backed EXTRACT segmentation route using `ExtractSegmentationInterface`
+- Added a NeuroConv-backed Inscopix segmentation route using `InscopixSegmentationInterface`
+- Added a NeuroConv-backed Suite2p segmentation route using `Suite2pSegmentationInterface`
+- Added a NeuroConv-backed TDT fiber photometry route using `TDTFiberPhotometryInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -165,8 +171,8 @@ In progress:
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Availability-gated supported-route expansion so newly implemented NeuroConv routes only appear in the app when their route packages are actually installed
-- The current route-scaling slice has finished the approved sorting routes under the same optional dependency-gated model, with overlap-sensitive sorting readers kept conservative where they share files or folders with recording routes
-- After the approved sorting routes are finished, the next route-scaling slice should continue with segmentation, fiber-photometry, and combined-workflow routes before reopening already-complete recording/imaging/sorting coverage
+- The current route-scaling slice has finished the approved segmentation and fiber-photometry routes under the same optional dependency-gated model, with ambiguous file- and folder-based routes kept conservative where they overlap imaging or TDT recording sources
+- After the approved segmentation and fiber-photometry routes are finished, the next route-scaling slice should continue with combined-workflow routes before reopening already-complete recording/imaging/sorting/segmentation coverage
 - Broader supported-route implementation work to start scaling beyond the current CSV, Excel, image, audio, videos, FicTrac, and DeepLabCut baseline
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
@@ -188,8 +194,8 @@ Next:
 - The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
 - Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
-- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `AlphaOmega`, `Axon/ABF`, `Axona`, `Biocam`, `Blackrock` recording and sorting, `Bruker TIFF` (single-plane and multi-plane), `Cell Explorer` sorting, `EDF`, `Femtonics`, `Videos`, `HDF5 Imaging`, `Inscopix`, `KiloSort` sorting, `MCSRaw`, `MaxOne`, `MEArec`, `Micro-Manager TIFF`, `Miniscope`, `Neuralynx` recording and sorting, `Neuralynx NVT`, `NeuroScope` recording and sorting, `OpenEphys Binary`, `OpenEphys Binary Analog`, `OpenEphys Legacy`, `Plexon` recording and sorting, `Plexon2`, `Phy` sorting, `Scanbox`, `ScanImage`, `ScanImage Legacy`, `Spike2`, `SpikeGadgets`, `SpikeGLX`, `TDT`, `TIFF`, `Thor`, `Intan`, and `WhiteMatter` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment and with the overlap-sensitive sorting readers kept conservative until the desktop UI grows explicit sort-vs-record selection.
-- The next supported-route scaling step should add more NeuroConv-backed segmentation, fiber-photometry, and combined-workflow routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
+- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `AlphaOmega`, `Axon/ABF`, `Axona`, `Biocam`, `Blackrock` recording and sorting, `Bruker TIFF` (single-plane and multi-plane), `Caiman` segmentation, `Cell Explorer` sorting, `CNMFE` segmentation, `EDF`, `EXTRACT` segmentation, `Femtonics`, `Videos`, `HDF5 Imaging`, `Inscopix` imaging and segmentation, `KiloSort` sorting, `MCSRaw`, `MaxOne`, `MEArec`, `Micro-Manager TIFF`, `Miniscope`, `Neuralynx` recording and sorting, `Neuralynx NVT`, `NeuroScope` recording and sorting, `OpenEphys Binary`, `OpenEphys Binary Analog`, `OpenEphys Legacy`, `Plexon` recording and sorting, `Plexon2`, `Phy` sorting, `Scanbox`, `ScanImage`, `ScanImage Legacy`, `Spike2`, `SpikeGadgets`, `SpikeGLX`, `Suite2p` segmentation, `TDT`, `TDT Fiber Photometry`, `TIFF`, `Thor`, `Intan`, and `WhiteMatter` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment and with the overlap-sensitive sorting, segmentation, and TDT photometry readers kept conservative until the desktop UI grows more explicit workflow selection for ambiguous sources.
+- The next supported-route scaling step should add combined-workflow routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
 - The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.

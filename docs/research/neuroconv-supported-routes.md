@@ -72,14 +72,14 @@ Checklist meaning:
 - [x] Tiff
 
 ### Segmentation
-- [ ] Caiman
-- [ ] CNMFE
-- [ ] EXTRACT
-- [ ] Inscopix
-- [ ] Suite2P
+- [x] Caiman
+- [x] CNMFE
+- [x] EXTRACT
+- [x] Inscopix
+- [x] Suite2P
 
 ## Fiber photometry
-- [ ] TDT Fiber Photometry
+- [x] TDT Fiber Photometry
 
 ## Behavior
 - [x] Audio

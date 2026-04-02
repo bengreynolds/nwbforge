@@ -1526,3 +1526,18 @@ Consequences:
 - `Blackrock`, `Cell Explorer`, `KiloSort`, `Neuralynx`, `NeuroScope`, `Phy`, and `Plexon` sorting routes are now implemented in that family
 - `Plexon` and `Neuralynx` sorting stay hint-driven for now, and `KiloSort` vs `Phy` is split by stronger folder markers instead of letting both claim the same directory
 - future sorting or workflow growth should preserve that explicit family boundary and prefer honest ambiguity handling over optimistic auto-detection
+
+### DEC-119: Segmentation and fiber-photometry routes should use dedicated family modules and conservative overlap handling
+Status: Accepted
+
+Reasoning:
+- The remaining approved NeuroConv ophys-analysis routes are not just more imaging readers; they represent segmentation outputs and photometry workflows with different ambiguity patterns and metadata requirements.
+- File-based segmentation outputs like Caiman, CNMFE, and EXTRACT can overlap generic HDF5 or MATLAB files, so they should prefer explicit hints, distinctive filenames, or required config rather than optimistic auto-detection.
+- `Suite2p` is distinctive enough for folder-level auto-detection, while `Inscopix` segmentation can share the existing install gate but still deserves a distinct adapter boundary from raw imaging.
+- `TDT` fiber photometry can overlap the same block folders as TDT recording, so it should remain hint-driven until the desktop UI grows an explicit recording-versus-photometry choice.
+
+Consequences:
+- the repo now has dedicated `supported/segmentation/` and `supported/fiber_photometry/` families
+- `Caiman`, `CNMFE`, `EXTRACT`, `Inscopix` segmentation, `Suite2p`, and `TDT Fiber Photometry` are now implemented as optional NeuroConv-backed routes
+- `Caiman`, `CNMFE`, and `EXTRACT` use conservative matching, `Suite2p` uses stronger folder markers, and `TDT Fiber Photometry` stays hint-driven for now
+- the supported-route registry and package catalog now treat segmentation and fiber photometry as first-class optional install surfaces rather than folding them into generic imaging or TDT recording
