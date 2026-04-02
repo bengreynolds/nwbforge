@@ -75,6 +75,9 @@ Completed:
 - Added richer session/source detail presentation to the desktop conversion panel, including explicit pathway, source count, and selected-source details
 - Added the first real hybrid-path workflow through a desktop `hybrid_session.json` descriptor that combines supported and custom sources in one session
 - Clarified that the current JSON-backed desktop session loaders are temporary testing/bootstrap paths and not the intended primary ingest UX
+- Added a backend `SessionAssemblyService` for direct file/folder ingest, pathway suggestion, and draft session creation
+- Added a toolkit-agnostic `SessionAssemblyScreenModel` for the `New Session` workflow
+- Added a PySide6 `SessionAssemblyDialog` so `New Session` now builds draft sessions from selected inputs instead of acting as a simple reset
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -102,6 +105,7 @@ Next:
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
 - The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.
 - The intended desktop entry point is `New Conversion Session`, followed by additive file/folder ingestion, source inspection, grouping, pathway classification, and explicit metadata override/review before preview or write.
+- The first concrete direct-ingest slice now exists: `New Session` opens a draft session-assembly workflow over real files/folders instead of behaving only as a shell reset.
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
@@ -119,9 +123,11 @@ Next:
 - The route-based package layer now also has a threaded runtime executor, so future setup and extension-install screens can run installs off the UI thread while preserving queued, progress, completion, and failure events.
 - The route-based package layer now also has a thin `PackageManagementController`, giving the future UI one small binding point for route listing, install preview, saved-selection loading, and background install execution.
 - The repository now also includes a first toolkit-agnostic `ui/` layer: a `DesktopShellModel` for File-menu/status/log-viewer state and a `PackageInstallerScreenModel` for setup and extension-install flows over the package-management controller.
+- The `ui/` layer now also includes a `SessionAssemblyScreenModel`, which turns direct file/folder ingest into a real toolkit-agnostic desktop workflow instead of leaving `New Session` as a shell-only affordance.
 - The `ui/` layer now also includes a `ConversionSessionScreenModel`, which consumes `ConversionExecutor`, `PipelineProgressEvent`, and `PipelineRuntimeError` directly instead of duplicating preview/execution workflow logic in future widgets.
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
+- The PySide6 shell now also includes a `SessionAssemblyDialog`, so `New Session` begins the direct-ingest workflow by letting users add real files/folders and create a draft `ConversionSession`.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
@@ -168,6 +174,11 @@ Required direction:
 - the primary start flow should become `New Conversion Session`, not “prepare an app-specific JSON file by hand”
 - users should be able to add real files and folders incrementally, combine supported and custom inputs in one session, and review the resulting source grouping before preview/build
 - metadata such as subject identifiers, species, session timing, and related canonical fields must be overridable from the UI rather than assumed to be fixed in a prepared session descriptor
+
+Current status:
+- the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
+- current assembly supports additive path selection, adapter/pathway suggestion, and draft session creation
+- richer grouping controls, role assignment, and metadata override remain follow-on work
 
 ### Priority 2: Custom and hybrid workflows
 
@@ -238,6 +249,7 @@ Current status:
 - first-pass internal testing may continue to use checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` examples plus equivalent desktop session descriptors
 - this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
 - the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
+- the first concrete version of that milestone is now implemented, but it still needs richer grouping, source-role editing, and metadata override before JSON-first testing paths can be fully demoted in day-to-day use
 - if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
 
 ### Testing baseline for first-pass handoff
@@ -1039,6 +1051,7 @@ Current status:
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
 - This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
 - The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
+- The first supported-path direct-ingest slice can now assemble manifest-backed sessions from file/folder selection through `New Session`, but broader supported-path metadata editing remains follow-on work
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
@@ -1048,6 +1061,7 @@ Current status:
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
 - The current repo now has a representative end-to-end custom-path desktop workflow slice through `custom_session.json`, but that JSON source should be treated as a narrow bootstrap fixture and possible future saved-state compatibility path rather than the intended long-term user input model
+- The first direct-ingest session assembly slice can now also assemble unmatched or custom-looking inputs into a reviewable custom draft session, though richer custom metadata entry is still required
 
 ### Phase 5: Hybrid-path MVP
 - Support multi-input conversion sessions
@@ -1057,6 +1071,7 @@ Current status:
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
 - The current repo now has a representative hybrid desktop workflow through `hybrid_session.json`, but that descriptor should be treated as a temporary composition/bootstrap artifact and possible future saved-project compatibility path rather than the intended long-term primary user input model
+- The first direct-ingest session assembly slice can now classify mixed selected inputs as hybrid drafts, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
 
 ### Phase 6: Department rollout
 - Add lab profiles

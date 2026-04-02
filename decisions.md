@@ -969,6 +969,20 @@ Consequences:
 - the current JSON-backed session loaders remain valid as testing fixtures, bootstrap helpers, and future saved-state compatibility paths, but not as the desired primary user-authored input format
 - future UI and workflow planning should prefer direct input ingestion plus optional saved project state over expanding JSON-first entry behavior
 
+### DEC-078: Start direct-ingest UX with a dedicated session-assembly service and `New Session` dialog
+Status: Accepted
+
+Reasoning:
+- The product needed to stop treating `New Session` as a shell reset and start using it as the first real direct-ingest workflow entry point.
+- Adapter matching, pathway suggestion, and draft session creation are application concerns and should not be embedded directly in the Qt layer.
+- A narrow first slice that supports additive path selection, pathway suggestion, and draft session creation is enough to move the app off JSON-first startup without pretending that grouping and metadata override are already solved.
+
+Consequences:
+- direct-ingest workflow logic now lives in `SessionAssemblyService` and `SessionAssemblyScreenModel`
+- the Qt shell now routes `New Session` into `SessionAssemblyDialog`
+- `Open Session...` remains for testing fixtures and saved-state compatibility, but `New Session` is now the intended start of the primary workflow
+- richer grouping, source-role editing, and metadata override remain explicit follow-on work rather than being implied by the first direct-ingest slice
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 

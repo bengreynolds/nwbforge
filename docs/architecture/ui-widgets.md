@@ -17,6 +17,7 @@ Responsibilities:
 - expose the current `File` menu actions
 - bind shell/package/conversion state into the status bar
 - host the conversion-session central widget
+- host the new-session assembly dialog
 - host the docked log viewer
 - open and close the package-install dialog
 - open and close the settings dialog
@@ -24,6 +25,17 @@ Responsibilities:
 - open supported, custom, and hybrid session fixtures or saved-state descriptors from disk through `File -> Open Session...`
 - rebuild the `Open Recent` submenu from persisted session-history state
 - expose explicit `New Session` and `Reopen Last Session` actions
+- route `New Session` into the direct-ingest session-assembly workflow instead of treating it as a simple screen reset
+
+### `SessionAssemblyDialog`
+
+Location: `src/nwbforge/ui/qt/session_assembly_dialog.py`
+
+Responsibilities:
+- let users add files and folders to a new conversion session
+- show the suggested session id, title, pathway, source preview, and assembly issues
+- remove selected inputs from the draft
+- create a real `ConversionSession` through `SessionAssemblyScreenModel`
 
 ### `ConversionSessionWidget`
 
@@ -135,10 +147,11 @@ Responsibilities:
 
 - the current Qt shell can open JSON session fixtures and descriptors, but that is not the intended primary user workflow
 - the primary future desktop entry should be `New Conversion Session`, where users add real files and folders directly and the app assembles a candidate session from inspection results
+- the first concrete implementation of that direction now exists through `SessionAssemblyDialog` and `SessionAssemblyScreenModel`
 - JSON session files may remain as saved-project or recovery/reopen artifacts, but the widget layer should not be optimized around requiring users to author them by hand
 
 ## Immediate follow-on work
 
-1. Add a real session-assembly screen and source-ingestion workflow while keeping the current model-first boundary intact.
+1. Expand the new-session assembly dialog into richer grouping, metadata-override, and saved-project workflows.
 2. Improve multi-source/hybrid provenance presentation and metadata-override UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

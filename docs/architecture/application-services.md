@@ -68,6 +68,19 @@ Responsibilities:
 
 This keeps the future UI shell dependent on small controller-level operations instead of reaching directly into planner helpers, setup scripts, or subprocess orchestration.
 
+### `SessionAssemblyService`
+
+Location: `src/nwbforge/app/services/session_assembly.py`
+
+Responsibilities:
+- accept real selected files and folders instead of requiring a hand-authored app session descriptor
+- ask the adapter registry which sources can be handled directly
+- suggest a session pathway (`supported`, `custom`, or `hybrid`) from the selected inputs
+- surface no-match and ambiguous-match conditions as reviewable issues
+- build a real `ConversionSession` once the draft is acceptable
+
+This keeps direct-ingest session assembly in the application layer instead of scattering path grouping and adapter classification logic across widgets or desktop bootstrap helpers.
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
@@ -76,9 +89,10 @@ This keeps the future UI shell dependent on small controller-level operations in
 - UI-adjacent package flows should depend on backend service contracts instead of reading setup-script conventions directly
 - package-install execution should expose progress and user-facing failure contracts rather than leaking raw subprocess behavior into callers
 - future UI setup and package-management screens should use thin controller bindings over backend services instead of embedding planning or runtime wiring in widgets
+- direct file/folder ingestion should go through `SessionAssemblyService` instead of pushing adapter-discovery logic into the Qt layer
 
 ## Immediate follow-on work
 
-1. Build the first concrete UI screen model on top of `PackageManagementController`.
-2. Add normalization and mapping-planner service implementations.
-3. Add validation-service implementations that wrap PyNWB validation and NWB Inspector.
+1. Expand session assembly from path selection into richer grouping and metadata-override workflows.
+2. Keep broadening the desktop UI while preserving small controller/service boundaries.
+3. Continue operational hardening for internal testing and saved-state recovery.
