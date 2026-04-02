@@ -107,6 +107,8 @@ class SessionAssemblySourceItem:
     source_type: str
     suggested_pathway: str
     role: str = "primary"
+    sidecar_for_source_id: str | None = None
+    sidecar_for_label: str | None = None
     matching_adapter_ids: tuple[str, ...] = ()
     suggested_adapter_id: str | None = None
     needs_review: bool = False

@@ -64,6 +64,9 @@ class SessionAssemblyDialog(QDialog):
         self._role_combo = QComboBox(self)
         self._role_combo.addItems(["primary", "supplemental", "metadata"])
         self._role_combo.currentTextChanged.connect(self._apply_selected_role)
+        self._group_edit = QLineEdit(self)
+        self._group_edit.setPlaceholderText("Group label")
+        self._group_edit.editingFinished.connect(self._apply_selected_group)
         self._pathway_label = QLabel("custom", self)
         self._grouping_label = QLabel("No grouping suggestions yet.", self)
         self._grouping_label.setWordWrap(True)
@@ -74,6 +77,8 @@ class SessionAssemblyDialog(QDialog):
         self._selected_source_label.setWordWrap(True)
         self._selected_adapter_label = QLabel("No adapter match", self)
         self._selected_adapter_label.setWordWrap(True)
+        self._selected_sidecar_label = QLabel("None", self)
+        self._selected_sidecar_label.setWordWrap(True)
         self._metadata_override_edits: dict[str, QLineEdit] = {}
 
         self._add_files_button = QPushButton("Add Files...", self)
@@ -110,6 +115,8 @@ class SessionAssemblyDialog(QDialog):
         source_details = QFormLayout()
         source_details.addRow("Selected Source", self._selected_source_label)
         source_details.addRow("Role", self._role_combo)
+        source_details.addRow("Group", self._group_edit)
+        source_details.addRow("Sidecar Association", self._selected_sidecar_label)
         source_details.addRow("Adapter Match", self._selected_adapter_label)
         source_layout.addLayout(source_details)
 
@@ -182,6 +189,11 @@ class SessionAssemblyDialog(QDialog):
         self.accept()
 
     def _apply_state(self, state: SessionAssemblyState) -> None:
+        selected_source_id = None
+        selected_item = self._source_list.currentItem()
+        if selected_item is not None:
+            selected_source_id = selected_item.data(Qt.ItemDataRole.UserRole)
+
         with QSignalBlocker(self._session_id_edit):
             if self._session_id_edit.text() != state.session_id:
                 self._session_id_edit.setText(state.session_id)
@@ -216,7 +228,13 @@ class SessionAssemblyDialog(QDialog):
             item.setData(Qt.ItemDataRole.UserRole, source.source_id)
             self._source_list.addItem(item)
         if self._source_list.count() > 0:
-            self._source_list.setCurrentRow(0)
+            restored_row = 0
+            if selected_source_id is not None:
+                for row in range(self._source_list.count()):
+                    if self._source_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_source_id:
+                        restored_row = row
+                        break
+            self._source_list.setCurrentRow(restored_row)
         else:
             self._sync_selected_source()
 
@@ -241,9 +259,13 @@ class SessionAssemblyDialog(QDialog):
         if selected_item is None:
             self._selected_source_label.setText("No source selected.")
             self._selected_adapter_label.setText("No adapter match")
+            self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
                 self._role_combo.setCurrentText("primary")
+            with QSignalBlocker(self._group_edit):
+                self._group_edit.setText("")
             self._role_combo.setEnabled(False)
+            self._group_edit.setEnabled(False)
             return
 
         source_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -251,17 +273,25 @@ class SessionAssemblyDialog(QDialog):
         if source is None:
             self._selected_source_label.setText("No source selected.")
             self._selected_adapter_label.setText("No adapter match")
+            self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
                 self._role_combo.setCurrentText("primary")
+            with QSignalBlocker(self._group_edit):
+                self._group_edit.setText("")
             self._role_combo.setEnabled(False)
+            self._group_edit.setEnabled(False)
             return
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
         adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "No adapter match"
         self._selected_adapter_label.setText(adapter_summary)
+        self._selected_sidecar_label.setText(source.sidecar_for_label or "None")
         with QSignalBlocker(self._role_combo):
             self._role_combo.setCurrentText(source.role)
+        with QSignalBlocker(self._group_edit):
+            self._group_edit.setText(source.group_label)
         self._role_combo.setEnabled(True)
+        self._group_edit.setEnabled(True)
 
     def _apply_selected_role(self, role: str) -> None:
         selected_item = self._source_list.currentItem()
@@ -271,3 +301,12 @@ class SessionAssemblyDialog(QDialog):
         if source_id is None:
             return
         self._screen_model.set_source_role(str(source_id), role)
+
+    def _apply_selected_group(self) -> None:
+        selected_item = self._source_list.currentItem()
+        if selected_item is None:
+            return
+        source_id = selected_item.data(Qt.ItemDataRole.UserRole)
+        if source_id is None:
+            return
+        self._screen_model.set_source_group_label(str(source_id), self._group_edit.text())

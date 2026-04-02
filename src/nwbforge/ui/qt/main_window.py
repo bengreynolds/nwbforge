@@ -11,6 +11,7 @@ from PySide6.QtGui import QAction, QDesktopServices
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
 
+from nwbforge.app.logging import get_logger, log_event
 from nwbforge.domain.models import ConversionSession
 from nwbforge.ui import (
     CompositeUiLogSink,
@@ -37,6 +38,8 @@ from nwbforge.ui.qt.settings_dialog import SettingsDialog
 
 class MainWindow(QMainWindow):
     """Minimal Qt desktop shell bound to the UI model layer."""
+
+    _logger = get_logger(__name__)
 
     def __init__(
         self,
@@ -230,8 +233,10 @@ class MainWindow(QMainWindow):
             "Conversion sessions (session_manifest.json custom_session.json hybrid_session.json);;JSON files (*.json)",
         )
         if not selected_path:
+            log_event(self._logger, logging.DEBUG, "Open Session dialog canceled.")
             return
 
+        log_event(self._logger, logging.INFO, "Selected session file from desktop dialog.", session_path=selected_path)
         self._load_session(Path(selected_path))
 
     def _choose_output_path(self, current_path: Path | None) -> Path | None:
@@ -251,12 +256,15 @@ class MainWindow(QMainWindow):
             "NWB files (*.nwb)",
         )
         if not selected_path:
+            log_event(self._logger, logging.DEBUG, "Output path chooser canceled.", start_location=start_location)
             return None
+        log_event(self._logger, logging.INFO, "Selected NWB output path from desktop dialog.", output_path=selected_path)
         return Path(selected_path)
 
     def _reopen_last_session(self) -> None:
         last_path = self._settings_screen_model.state.applied_settings.last_open_session_path
         if last_path is None or not last_path.exists():
+            log_event(self._logger, logging.WARNING, "Reopen Last Session failed because no recent session was available.")
             self._shell_model.set_status_bar(
                 StatusBarState(
                     stage_key="session:reopen:error",
@@ -273,12 +281,21 @@ class MainWindow(QMainWindow):
             )
             return
 
+        log_event(self._logger, logging.INFO, "Reopening last desktop session.", session_path=str(last_path))
         self._load_session(last_path)
 
     def _load_session(self, session_path: Path) -> None:
+        log_event(self._logger, logging.INFO, "Loading desktop session.", session_path=str(session_path))
         try:
             session = self._session_loader(session_path)
         except Exception as exc:
+            log_event(
+                self._logger,
+                logging.ERROR,
+                "Desktop session load failed.",
+                session_path=str(session_path),
+                error=str(exc),
+            )
             self._shell_model.set_status_bar(
                 StatusBarState(
                     stage_key="session:open:error",
@@ -297,6 +314,14 @@ class MainWindow(QMainWindow):
             return
 
         self._activate_loaded_session(session, session_path=session_path)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Loaded desktop session successfully.",
+            session_id=session.session_id,
+            pathway=session.pathway.value,
+            source_count=len(session.sources),
+        )
         self._shell_model.set_status_bar(
             StatusBarState(
                 stage_key="session:loaded",
@@ -308,6 +333,14 @@ class MainWindow(QMainWindow):
         )
 
     def _load_built_session(self, session: ConversionSession) -> None:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Loaded session created from direct-ingest dialog.",
+            session_id=session.session_id,
+            pathway=session.pathway.value,
+            source_count=len(session.sources),
+        )
         self._activate_loaded_session(session)
         self._shell_model.set_status_bar(
             StatusBarState(
@@ -324,6 +357,13 @@ class MainWindow(QMainWindow):
             self._settings_screen_model.record_recent_session(session_path)
         self._conversion_widget.load_session(session)
         default_output_path = self._default_output_path_for_session(session)
+        log_event(
+            self._logger,
+            logging.DEBUG,
+            "Activated loaded desktop session.",
+            session_id=session.session_id,
+            default_output_path=str(default_output_path),
+        )
         self._conversion_screen_model.set_output_path(default_output_path)
 
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
@@ -381,6 +421,13 @@ class MainWindow(QMainWindow):
     ) -> bool:
         resolved_path = path.resolve()
         if not resolved_path.exists():
+            log_event(
+                self._logger,
+                logging.WARNING,
+                "Desktop path action failed because the target no longer exists.",
+                path=str(resolved_path),
+                action=category,
+            )
             self._shell_model.set_status_bar(
                 StatusBarState(
                     stage_key="artifact:error",
@@ -400,8 +447,22 @@ class MainWindow(QMainWindow):
 
         opened = QDesktopServices.openUrl(QUrl.fromLocalFile(str(resolved_path)))
         if opened:
+            log_event(
+                self._logger,
+                logging.INFO,
+                "Opened desktop path successfully.",
+                path=str(resolved_path),
+                action=category,
+            )
             return True
 
+        log_event(
+            self._logger,
+            logging.ERROR,
+            "Desktop path action failed to open target.",
+            path=str(resolved_path),
+            action=category,
+        )
         self._shell_model.set_status_bar(
             StatusBarState(
                 stage_key="artifact:error",

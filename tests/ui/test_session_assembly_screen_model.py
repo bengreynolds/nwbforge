@@ -59,6 +59,28 @@ def test_session_assembly_screen_model_edits_roles_and_metadata_overrides(tmp_pa
     assert [source.role for source in session.sources] == ["metadata", "primary"]
 
 
+def test_session_assembly_screen_model_edits_group_labels_and_persists_manual_override(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    workspace_store = JsonSessionAssemblyWorkspaceStore(tmp_path / "drafts" / "group-draft.json")
+
+    first_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+    first_screen.add_paths((manifest_path, custom_path))
+    first_screen.set_source_group_label("custom-session", "Manual Custom Group")
+
+    restored_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+
+    assert [source.group_label for source in restored_screen.state.sources] == [tmp_path.name, "Manual Custom Group"]
+
+
 def test_session_assembly_screen_model_surfaces_unmatched_input(tmp_path: Path) -> None:
     unknown_path = tmp_path / "notes.txt"
     unknown_path.write_text("freeform notes", encoding="utf-8")

@@ -38,6 +38,8 @@ class SessionAssemblySource:
     suggested_adapter_id: str | None
     suggested_pathway: ConversionPathway
     role: str = "primary"
+    sidecar_for_source_id: str | None = None
+    sidecar_for_label: str | None = None
     needs_review: bool = False
 
 
@@ -65,6 +67,7 @@ class SessionAssemblyWorkspace:
     session_id: str = ""
     title: str = ""
     source_roles: dict[str, str] | None = None
+    group_overrides: dict[str, str] | None = None
     metadata_overrides: dict[str, str] | None = None
 
 
@@ -80,6 +83,7 @@ class JsonSessionAssemblyWorkspaceStore:
             "session_id": workspace.session_id,
             "title": workspace.title,
             "source_roles": dict(workspace.source_roles or {}),
+            "group_overrides": dict(workspace.group_overrides or {}),
             "metadata_overrides": dict(workspace.metadata_overrides or {}),
         }
         self._workspace_path.parent.mkdir(parents=True, exist_ok=True)
@@ -94,6 +98,7 @@ class JsonSessionAssemblyWorkspaceStore:
             session_id=str(payload.get("session_id", "")),
             title=str(payload.get("title", "")),
             source_roles={str(key): str(value) for key, value in dict(payload.get("source_roles", {})).items()},
+            group_overrides={str(key): str(value) for key, value in dict(payload.get("group_overrides", {})).items()},
             metadata_overrides={
                 str(key): str(value) for key, value in dict(payload.get("metadata_overrides", {})).items()
             },
@@ -110,6 +115,7 @@ class SessionAssemblyService:
     _logger = get_logger(__name__)
     _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
     _DESKTOP_SESSION_FILENAMES = {"session_manifest.json", "custom_session.json", "hybrid_session.json"}
+    _METADATA_SIDECAR_SUFFIXES = {".json", ".yaml", ".yml", ".txt"}
 
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
@@ -121,25 +127,39 @@ class SessionAssemblyService:
         session_id: str | None = None,
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
+        group_overrides: dict[str, str] | None = None,
         metadata_overrides: dict[str, str] | None = None,
     ) -> SessionAssemblyDraft:
         """Build a suggested session draft from one or more selected files or folders."""
 
         normalized_paths = self._normalize_paths(selected_paths)
-        grouped_paths = self._grouped_paths(normalized_paths)
+        sidecar_links = self._detect_sidecar_links(normalized_paths)
         log_event(
             self._logger,
             logging.INFO,
             "Assembling direct-ingest session draft.",
             selected_path_count=len(normalized_paths),
-            group_count=len(grouped_paths),
+            group_count=len(self._grouped_paths(normalized_paths)),
+            sidecar_link_count=len(sidecar_links),
             requested_session_id=session_id or "",
         )
+        source_ids_by_path: dict[Path, str] = {}
+        existing_ids: list[str] = []
+        for path in normalized_paths:
+            source_id = self._build_source_id(path, tuple(existing_ids))
+            existing_ids.append(source_id)
+            source_ids_by_path[path.resolve()] = source_id
+
         draft_sources: list[SessionAssemblySource] = []
         issues: list[SessionAssemblyIssue] = []
         normalized_source_roles = {
             str(key): self._normalize_source_role(value)
             for key, value in (source_roles or {}).items()
+        }
+        normalized_group_overrides = {
+            str(key): str(value).strip()
+            for key, value in (group_overrides or {}).items()
+            if str(value).strip()
         }
         normalized_metadata_overrides = {
             str(key): str(value).strip()
@@ -148,8 +168,12 @@ class SessionAssemblyService:
         }
 
         for index, path in enumerate(normalized_paths, start=1):
+            source_id = source_ids_by_path[path.resolve()]
             group_key, group_label = self._group_for_path(path)
-            source_id = self._build_source_id(path, draft_sources)
+            override_group = normalized_group_overrides.get(source_id)
+            if override_group:
+                group_key = f"manual:{override_group.lower()}"
+                group_label = override_group
             source_reference = SourceReference(
                 source_id=source_id,
                 location=path,
@@ -161,7 +185,8 @@ class SessionAssemblyService:
             suggested_pathway = self._suggest_source_pathway(matches)
             suggested_adapter_id = matching_ids[0] if len(matching_ids) == 1 else None
             needs_review = len(matching_ids) != 1
-            role = normalized_source_roles.get(source_id, self._default_role_for_index(index))
+            sidecar_anchor = sidecar_links.get(path.resolve())
+            role = normalized_source_roles.get(source_id, self._default_role_for_index(index, sidecar_anchor is not None))
 
             if not matching_ids:
                 issues.append(
@@ -188,6 +213,19 @@ class SessionAssemblyService:
                     )
                 )
 
+            if sidecar_anchor is not None:
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-sidecar-association",
+                        message=(
+                            f"Associated likely metadata sidecar '{path.name}' with '{sidecar_anchor.name}'. "
+                            "Review the grouping and role before preview."
+                        ),
+                        severity=IssueSeverity.INFO,
+                        location=path,
+                    )
+                )
+
             draft_sources.append(
                 SessionAssemblySource(
                     source_id=source_reference.source_id,
@@ -200,22 +238,34 @@ class SessionAssemblyService:
                     suggested_adapter_id=suggested_adapter_id,
                     suggested_pathway=suggested_pathway,
                     role=role,
+                    sidecar_for_source_id=source_ids_by_path.get(sidecar_anchor) if sidecar_anchor is not None else None,
+                    sidecar_for_label=sidecar_anchor.name if sidecar_anchor is not None else None,
                     needs_review=needs_review,
                 )
             )
 
-        for group_label, paths in grouped_paths.items():
-            if len(paths) < 2:
+        grouped_sources: dict[str, list[SessionAssemblySource]] = {}
+        for source in draft_sources:
+            grouped_sources.setdefault(source.group_label, []).append(source)
+
+        for group_label, sources in grouped_sources.items():
+            if len(sources) < 2:
+                continue
+            if any(source.group_key.startswith("manual:") for source in sources):
                 continue
             issues.append(
                 SessionAssemblyIssue(
                     code="session-assembly-auto-grouped-inputs",
                     message=(
-                        f"Auto-grouped {len(paths)} selected inputs under '{group_label}'. "
+                        f"Auto-grouped {len(sources)} selected inputs under '{group_label}'. "
                         "Confirm they belong to the same conversion session."
                     ),
                     severity=IssueSeverity.INFO,
-                    location=paths[0].parent if paths[0].is_file() else paths[0],
+                    location=(
+                        sources[0].location.parent
+                        if sources[0].location.is_file()
+                        else sources[0].location
+                    ),
                 )
             )
 
@@ -265,6 +315,8 @@ class SessionAssemblyService:
                 metadata={
                     "session_assembly.group_key": source.group_key,
                     "session_assembly.group_label": source.group_label,
+                    "session_assembly.sidecar_for_source_id": source.sidecar_for_source_id or "",
+                    "session_assembly.sidecar_for_label": source.sidecar_for_label or "",
                 },
             )
             for source in draft.sources
@@ -298,12 +350,12 @@ class SessionAssemblyService:
             normalized.append(resolved)
         return tuple(normalized)
 
-    def _build_source_id(self, path: Path, existing_sources: list[SessionAssemblySource]) -> str:
+    def _build_source_id(self, path: Path, existing_ids: tuple[str, ...]) -> str:
         base = self._slugify(path.stem if path.is_file() else path.name) or "source"
-        existing_ids = {source.source_id for source in existing_sources}
+        seen_ids = set(existing_ids)
         candidate = base
         counter = 2
-        while candidate in existing_ids:
+        while candidate in seen_ids:
             candidate = f"{base}-{counter}"
             counter += 1
         return candidate
@@ -342,6 +394,24 @@ class SessionAssemblyService:
             groups.setdefault(group_label, []).append(path)
         return groups
 
+    def _detect_sidecar_links(self, normalized_paths: tuple[Path, ...]) -> dict[Path, Path]:
+        primary_candidates = {
+            (path.parent.resolve(), path.stem.lower()): path.resolve()
+            for path in normalized_paths
+            if path.is_file() and path.suffix.lower() not in self._METADATA_SIDECAR_SUFFIXES
+        }
+        sidecar_links: dict[Path, Path] = {}
+        for path in normalized_paths:
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in self._METADATA_SIDECAR_SUFFIXES:
+                continue
+            anchor = primary_candidates.get((path.parent.resolve(), path.stem.lower()))
+            if anchor is None:
+                continue
+            sidecar_links[path.resolve()] = anchor
+        return sidecar_links
+
     @staticmethod
     def _slugify(value: str) -> str:
         collapsed = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
@@ -355,7 +425,9 @@ class SessionAssemblyService:
         return normalized
 
     @staticmethod
-    def _default_role_for_index(index: int) -> str:
+    def _default_role_for_index(index: int, is_sidecar: bool = False) -> str:
+        if is_sidecar:
+            return "metadata"
         if index == 1:
             return "primary"
         return "supplemental"

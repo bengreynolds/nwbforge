@@ -792,6 +792,49 @@ def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, t
     window.close()
 
 
+def test_session_assembly_dialog_edits_group_label_and_shows_sidecar_association(
+    qapp, tmp_path: Path, monkeypatch
+) -> None:
+    image_path = tmp_path / "recording.tif"
+    image_path.write_text("binary-placeholder", encoding="utf-8")
+    sidecar_path = tmp_path / "recording.json"
+    sidecar_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(image_path), str(sidecar_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+
+    dialog._source_list.setCurrentRow(1)
+    qapp.processEvents()
+    assert dialog._selected_sidecar_label.text() == "recording.tif"
+
+    dialog._group_edit.setText("Manual Metadata Group")
+    dialog._group_edit.editingFinished.emit()
+    qapp.processEvents()
+
+    assert dialog._source_list.currentItem() is not None
+    assert "Manual Metadata Group" in dialog._source_list.currentItem().text()
+    assert dialog._selected_sidecar_label.text() == "recording.tif"
+    window.close()
+
+
 def test_main_window_restores_new_session_draft(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")

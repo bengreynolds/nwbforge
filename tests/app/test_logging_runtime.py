@@ -10,6 +10,7 @@ from nwbforge.app.runtime import ThreadedConversionExecutor
 from nwbforge.app.services import (
     ConversionPipelineService,
     ExecutionReviewService,
+    JsonSessionAssemblyWorkspaceStore,
     RegistrySourceInspectionService,
     SessionAssemblyService,
     SessionPersistenceService,
@@ -20,6 +21,7 @@ from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.domain.enums import ReviewStatus, ValidationReviewStatus
 from nwbforge.domain.models import MappingPlan, NormalizedMetadataBundle, ProvenanceArtifact, ProvenanceRecord, ValidationReviewOutcome, ValidationSummary
 from nwbforge.persistence import JsonSessionSnapshotStore
+from nwbforge.ui import SessionAssemblyScreenModel
 from nwbforge.validation import JsonExecutionReviewArtifactService
 from nwbforge.domain.enums import ConversionPathway, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
@@ -143,6 +145,31 @@ def test_session_assembly_service_logs_structured_draft_context(
     records = [record for record in caplog.records if hasattr(record, "nwbforge_context")]
     assembly_record = next(record for record in records if record.message == "Assembling direct-ingest session draft.")
     assert assembly_record.nwbforge_context["selected_path_count"] == 1
+
+
+def test_session_assembly_screen_model_logs_create_session_context(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.INFO)
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text('{"session": {"session_id": "supported-01"}}', encoding="utf-8")
+    screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=JsonSessionAssemblyWorkspaceStore(tmp_path / "state" / "draft.json"),
+    )
+
+    screen.add_paths((manifest_path,))
+    session = screen.create_session()
+
+    assert session.pathway.value == "supported"
+    records = [record for record in caplog.records if hasattr(record, "nwbforge_context")]
+    create_record = next(
+        record for record in records if record.message == "Creating conversion session from direct-ingest workspace."
+    )
+    assert create_record.nwbforge_context["source_count"] == 1
+    created_record = next(record for record in records if record.message == "Created conversion session from direct-ingest draft.")
+    assert created_record.nwbforge_context["session_id"] == session.session_id
 
 
 def test_ui_settings_service_logs_save_context(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:

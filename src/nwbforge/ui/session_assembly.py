@@ -94,9 +94,34 @@ class SessionAssemblyScreenModel:
             next_overrides.pop(key, None)
         return self._refresh(metadata_overrides=next_overrides)
 
+    def set_source_group_label(self, source_id: str, group_label: str) -> SessionAssemblyState:
+        normalized_label = group_label.strip()
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Updated source grouping in direct-ingest workspace.",
+            source_id=source_id,
+            group_label=normalized_label,
+        )
+        next_group_overrides = {source.source_id: source.group_label for source in self._state.sources}
+        if normalized_label:
+            next_group_overrides[source_id] = normalized_label
+        else:
+            next_group_overrides.pop(source_id, None)
+        return self._refresh(group_overrides=next_group_overrides)
+
     def create_session(self):
         if self._state.draft is None:
             raise ValueError("Session assembly requires at least one selected input.")
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Creating conversion session from direct-ingest workspace.",
+            session_id=self._state.draft.session_id,
+            pathway=self._state.draft.pathway.value,
+            source_count=len(self._state.draft.sources),
+            issue_count=len(self._state.draft.issues),
+        )
         try:
             session = self._assembly_service.create_session(self._state.draft)
             self._clear_workspace()
@@ -120,6 +145,7 @@ class SessionAssemblyScreenModel:
         session_id: str | None = None,
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
+        group_overrides: dict[str, str] | None = None,
         metadata_overrides: dict[str, str] | None = None,
     ) -> SessionAssemblyState:
         next_paths = selected_paths if selected_paths is not None else self._state.selected_paths
@@ -130,7 +156,17 @@ class SessionAssemblyScreenModel:
             if self._state.sources
             else {}
         )
+        current_group_overrides = (
+            {
+                source.source_id: source.group_label
+                for source in self._state.sources
+                if source.group_key.startswith("manual:")
+            }
+            if self._state.sources
+            else {}
+        )
         next_source_roles = source_roles if source_roles is not None else current_roles
+        next_group_overrides = group_overrides if group_overrides is not None else current_group_overrides
         next_metadata_overrides = (
             metadata_overrides if metadata_overrides is not None else self._state.metadata_overrides
         )
@@ -140,6 +176,7 @@ class SessionAssemblyScreenModel:
                 session_id=next_session_id,
                 title=next_title,
                 source_roles=next_source_roles,
+                group_overrides=next_group_overrides,
                 metadata_overrides=next_metadata_overrides,
             )
         except Exception as exc:
@@ -171,6 +208,8 @@ class SessionAssemblyScreenModel:
                         source_type=source.source_type.value,
                         suggested_pathway=source.suggested_pathway.value,
                         role=source.role,
+                        sidecar_for_source_id=source.sidecar_for_source_id,
+                        sidecar_for_label=source.sidecar_for_label,
                         matching_adapter_ids=source.matching_adapter_ids,
                         suggested_adapter_id=source.suggested_adapter_id,
                         needs_review=source.needs_review,
@@ -232,6 +271,7 @@ class SessionAssemblyScreenModel:
             session_id=workspace.session_id,
             title=workspace.title,
             source_roles=dict(workspace.source_roles or {}),
+            group_overrides=dict(workspace.group_overrides or {}),
             metadata_overrides=dict(workspace.metadata_overrides or {}),
         )
 
@@ -255,6 +295,11 @@ class SessionAssemblyScreenModel:
                 session_id=state.session_id,
                 title=state.title,
                 source_roles={source.source_id: source.role for source in state.sources},
+                group_overrides={
+                    source.source_id: source.group_label
+                    for source in state.sources
+                    if source.group_key.startswith("manual:")
+                },
                 metadata_overrides=dict(state.metadata_overrides),
             )
         )

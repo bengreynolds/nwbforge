@@ -97,6 +97,37 @@ def test_session_assembly_service_emits_auto_grouping_issue_for_shared_folder(tm
     assert any(issue.code == "session-assembly-auto-grouped-inputs" for issue in draft.issues)
 
 
+def test_session_assembly_service_allows_manual_group_override(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+
+    draft = SessionAssemblyService(build_adapter_registry()).assemble_draft(
+        (manifest_path, custom_path),
+        group_overrides={"custom-session": "Custom Metadata Bundle"},
+    )
+
+    assert [source.group_label for source in draft.sources] == [tmp_path.name, "Custom Metadata Bundle"]
+    assert not any(issue.code == "session-assembly-auto-grouped-inputs" for issue in draft.issues)
+
+
+def test_session_assembly_service_detects_simple_metadata_sidecar(tmp_path: Path) -> None:
+    image_path = tmp_path / "recording.tif"
+    image_path.write_text("binary-placeholder", encoding="utf-8")
+    sidecar_path = tmp_path / "recording.json"
+    sidecar_path.write_text(json.dumps({"session": {"session_id": "sidecar-01"}}), encoding="utf-8")
+
+    draft = SessionAssemblyService(build_adapter_registry()).assemble_draft((image_path, sidecar_path))
+
+    image_source, sidecar_source = draft.sources
+    assert image_source.role == "primary"
+    assert sidecar_source.role == "metadata"
+    assert sidecar_source.sidecar_for_label == "recording.tif"
+    assert sidecar_source.sidecar_for_source_id == image_source.source_id
+    assert any(issue.code == "session-assembly-sidecar-association" for issue in draft.issues)
+
+
 def test_session_assembly_service_deduplicates_selected_paths(tmp_path: Path) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
