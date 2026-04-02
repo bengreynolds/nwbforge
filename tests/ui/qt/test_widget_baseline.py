@@ -1505,6 +1505,104 @@ def test_conversion_widget_can_apply_session_override_from_metadata_review(qapp,
     window.close()
 
 
+def test_conversion_widget_can_apply_source_override_from_metadata_review(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-source-review-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview = ConversionPreview(
+        session=session.transition(SessionStatus.READY_TO_WRITE),
+        extraction_results=(
+            ExtractionResult(
+                source_id="manifest",
+                adapter_id="session_manifest",
+                record_type="session_manifest",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="primary-mouse-01",
+                        source_id="manifest",
+                    )
+                },
+            ),
+            ExtractionResult(
+                source_id="custom",
+                adapter_id="custom_json_session",
+                record_type="custom_session",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="custom-mouse-01",
+                        source_id="custom",
+                    )
+                },
+            ),
+        ),
+        normalized_metadata=NormalizedMetadataBundle(
+            subject=NormalizedSubject(
+                subject_id=NormalizedValue(
+                    "primary-mouse-01",
+                    origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    source_ids=("manifest", "custom"),
+                    review_status=ReviewStatus.NEEDS_REVIEW,
+                )
+            ),
+            session=NormalizedSessionMetadata(),
+        ),
+        mapping_plan=MappingPlan(pathway=session.pathway, decisions=(), issues=()),
+        provenance_record=ProvenanceRecord(
+            session_id=session.session_id,
+            pathway=session.pathway,
+            input_artifacts=(),
+            generated_artifacts=(),
+        ),
+    )
+    _, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
+    qapp.processEvents()
+    window.conversion_widget._selected_source_override_edit.setText("manual-custom-01")
+    qapp.processEvents()
+    window.conversion_widget._apply_source_override_button.click()
+    qapp.processEvents()
+
+    assert (
+        window.conversion_widget._screen_model.state.session.source_metadata_overrides["custom"]["subject.subject_id"]
+        == "manual-custom-01"
+    )
+    assert window.conversion_widget._screen_model.state.preview is None
+    assert "Applied source override" in window.conversion_widget._status_label.text()
+    window.close()
+
+
 def test_conversion_widget_surfaces_missing_artifact_error(qapp, tmp_path: Path) -> None:
     session = make_session(tmp_path)
     missing_artifact = tmp_path / "reports" / "missing-validation-report.json"

@@ -131,6 +131,7 @@ class SessionAssemblyGroupItem:
     supplemental_count: int = 0
     metadata_count: int = 0
     needs_review: bool = False
+    is_confirmed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +199,7 @@ class MetadataDisagreementSourceItem:
     role: str
     extracted_key: str
     value: str
+    override_value: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +213,7 @@ class MetadataDisagreementItem:
     notes: tuple[str, ...] = ()
     source_values: tuple[MetadataDisagreementSourceItem, ...] = ()
     session_override_value: str | None = None
+    resolution_notes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

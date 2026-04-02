@@ -94,12 +94,18 @@ class SessionAssemblyDialog(QDialog):
         self._selected_group_edit.editingFinished.connect(self._rename_selected_group)
         self._rename_group_button = QPushButton("Rename Group", self)
         self._rename_group_button.clicked.connect(self._rename_selected_group)
+        self._confirm_group_button = QPushButton("Confirm Group", self)
+        self._confirm_group_button.clicked.connect(self._toggle_selected_group_confirmation)
+        self._confirm_all_groups_button = QPushButton("Confirm All Groups", self)
+        self._confirm_all_groups_button.clicked.connect(self._screen_model.confirm_all_groups)
         self._move_selected_sources_button = QPushButton("Move Selected Sources To Group", self)
         self._move_selected_sources_button.clicked.connect(self._move_selected_sources_to_group)
         self._create_group_from_selection_button = QPushButton("Create Group From Selection", self)
         self._create_group_from_selection_button.clicked.connect(self._create_group_from_selection)
+        self._split_selection_button = QPushButton("Split Selected Sources", self)
+        self._split_selection_button.clicked.connect(self._split_selected_sources)
         self._group_action_hint_label = QLabel(
-            "Select one or more sources, then move them into the selected group or create a new one.",
+            "Select one or more sources, then confirm, split, move, or create groups before preview.",
             self,
         )
         self._group_action_hint_label.setWordWrap(True)
@@ -157,8 +163,11 @@ class SessionAssemblyDialog(QDialog):
         group_layout.addLayout(group_details)
         group_action_row = QHBoxLayout()
         group_action_row.addWidget(self._rename_group_button)
+        group_action_row.addWidget(self._confirm_group_button)
+        group_action_row.addWidget(self._confirm_all_groups_button)
         group_action_row.addWidget(self._move_selected_sources_button)
         group_action_row.addWidget(self._create_group_from_selection_button)
+        group_action_row.addWidget(self._split_selection_button)
         group_layout.addLayout(group_action_row)
         group_layout.addWidget(self._group_action_hint_label)
 
@@ -308,7 +317,9 @@ class SessionAssemblyDialog(QDialog):
         self._group_list.clear()
         for group in state.groups:
             item = QListWidgetItem(
-                f"[{group.suggested_pathway}] {group.group_label} ({group.source_count} sources)"
+                f"[{group.suggested_pathway}] "
+                f"{'[confirmed] ' if group.is_confirmed else ''}"
+                f"{group.group_label} ({group.source_count} sources)"
             )
             item.setData(Qt.ItemDataRole.UserRole, group.group_key)
             self._group_list.addItem(item)
@@ -342,6 +353,8 @@ class SessionAssemblyDialog(QDialog):
             bool(self._selected_source_ids()) and self._group_list.currentItem() is not None
         )
         self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
+        self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
+        self._confirm_all_groups_button.setEnabled(bool(state.groups))
         self.setWindowTitle(
             "New Conversion Session"
             if state.project_path is None and not state.has_unsaved_changes
@@ -431,8 +444,11 @@ class SessionAssemblyDialog(QDialog):
             with QSignalBlocker(self._selected_group_edit):
                 self._selected_group_edit.setText("")
             self._rename_group_button.setEnabled(False)
+            self._confirm_group_button.setEnabled(False)
+            self._confirm_group_button.setText("Confirm Group")
             self._move_selected_sources_button.setEnabled(False)
             self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
+            self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
             return
 
         group_key = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -444,8 +460,11 @@ class SessionAssemblyDialog(QDialog):
             with QSignalBlocker(self._selected_group_edit):
                 self._selected_group_edit.setText("")
             self._rename_group_button.setEnabled(False)
+            self._confirm_group_button.setEnabled(False)
+            self._confirm_group_button.setText("Confirm Group")
             self._move_selected_sources_button.setEnabled(False)
             self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
+            self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
             return
 
         self._selected_group_label.setText(group.group_label)
@@ -454,12 +473,17 @@ class SessionAssemblyDialog(QDialog):
             f"{group.primary_count} primary, {group.supplemental_count} supplemental, "
             f"{group.metadata_count} metadata"
             + (" | review needed" if group.needs_review else "")
+            + (" | confirmed" if group.is_confirmed else "")
         )
         with QSignalBlocker(self._selected_group_edit):
             self._selected_group_edit.setText(group.group_label)
         self._rename_group_button.setEnabled(True)
+        self._confirm_group_button.setEnabled(True)
+        self._confirm_group_button.setText("Unconfirm Group" if group.is_confirmed else "Confirm Group")
+        self._confirm_all_groups_button.setEnabled(bool(self._screen_model.state.groups))
         self._move_selected_sources_button.setEnabled(bool(self._selected_source_ids()))
         self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
+        self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
 
     def _apply_selected_role(self, role: str) -> None:
         selected_item = self._source_list.currentItem()
@@ -513,6 +537,30 @@ class SessionAssemblyDialog(QDialog):
         if not group_label:
             return
         self._screen_model.set_group_label_for_sources(source_ids, group_label)
+
+    def _split_selected_sources(self) -> None:
+        source_ids = self._selected_source_ids()
+        if not source_ids:
+            return
+        self._screen_model.split_sources_into_individual_groups(source_ids)
+
+    def _toggle_selected_group_confirmation(self) -> None:
+        selected_item = self._group_list.currentItem()
+        if selected_item is None:
+            return
+        group_key = selected_item.data(Qt.ItemDataRole.UserRole)
+        if group_key is None:
+            return
+        group = next(
+            (item for item in self._screen_model.state.groups if item.group_key == str(group_key)),
+            None,
+        )
+        if group is None:
+            return
+        if group.is_confirmed:
+            self._screen_model.unconfirm_group(str(group_key))
+            return
+        self._screen_model.confirm_group(str(group_key))
 
     def _apply_selected_source_metadata_override(self, key: str, value: str) -> None:
         selected_item = self._source_list.currentItem()

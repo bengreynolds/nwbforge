@@ -152,6 +152,26 @@ def test_session_assembly_service_allows_manual_group_override(tmp_path: Path) -
     assert not any(issue.code == "session-assembly-auto-grouped-inputs" for issue in draft.issues)
 
 
+def test_session_assembly_service_can_confirm_auto_grouped_bundle(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    unconfirmed = service.assemble_draft((manifest_path, custom_path))
+    confirmed = service.assemble_draft(
+        (manifest_path, custom_path),
+        confirmed_group_keys=(unconfirmed.groups[0].group_key,),
+    )
+    session = service.create_session(confirmed)
+
+    assert unconfirmed.groups[0].is_confirmed is False
+    assert confirmed.groups[0].is_confirmed is True
+    assert not any(issue.code == "session-assembly-auto-grouped-inputs" for issue in confirmed.issues)
+    assert session.sources[0].metadata["session_assembly.group_confirmed"] == "true"
+
+
 def test_session_assembly_service_detects_simple_metadata_sidecar(tmp_path: Path) -> None:
     image_path = tmp_path / "recording.tif"
     image_path.write_text("binary-placeholder", encoding="utf-8")

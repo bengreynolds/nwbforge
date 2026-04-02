@@ -39,6 +39,7 @@ class JsonSessionAssemblyProjectStore:
                 "has_unsaved_changes": False,
                 "source_roles": dict(workspace.source_roles or {}),
                 "group_overrides": dict(workspace.group_overrides or {}),
+                "confirmed_group_keys": tuple(workspace.confirmed_group_keys or ()),
                 "metadata_overrides": dict(workspace.metadata_overrides or {}),
                 "source_metadata_overrides": {
                     str(source_id): {
@@ -80,6 +81,9 @@ class JsonSessionAssemblyProjectStore:
                     str(key): str(value)
                     for key, value in dict(workspace_payload.get("group_overrides", {})).items()
                 },
+                confirmed_group_keys=tuple(
+                    str(group_key) for group_key in workspace_payload.get("confirmed_group_keys", ())
+                ),
                 metadata_overrides={
                     str(key): str(value)
                     for key, value in dict(workspace_payload.get("metadata_overrides", {})).items()

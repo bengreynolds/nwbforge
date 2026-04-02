@@ -78,6 +78,7 @@ class SessionAssemblyScreenModel:
             title=document.workspace.title,
             source_roles=dict(document.workspace.source_roles or {}),
             group_overrides=dict(document.workspace.group_overrides or {}),
+            confirmed_group_keys=tuple(document.workspace.confirmed_group_keys or ()),
             metadata_overrides=dict(document.workspace.metadata_overrides or {}),
             source_metadata_overrides={
                 str(source_id): dict(overrides)
@@ -211,11 +212,73 @@ class SessionAssemblyScreenModel:
                 next_group_overrides.pop(source_id, None)
         return self._refresh(group_overrides=next_group_overrides)
 
+    def split_sources_into_individual_groups(self, source_ids: tuple[str, ...]) -> SessionAssemblyState:
+        if not source_ids:
+            return self._state
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Split selected sources into individual direct-ingest groups.",
+            source_count=len(source_ids),
+        )
+        next_group_overrides = {source.source_id: source.group_label for source in self._state.sources}
+        used_labels = {source.group_label for source in self._state.sources if source.source_id not in source_ids}
+        for source in self._state.sources:
+            if source.source_id not in source_ids:
+                continue
+            base_label = source.location.stem if source.location.is_file() else source.location.name
+            next_label = base_label or source.label or source.source_id
+            counter = 2
+            while next_label in used_labels:
+                next_label = f"{base_label or source.label or source.source_id} {counter}"
+                counter += 1
+            used_labels.add(next_label)
+            next_group_overrides[source.source_id] = next_label
+        return self._refresh(group_overrides=next_group_overrides)
+
     def rename_group(self, group_key: str, group_label: str) -> SessionAssemblyState:
         source_ids = tuple(
             source.source_id for source in self._state.sources if source.group_key == group_key
         )
         return self.set_group_label_for_sources(source_ids, group_label)
+
+    def confirm_group(self, group_key: str) -> SessionAssemblyState:
+        next_confirmed = {
+            group.group_key
+            for group in self._state.groups
+            if group.is_confirmed or group.group_key == group_key
+        }
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Confirmed direct-ingest dataset group.",
+            group_key=group_key,
+        )
+        return self._refresh(confirmed_group_keys=tuple(sorted(next_confirmed)))
+
+    def unconfirm_group(self, group_key: str) -> SessionAssemblyState:
+        next_confirmed = tuple(
+            group.group_key
+            for group in self._state.groups
+            if group.is_confirmed and group.group_key != group_key
+        )
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Unconfirmed direct-ingest dataset group.",
+            group_key=group_key,
+        )
+        return self._refresh(confirmed_group_keys=next_confirmed)
+
+    def confirm_all_groups(self) -> SessionAssemblyState:
+        next_confirmed = tuple(group.group_key for group in self._state.groups)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Confirmed all direct-ingest dataset groups.",
+            group_count=len(next_confirmed),
+        )
+        return self._refresh(confirmed_group_keys=next_confirmed)
 
     def create_session(self):
         if self._state.draft is None:
@@ -253,6 +316,7 @@ class SessionAssemblyScreenModel:
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
         group_overrides: dict[str, str] | None = None,
+        confirmed_group_keys: tuple[str, ...] | None = None,
         metadata_overrides: dict[str, str] | None = None,
         source_metadata_overrides: dict[str, dict[str, str]] | None = None,
     ) -> SessionAssemblyState:
@@ -275,6 +339,14 @@ class SessionAssemblyScreenModel:
         )
         next_source_roles = source_roles if source_roles is not None else current_roles
         next_group_overrides = group_overrides if group_overrides is not None else current_group_overrides
+        current_confirmed_group_keys = tuple(
+            group.group_key
+            for group in self._state.groups
+            if group.is_confirmed
+        )
+        next_confirmed_group_keys = (
+            confirmed_group_keys if confirmed_group_keys is not None else current_confirmed_group_keys
+        )
         next_metadata_overrides = (
             metadata_overrides if metadata_overrides is not None else self._state.metadata_overrides
         )
@@ -295,6 +367,7 @@ class SessionAssemblyScreenModel:
                 title=next_title,
                 source_roles=next_source_roles,
                 group_overrides=next_group_overrides,
+                confirmed_group_keys=next_confirmed_group_keys,
                 metadata_overrides=next_metadata_overrides,
                 source_metadata_overrides=next_source_metadata_overrides,
             )
@@ -332,6 +405,7 @@ class SessionAssemblyScreenModel:
                         supplemental_count=group.supplemental_count,
                         metadata_count=group.metadata_count,
                         needs_review=group.needs_review,
+                        is_confirmed=group.is_confirmed,
                     )
                     for group in draft.groups
                 ),
@@ -412,6 +486,7 @@ class SessionAssemblyScreenModel:
             title=workspace.title,
             source_roles=dict(workspace.source_roles or {}),
             group_overrides=dict(workspace.group_overrides or {}),
+            confirmed_group_keys=tuple(workspace.confirmed_group_keys or ()),
             metadata_overrides=dict(workspace.metadata_overrides or {}),
             source_metadata_overrides={
                 str(source_id): dict(overrides)
@@ -460,6 +535,11 @@ class SessionAssemblyScreenModel:
                 for source in state.sources
                 if source.group_key.startswith("manual:")
             },
+            confirmed_group_keys=tuple(
+                group.group_key
+                for group in state.groups
+                if group.is_confirmed
+            ),
             metadata_overrides=dict(state.metadata_overrides),
             source_metadata_overrides={
                 source.source_id: dict(source.metadata_overrides)

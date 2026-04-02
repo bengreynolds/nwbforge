@@ -57,6 +57,7 @@ class SessionAssemblyGroup:
     supplemental_count: int = 0
     metadata_count: int = 0
     needs_review: bool = False
+    is_confirmed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +89,7 @@ class SessionAssemblyWorkspace:
     title: str = ""
     source_roles: dict[str, str] | None = None
     group_overrides: dict[str, str] | None = None
+    confirmed_group_keys: tuple[str, ...] | None = None
     metadata_overrides: dict[str, str] | None = None
     source_metadata_overrides: dict[str, dict[str, str]] | None = None
 
@@ -107,6 +109,7 @@ class JsonSessionAssemblyWorkspaceStore:
             "title": workspace.title,
             "source_roles": dict(workspace.source_roles or {}),
             "group_overrides": dict(workspace.group_overrides or {}),
+            "confirmed_group_keys": tuple(workspace.confirmed_group_keys or ()),
             "metadata_overrides": dict(workspace.metadata_overrides or {}),
             "source_metadata_overrides": {
                 str(source_id): {
@@ -133,6 +136,7 @@ class JsonSessionAssemblyWorkspaceStore:
             title=str(payload.get("title", "")),
             source_roles={str(key): str(value) for key, value in dict(payload.get("source_roles", {})).items()},
             group_overrides={str(key): str(value) for key, value in dict(payload.get("group_overrides", {})).items()},
+            confirmed_group_keys=tuple(str(key) for key in payload.get("confirmed_group_keys", ())),
             metadata_overrides={
                 str(key): str(value) for key, value in dict(payload.get("metadata_overrides", {})).items()
             },
@@ -169,6 +173,7 @@ class SessionAssemblyService:
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
         group_overrides: dict[str, str] | None = None,
+        confirmed_group_keys: tuple[str, ...] | None = None,
         metadata_overrides: dict[str, str] | None = None,
         source_metadata_overrides: dict[str, dict[str, str]] | None = None,
     ) -> SessionAssemblyDraft:
@@ -202,6 +207,11 @@ class SessionAssemblyService:
             str(key): str(value).strip()
             for key, value in (group_overrides or {}).items()
             if str(value).strip()
+        }
+        normalized_confirmed_group_keys = {
+            str(group_key).strip()
+            for group_key in (confirmed_group_keys or ())
+            if str(group_key).strip()
         }
         normalized_metadata_overrides = {
             str(key): str(value).strip()
@@ -309,9 +319,13 @@ class SessionAssemblyService:
             group_pathway = (
                 ConversionPathway.HYBRID if len(group_pathways) > 1 else next(iter(group_pathways))
             )
-            needs_group_review = any(source.needs_review for source in sources) or len(group_pathways) > 1
+            is_confirmed = group_key in normalized_confirmed_group_keys
+            auto_grouped = len(sources) > 1 and not any(source.group_key.startswith("manual:") for source in sources)
+            needs_group_review = any(source.needs_review for source in sources) or (
+                not is_confirmed and (auto_grouped or len(group_pathways) > 1)
+            )
 
-            if len(sources) > 1 and not any(source.group_key.startswith("manual:") for source in sources):
+            if auto_grouped and not is_confirmed:
                 issues.append(
                     SessionAssemblyIssue(
                         code="session-assembly-auto-grouped-inputs",
@@ -328,7 +342,7 @@ class SessionAssemblyService:
                     )
                 )
 
-            if len(group_pathways) > 1:
+            if len(group_pathways) > 1 and not is_confirmed:
                 issues.append(
                     SessionAssemblyIssue(
                         code="session-assembly-mixed-group-pathways",
@@ -356,6 +370,7 @@ class SessionAssemblyService:
                     supplemental_count=sum(1 for source in sources if source.role == "supplemental"),
                     metadata_count=sum(1 for source in sources if source.role == "metadata"),
                     needs_review=needs_group_review,
+                    is_confirmed=is_confirmed,
                 )
             )
 
@@ -415,6 +430,16 @@ class SessionAssemblyService:
                 metadata={
                     "session_assembly.group_key": source.group_key,
                     "session_assembly.group_label": source.group_label,
+                    "session_assembly.group_confirmed": str(
+                        next(
+                            (
+                                group.is_confirmed
+                                for group in draft.groups
+                                if group.group_key == source.group_key
+                            ),
+                            False,
+                        )
+                    ).lower(),
                     "session_assembly.sidecar_for_source_id": source.sidecar_for_source_id or "",
                     "session_assembly.sidecar_for_label": source.sidecar_for_label or "",
                 },

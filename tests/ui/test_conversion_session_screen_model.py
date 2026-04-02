@@ -432,6 +432,40 @@ def test_conversion_session_screen_model_can_clear_session_override() -> None:
     assert "Cleared session override" in (state.review_message or "")
 
 
+def test_conversion_session_screen_model_can_apply_source_override() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.apply_source_override("manifest", "subject.subject_id", "source-specific-mouse-01")
+
+    assert state.session is not None
+    assert state.session.source_metadata_overrides["manifest"]["subject.subject_id"] == "source-specific-mouse-01"
+    assert state.preview is None
+    assert "Applied source override" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_can_clear_source_override() -> None:
+    session = make_session()
+    session = ConversionSession(
+        session_id=session.session_id,
+        pathway=session.pathway,
+        status=session.status,
+        sources=session.sources,
+        source_metadata_overrides={"manifest": {"subject.subject_id": "source-specific-mouse-01"}},
+    )
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.clear_source_override("manifest", "subject.subject_id")
+
+    assert state.session is not None
+    assert state.session.source_metadata_overrides == {}
+    assert "Cleared source override" in (state.review_message or "")
+
+
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:
     session = make_session()
     error = PipelineRuntimeError(

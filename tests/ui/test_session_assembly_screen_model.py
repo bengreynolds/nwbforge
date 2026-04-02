@@ -117,6 +117,46 @@ def test_session_assembly_screen_model_can_move_multiple_sources_into_named_grou
     assert any(group.group_label == "Merged Review Bundle" for group in state.groups)
 
 
+def test_session_assembly_screen_model_can_confirm_group_and_restore_it(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    workspace_store = JsonSessionAssemblyWorkspaceStore(tmp_path / "drafts" / "confirmed-group.json")
+
+    first_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+    first_state = first_screen.add_paths((manifest_path, custom_path))
+    confirmed_state = first_screen.confirm_group(first_state.groups[0].group_key)
+
+    restored_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+
+    assert confirmed_state.groups[0].is_confirmed is True
+    assert restored_screen.state.groups[0].is_confirmed is True
+    assert not any(issue.code == "session-assembly-auto-grouped-inputs" for issue in restored_screen.state.issues)
+
+
+def test_session_assembly_screen_model_can_split_selected_sources_into_individual_groups(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("freeform notes", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    screen.add_paths((manifest_path, custom_path, notes_path))
+    state = screen.split_sources_into_individual_groups(("custom-session", "notes"))
+
+    assert state.sources[1].group_label != state.sources[2].group_label
+    assert len({source.group_label for source in state.sources}) == 3
+
+
 def test_session_assembly_screen_model_surfaces_unmatched_input(tmp_path: Path) -> None:
     unknown_path = tmp_path / "notes.txt"
     unknown_path.write_text("freeform notes", encoding="utf-8")
@@ -187,6 +227,7 @@ def test_session_assembly_screen_model_saves_and_loads_explicit_project(tmp_path
     first_screen.add_paths((manifest_path, custom_path))
     first_screen.set_source_group_label("custom-session", "Manual Custom Group")
     first_screen.set_source_metadata_override("custom-session", "subject.subject_id", "custom-source-01")
+    first_screen.confirm_all_groups()
     saved_state = first_screen.save_project(project_path)
 
     restored_screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
@@ -198,6 +239,7 @@ def test_session_assembly_screen_model_saves_and_loads_explicit_project(tmp_path
     assert restored_state.has_unsaved_changes is False
     assert restored_state.sources[1].group_label == "Manual Custom Group"
     assert restored_state.sources[1].metadata_overrides["subject.subject_id"] == "custom-source-01"
+    assert all(group.is_confirmed for group in restored_state.groups)
 
 
 def test_session_assembly_screen_model_restores_project_path_from_workspace(tmp_path: Path) -> None:
