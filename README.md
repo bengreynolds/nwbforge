@@ -108,6 +108,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Persisted last-opened session state plus an `Open Recent` desktop menu
 - Explicit `New Session` and `Reopen Last Session` desktop actions
 - Persisted last-used output directory with default NWB output-path suggestions for newly loaded sessions
+- App-owned default output location under `.nwbforge/outputs/` when no prior export directory has been chosen
 - Real `Choose Output...` desktop save dialog for NWB output selection
 - Generated-artifact visibility in the conversion-session panel for NWB, validation-report, and review outputs
 - Direct desktop actions to open generated artifacts and their folders from the conversion panel
@@ -161,6 +162,8 @@ conda run -n nwbforge-dev python scripts/run_app.py --session examples\sessions\
 ```
 
 The temporary launcher is a development aid only. It now boots the real desktop service composition and loads either a user-provided supported/custom session source or a generated demo manifest, without changing the long-term packaging plan.
+
+If no output directory has been chosen yet, the desktop shell now defaults NWB writes into `.nwbforge/outputs/` instead of the repository root.
 
 ## Local development
 

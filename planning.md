@@ -129,6 +129,7 @@ Next:
 - The conversion-session panel now also supports direct actions for opening a selected artifact or its containing folder, which gives immediate desktop access to validation reports and later review artifacts.
 - The shell now also has explicit session lifecycle controls for `New Session` and `Reopen Last Session`, which moves the desktop flow closer to a conventional application model instead of a launcher-only workflow.
 - The desktop settings path now also persists the last used NWB output directory, and each newly loaded supported or custom session receives a default output path derived from that directory and the current session id.
+- When no previous output directory has been chosen, the desktop shell now defaults new NWB outputs into `.nwbforge/outputs/` instead of writing into the repository root.
 - The conversion-session panel now also exposes dedicated validation-report and review-decision shortcuts so the most important review artifacts are directly reachable without manually selecting them from the artifact list.
 - The conversion-session panel now also exposes a real `Choose Output...` dialog path for NWB targets, seeded from the current output path or the persisted last-used output directory.
 - The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.

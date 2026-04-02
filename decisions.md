@@ -929,6 +929,19 @@ Consequences:
 - reopened desktop sessions now surface recovered artifact, validation, review, and output-path state directly in the conversion workspace
 - recovery remains latest-state only; richer history and multi-snapshot navigation are still follow-on work
 
+### DEC-075: Use an app-owned default output directory instead of the repository root
+Status: Accepted
+
+Reasoning:
+- Manual desktop testing showed that falling back to `Path.cwd()` for NWB output writes dirtied the repository root with generated `.nwb` and validation-report files.
+- The app already has an app-state area under `.nwbforge/`, which is a more appropriate default location for generated outputs before a user chooses a custom export directory.
+- This keeps internal testing cleaner without changing the persisted last-output-directory behavior once users intentionally choose an output location.
+
+Consequences:
+- the desktop shell now defaults new NWB outputs into `.nwbforge/outputs/` when no previous output directory has been recorded
+- validation reports now follow those outputs into the app-owned directory instead of landing in the repository root by default
+- checked-in example session metadata should prefer cleaner happy-path values where practical so first-run testing is less noisy
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 
