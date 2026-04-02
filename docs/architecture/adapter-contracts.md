@@ -37,16 +37,25 @@ Implemented adapters now include:
 - `NeuroConvAxonAdapter` for real NeuroConv-backed Axon/ABF ecephys sources
 - `NeuroConvAxonaAdapter` for real NeuroConv-backed Axona ecephys sources
 - `NeuroConvBlackrockAdapter` for real NeuroConv-backed Blackrock ecephys sources
+- `NeuroConvBiocamAdapter` for real NeuroConv-backed Biocam ecephys sources
+- `NeuroConvBrukerTiffSinglePlaneAdapter` and `NeuroConvBrukerTiffMultiPlaneAdapter` for real NeuroConv-backed Bruker TIFF imaging sources
 - `NeuroConvEdfAdapter` for real NeuroConv-backed EDF ecephys sources
+- `NeuroConvFemtonicsAdapter` for real NeuroConv-backed Femtonics imaging sources
 - `NeuroConvVideoAdapter` for real NeuroConv-backed external video sources
 - `NeuroConvHdf5ImagingAdapter` for real NeuroConv-backed HDF5 imaging sources
+- `NeuroConvInscopixAdapter` for real NeuroConv-backed Inscopix imaging sources
+- `NeuroConvMCSRawAdapter` for real NeuroConv-backed MCSRaw ecephys sources
 - `NeuroConvMicroManagerTiffAdapter` for real NeuroConv-backed Micro-Manager TIFF imaging sources
 - `NeuroConvMiniscopeAdapter` for real NeuroConv-backed Miniscope imaging sources
 - `NeuroConvNeuralynxAdapter` for real NeuroConv-backed Neuralynx ecephys sources
+- `NeuroConvNeuralynxNvtAdapter` for real NeuroConv-backed Neuralynx NVT behavior sources
+- `NeuroConvNeuroScopeAdapter` for real NeuroConv-backed NeuroScope ecephys sources
+- `NeuroConvOpenEphysBinaryAnalogAdapter` for real NeuroConv-backed OpenEphys Binary analog sources
 - `NeuroConvOpenEphysBinaryAdapter` for real NeuroConv-backed OpenEphys Binary ecephys sources
 - `NeuroConvOpenEphysLegacyAdapter` for real NeuroConv-backed OpenEphys Legacy ecephys sources
 - `NeuroConvPlexonAdapter` for real NeuroConv-backed Plexon ecephys sources
 - `NeuroConvScanImageAdapter` for real NeuroConv-backed ScanImage imaging sources
+- `NeuroConvScanImageLegacyAdapter` for real NeuroConv-backed ScanImage legacy imaging sources
 - `NeuroConvSpikeGadgetsAdapter` for real NeuroConv-backed SpikeGadgets ecephys sources
 - `NeuroConvSpikeGLXAdapter` for real NeuroConv-backed SpikeGLX ecephys sources
 - `NeuroConvTdtAdapter` for real NeuroConv-backed TDT ecephys sources
@@ -76,7 +85,7 @@ Implemented framework pieces:
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
-- the SLEAP, LightningPose, MedPC, AlphaOmega, Axon/ABF, Axona, Blackrock, EDF, Video, HDF5 imaging, Micro-Manager TIFF, Miniscope, Neuralynx, OpenEphys Binary, OpenEphys Legacy, Plexon, ScanImage, SpikeGadgets, SpikeGLX, TDT, Thor, Intan, and WhiteMatter adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
+- the SLEAP, LightningPose, MedPC, AlphaOmega, Axon/ABF, Axona, Biocam, Blackrock, Bruker TIFF, EDF, Femtonics, Video, HDF5 imaging, Inscopix, MCSRaw, Micro-Manager TIFF, Miniscope, Neuralynx, Neuralynx NVT, NeuroScope, OpenEphys Binary, OpenEphys Binary Analog, OpenEphys Legacy, Plexon, ScanImage, ScanImage Legacy, SpikeGadgets, SpikeGLX, TDT, Thor, Intan, and WhiteMatter adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
 - the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:
@@ -105,6 +114,7 @@ These protocols define what higher-level services must do without choosing concr
 - Custom supported-path adapter work should start only after checking the NeuroConv Conversion Gallery for an existing route
 - Supported behavior and media routes may write directly into their documented NWB processing or stimulus targets through NeuroConv, with the repository providing orchestration, metadata overrides, and validation around that write path
 - Optional supported routes should only be registered into the active desktop adapter registry when the curated route dependencies for that route are installed in the current environment
+- One curated install gate may legitimately enable more than one adapter when they share the same software stack, such as Bruker TIFF single-plane versus multi-plane, Neuralynx recording versus NVT tracking, or OpenEphys Binary recording versus analog streams
 
 ## Immediate follow-on work
 

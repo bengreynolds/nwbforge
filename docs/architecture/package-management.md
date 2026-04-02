@@ -35,10 +35,15 @@ Current route package catalog examples:
 - `alphaomega`
 - `axon`
 - `axona`
+- `biocam`
 - `blackrock`
+- `brukertiff`
 - `deeplabcut`
 - `edf`
+- `femtonics`
 - `lightningpose`
+- `inscopix`
+- `mcsraw`
 - `medpc`
 - `excel`
 - `hdf5`
@@ -46,6 +51,7 @@ Current route package catalog examples:
 - `micromanager`
 - `miniscope`
 - `neuralynx`
+- `neuroscope`
 - `openephys_binary`
 - `openephys_legacy`
 - `plexon`
@@ -57,6 +63,7 @@ Current route package catalog examples:
 - `videos`
 - `whitematter`
 - `scanimage`
+- `scanimage_legacy`
 - `intan`
 
 ## Setup modes
@@ -132,9 +139,16 @@ Examples:
 - `edf` depends on `spikeinterface` and `pyedflib`
 - `videos` depends on `cv2`
 - `hdf5` depends on `h5py` and `roiextractors`
+- `brukertiff` depends on `roiextractors`, `tifffile`, and `natsort`
+- `femtonics` depends on `roiextractors` and `h5py`
+- `inscopix` depends on `roiextractors` and `isx`
 - `scanimage` depends on `roiextractors` and `tifffile`
+- `scanimage_legacy` depends on `roiextractors` and `tifffile`
+- `biocam` depends on `spikeinterface`
+- `mcsraw` depends on `spikeinterface`
 - `intan` depends on `spikeinterface`
 - `neuralynx` depends on `spikeinterface` and `natsort`
+- `neuroscope` depends on `spikeinterface` and `lxml`
 - `openephys_binary` depends on `spikeinterface`
 - `openephys_legacy` depends on `spikeinterface`
 - `plexon` depends on `spikeinterface`
@@ -144,6 +158,11 @@ Examples:
 - `whitematter` depends on `spikeinterface`
 
 This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.
+
+In some cases one install gate enables more than one adapter because the same software stack supports more than one route shape:
+- `brukertiff` enables both Bruker single-plane and Bruker multi-plane adapters
+- `neuralynx` enables both Neuralynx recording and Neuralynx NVT adapters
+- `openephys_binary` enables both OpenEphys Binary recording and OpenEphys Binary analog adapters
 
 ## Future UI expectations
 

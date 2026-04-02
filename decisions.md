@@ -1483,3 +1483,18 @@ Consequences:
 - the `ecephys` family now also includes `AlphaOmega`, `Axona`, `Blackrock`, `Neuralynx`, `OpenEphys Legacy`, `Plexon`, `TDT`, and `WhiteMatter`
 - package-gated scaling should continue to prefer strong suffixes, stream manifests, and required configuration over broad file-type claims
 - generic `.bin` and multi-stream folder routes should remain conservative until richer dataset modeling and ambiguity review affordances exist
+
+### DEC-116: Reuse one install gate for closely related adapters when they share the same software stack, but keep adapter matching split by semantics
+Status: Accepted
+
+Reasoning:
+- The next route-scaling batch adds several cases where one installed software stack legitimately exposes more than one route shape: Bruker TIFF single-plane vs multi-plane, Neuralynx ecephys vs Neuralynx NVT tracking, OpenEphys Binary recordings vs OpenEphys Binary analog streams, and ScanImage current vs ScanImage legacy.
+- The install UI should stay route-name oriented and simple, but the runtime adapter layer still needs semantically distinct matching so the wrong reader does not claim a source.
+- This means the right scaling unit is sometimes one package/install gate mapped to multiple adapters, not one adapter per gate.
+
+Consequences:
+- the `brukertiff` install gate now enables both Bruker TIFF single-plane and Bruker TIFF multi-plane adapters
+- the `neuralynx` install gate now enables both Neuralynx ecephys and Neuralynx NVT adapters
+- the `openephys_binary` install gate now enables both OpenEphys Binary recording and OpenEphys Binary analog adapters
+- ScanImage current and legacy matching are now split so the current adapter stops claiming legacy TIFFs
+- future optional-route growth can reuse one curated install gate for multiple semantically distinct adapters when that reflects one real software stack rather than unrelated formats
