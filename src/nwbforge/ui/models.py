@@ -127,11 +127,14 @@ class SessionAssemblyGroupItem:
     suggested_pathway: str
     group_kind: str = "folder"
     anchor_path: Path | None = None
+    grouping_reason: str = ""
+    member_labels: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
     source_count: int = 0
     primary_count: int = 0
     supplemental_count: int = 0
     metadata_count: int = 0
+    review_issue_count: int = 0
     requires_confirmation: bool = False
     needs_review: bool = False
     is_confirmed: bool = False
@@ -216,7 +219,9 @@ class MetadataDisagreementItem:
     notes: tuple[str, ...] = ()
     source_values: tuple[MetadataDisagreementSourceItem, ...] = ()
     session_override_value: str | None = None
+    resolution_status: str = "pending"
     resolution_notes: tuple[str, ...] = ()
+    resolution_history: tuple[str, ...] = ()
     pending_resolution: bool = True
 
 

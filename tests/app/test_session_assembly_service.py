@@ -164,6 +164,25 @@ def test_session_assembly_service_builds_group_summary_for_same_stem_sidecar_bun
     assert draft.groups[0].group_label == "recording"
     assert draft.groups[0].source_count == 2
     assert draft.groups[0].metadata_count == 1
+    assert draft.groups[0].group_kind == "sidecar_bundle"
+    assert draft.groups[0].grouping_reason == "Grouped by same-stem metadata sidecar detection."
+    assert draft.groups[0].member_labels == ("recording.tif", "recording.json")
+
+
+def test_session_assembly_service_tracks_group_reason_and_review_issue_count(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+
+    draft = SessionAssemblyService(build_adapter_registry()).assemble_draft((manifest_path, custom_path))
+
+    assert draft.groups[0].group_kind == "folder"
+    assert draft.groups[0].anchor_path == tmp_path
+    assert draft.groups[0].grouping_reason == (
+        "Grouped by shared location, but contains mixed supported/custom-looking inputs."
+    )
+    assert draft.groups[0].review_issue_count >= 1
 
 
 def test_session_assembly_service_allows_manual_group_override(tmp_path: Path) -> None:

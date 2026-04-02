@@ -334,6 +334,8 @@ def test_conversion_session_screen_model_projects_metadata_disagreements_from_pr
     assert disagreement.canonical_key == "subject.subject_id"
     assert disagreement.resolved_value == "primary-mouse-01"
     assert [item.source_id for item in disagreement.source_values] == ["manifest", "custom"]
+    assert disagreement.resolution_status == "pending"
+    assert disagreement.resolution_history == ("No override history recorded for this field yet.",)
 
 
 def test_conversion_session_screen_model_applies_session_override_from_metadata_disagreement() -> None:
@@ -464,6 +466,42 @@ def test_conversion_session_screen_model_can_clear_source_override() -> None:
     assert state.session is not None
     assert state.session.source_metadata_overrides == {}
     assert "Cleared source override" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_can_clear_all_field_overrides() -> None:
+    session = ConversionSession(
+        session_id="session-ui-04",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=Path("C:/tmp/session_manifest.json"),
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=Path("C:/tmp/custom_session.json"),
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+        metadata_overrides={"subject.subject_id": "session-value"},
+        source_metadata_overrides={"custom": {"subject.subject_id": "source-value"}},
+    )
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.clear_all_field_overrides("subject.subject_id")
+
+    assert state.session is not None
+    assert state.session.metadata_overrides == {}
+    assert state.session.source_metadata_overrides == {}
+    assert "Cleared all overrides" in (state.review_message or "")
 
 
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:

@@ -236,6 +236,12 @@ class SessionAssemblyScreenModel:
             next_group_overrides[source.source_id] = next_label
         return self._refresh(group_overrides=next_group_overrides)
 
+    def split_group(self, group_key: str) -> SessionAssemblyState:
+        source_ids = tuple(
+            source.source_id for source in self._state.sources if source.group_key == group_key
+        )
+        return self.split_sources_into_individual_groups(source_ids)
+
     def rename_group(self, group_key: str, group_label: str) -> SessionAssemblyState:
         source_ids = tuple(
             source.source_id for source in self._state.sources if source.group_key == group_key
@@ -401,11 +407,14 @@ class SessionAssemblyScreenModel:
                         suggested_pathway=group.suggested_pathway.value,
                         group_kind=group.group_kind,
                         anchor_path=group.anchor_path,
+                        grouping_reason=group.grouping_reason,
+                        member_labels=group.member_labels,
                         source_ids=group.source_ids,
                         source_count=group.source_count,
                         primary_count=group.primary_count,
                         supplemental_count=group.supplemental_count,
                         metadata_count=group.metadata_count,
+                        review_issue_count=group.review_issue_count,
                         requires_confirmation=group.requires_confirmation,
                         needs_review=group.needs_review,
                         is_confirmed=group.is_confirmed,

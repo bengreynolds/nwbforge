@@ -90,6 +90,10 @@ class SessionAssemblyDialog(QDialog):
         self._selected_group_kind_label = QLabel("Not available.", self)
         self._selected_group_anchor_label = QLabel("Not available.", self)
         self._selected_group_anchor_label.setWordWrap(True)
+        self._selected_group_reason_label = QLabel("Not available.", self)
+        self._selected_group_reason_label.setWordWrap(True)
+        self._selected_group_members_label = QLabel("No group selected.", self)
+        self._selected_group_members_label.setWordWrap(True)
         self._selected_group_counts_label = QLabel("No group selected.", self)
         self._selected_group_counts_label.setWordWrap(True)
         self._selected_group_edit = QLineEdit(self)
@@ -107,6 +111,8 @@ class SessionAssemblyDialog(QDialog):
         self._create_group_from_selection_button.clicked.connect(self._create_group_from_selection)
         self._split_selection_button = QPushButton("Split Selected Sources", self)
         self._split_selection_button.clicked.connect(self._split_selected_sources)
+        self._split_group_button = QPushButton("Split Group", self)
+        self._split_group_button.clicked.connect(self._split_selected_group)
         self._group_action_hint_label = QLabel(
             "Select one or more sources, then confirm, split, move, or create groups before preview.",
             self,
@@ -163,6 +169,8 @@ class SessionAssemblyDialog(QDialog):
         group_details.addRow("Pathway", self._selected_group_pathway_label)
         group_details.addRow("Kind", self._selected_group_kind_label)
         group_details.addRow("Anchor", self._selected_group_anchor_label)
+        group_details.addRow("Reason", self._selected_group_reason_label)
+        group_details.addRow("Members", self._selected_group_members_label)
         group_details.addRow("Composition", self._selected_group_counts_label)
         group_details.addRow("Group Label", self._selected_group_edit)
         group_layout.addLayout(group_details)
@@ -173,6 +181,7 @@ class SessionAssemblyDialog(QDialog):
         group_action_row.addWidget(self._move_selected_sources_button)
         group_action_row.addWidget(self._create_group_from_selection_button)
         group_action_row.addWidget(self._split_selection_button)
+        group_action_row.addWidget(self._split_group_button)
         group_layout.addLayout(group_action_row)
         group_layout.addWidget(self._group_action_hint_label)
 
@@ -447,6 +456,8 @@ class SessionAssemblyDialog(QDialog):
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_kind_label.setText("Not available.")
             self._selected_group_anchor_label.setText("Not available.")
+            self._selected_group_reason_label.setText("Not available.")
+            self._selected_group_members_label.setText("No group selected.")
             self._selected_group_counts_label.setText("No group selected.")
             with QSignalBlocker(self._selected_group_edit):
                 self._selected_group_edit.setText("")
@@ -456,6 +467,7 @@ class SessionAssemblyDialog(QDialog):
             self._move_selected_sources_button.setEnabled(False)
             self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
             self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
+            self._split_group_button.setEnabled(False)
             return
 
         group_key = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -465,6 +477,8 @@ class SessionAssemblyDialog(QDialog):
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_kind_label.setText("Not available.")
             self._selected_group_anchor_label.setText("Not available.")
+            self._selected_group_reason_label.setText("Not available.")
+            self._selected_group_members_label.setText("No group selected.")
             self._selected_group_counts_label.setText("No group selected.")
             with QSignalBlocker(self._selected_group_edit):
                 self._selected_group_edit.setText("")
@@ -474,15 +488,19 @@ class SessionAssemblyDialog(QDialog):
             self._move_selected_sources_button.setEnabled(False)
             self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
             self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
+            self._split_group_button.setEnabled(False)
             return
 
         self._selected_group_label.setText(group.group_label)
         self._selected_group_pathway_label.setText(group.suggested_pathway)
         self._selected_group_kind_label.setText(group.group_kind.replace("_", " "))
         self._selected_group_anchor_label.setText(str(group.anchor_path) if group.anchor_path is not None else "Not available.")
+        self._selected_group_reason_label.setText(group.grouping_reason or "No grouping reason available.")
+        self._selected_group_members_label.setText(", ".join(group.member_labels) if group.member_labels else "No members listed.")
         self._selected_group_counts_label.setText(
             f"{group.primary_count} primary, {group.supplemental_count} supplemental, "
             f"{group.metadata_count} metadata"
+            + (f" | {group.review_issue_count} review flags" if group.review_issue_count else "")
             + (" | confirmation required" if group.requires_confirmation else "")
             + (" | review needed" if group.needs_review else "")
             + (" | confirmed" if group.is_confirmed else "")
@@ -496,6 +514,7 @@ class SessionAssemblyDialog(QDialog):
         self._move_selected_sources_button.setEnabled(bool(self._selected_source_ids()))
         self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
         self._split_selection_button.setEnabled(bool(self._selected_source_ids()))
+        self._split_group_button.setEnabled(group.source_count > 1)
 
     def _apply_selected_role(self, role: str) -> None:
         selected_item = self._source_list.currentItem()
@@ -555,6 +574,15 @@ class SessionAssemblyDialog(QDialog):
         if not source_ids:
             return
         self._screen_model.split_sources_into_individual_groups(source_ids)
+
+    def _split_selected_group(self) -> None:
+        selected_item = self._group_list.currentItem()
+        if selected_item is None:
+            return
+        group_key = selected_item.data(Qt.ItemDataRole.UserRole)
+        if group_key is None:
+            return
+        self._screen_model.split_group(str(group_key))
 
     def _toggle_selected_group_confirmation(self) -> None:
         selected_item = self._group_list.currentItem()

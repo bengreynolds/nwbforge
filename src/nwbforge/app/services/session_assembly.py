@@ -55,9 +55,12 @@ class SessionAssemblyGroup:
     source_count: int
     group_kind: str = "folder"
     anchor_path: Path | None = None
+    grouping_reason: str = ""
+    member_labels: tuple[str, ...] = ()
     primary_count: int = 0
     supplemental_count: int = 0
     metadata_count: int = 0
+    review_issue_count: int = 0
     requires_confirmation: bool = False
     needs_review: bool = False
     is_confirmed: bool = False
@@ -332,6 +335,13 @@ class SessionAssemblyService:
                 sources[0].location.parent if sources[0].location.is_file() else sources[0].location
             )
             group_kind = self._group_kind_for_key(group_key, sources)
+            grouping_reason = self._group_reason_for(
+                group_key=group_key,
+                sources=sources,
+                group_kind=group_kind,
+                group_pathways=group_pathways,
+            )
+            review_issue_count = sum(1 for source in sources if source.needs_review)
 
             if auto_grouped and not is_confirmed:
                 issues.append(
@@ -388,9 +398,14 @@ class SessionAssemblyService:
                     source_count=len(sources),
                     group_kind=group_kind,
                     anchor_path=anchor_path,
+                    grouping_reason=grouping_reason,
+                    member_labels=tuple(source.label for source in sources),
                     primary_count=sum(1 for source in sources if source.role == "primary"),
                     supplemental_count=sum(1 for source in sources if source.role == "supplemental"),
                     metadata_count=sum(1 for source in sources if source.role == "metadata"),
+                    review_issue_count=review_issue_count + (
+                        1 if requires_confirmation and not is_confirmed else 0
+                    ),
                     requires_confirmation=requires_confirmation,
                     needs_review=needs_group_review,
                     is_confirmed=is_confirmed,
@@ -605,6 +620,28 @@ class SessionAssemblyService:
         if len(sources) == 1 and sources[0].location.is_dir():
             return "directory"
         return "folder"
+
+    @staticmethod
+    def _group_reason_for(
+        *,
+        group_key: str,
+        sources: list[SessionAssemblySource],
+        group_kind: str,
+        group_pathways: set[ConversionPathway],
+    ) -> str:
+        if group_key.startswith("manual:"):
+            return "Created or corrected manually in the direct-ingest workspace."
+        if group_key.startswith("sidecar-bundle:"):
+            return "Grouped by same-stem metadata sidecar detection."
+        if group_key.startswith("descriptor-parent:"):
+            return "Grouped under a recognized session-descriptor parent directory."
+        if len(group_pathways) > 1:
+            return "Grouped by shared location, but contains mixed supported/custom-looking inputs."
+        if len(sources) == 1 and group_kind == "directory":
+            return "Single selected directory treated as one dataset bundle."
+        if len(sources) > 1:
+            return "Grouped automatically from the same selected folder."
+        return "Single selected file treated as its own dataset bundle."
 
     def _detect_sidecar_links(self, normalized_paths: tuple[Path, ...]) -> dict[Path, Path]:
         primary_candidates = {

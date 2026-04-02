@@ -313,6 +313,47 @@ class ConversionSessionScreenModel:
             )
         )
 
+    def clear_all_field_overrides(self, canonical_key: str) -> ConversionSessionScreenState:
+        session = self._require_session()
+        next_session_overrides = dict(session.metadata_overrides)
+        next_session_overrides.pop(canonical_key, None)
+        next_source_overrides: dict[str, dict[str, str]] = {}
+        for existing_source_id, overrides in session.source_metadata_overrides.items():
+            reduced = {
+                str(key): str(value)
+                for key, value in overrides.items()
+                if key != canonical_key
+            }
+            if reduced:
+                next_source_overrides[str(existing_source_id)] = reduced
+        updated_session = replace(
+            session,
+            metadata_overrides=next_session_overrides,
+            source_metadata_overrides=next_source_overrides,
+        )
+        return self._set_state(
+            replace(
+                self._state,
+                session=updated_session,
+                sources=conversion_source_items(updated_session.sources),
+                preview=None,
+                execution=None,
+                generated_artifacts=(),
+                validation_issues=(),
+                metadata_disagreements=(),
+                progress_event=None,
+                last_review_submission=None,
+                review_message=(
+                    f"Cleared all overrides for {canonical_key}. Rebuild preview to refresh results."
+                ),
+                recovery_message=None,
+                error_message=None,
+                user_error=None,
+                persisted_validation_summary=None,
+                persisted_review_outcome=None,
+            )
+        )
+
     def submit_review(self, decision: ReviewStatus) -> ReviewSubmission:
         if self._review_service is None:
             raise ValueError("Review submission is not configured for this conversion session.")
@@ -600,6 +641,11 @@ def metadata_disagreement_items(preview: ConversionPreview) -> tuple[MetadataDis
     items: list[MetadataDisagreementItem] = []
     for canonical_key, normalized_value in _pending_review_entries(preview.normalized_metadata):
         source_values = tuple(extracted_by_canonical.get(canonical_key, ()))
+        has_session_override = preview.session.metadata_overrides.get(canonical_key) is not None
+        has_source_override = any(source_value.override_value is not None for source_value in source_values)
+        pending_resolution = normalized_value.review_status is ReviewStatus.NEEDS_REVIEW and not (
+            has_session_override or has_source_override
+        )
         items.append(
             MetadataDisagreementItem(
                 canonical_key=canonical_key,
@@ -609,12 +655,22 @@ def metadata_disagreement_items(preview: ConversionPreview) -> tuple[MetadataDis
                 notes=normalized_value.notes,
                 source_values=source_values,
                 session_override_value=preview.session.metadata_overrides.get(canonical_key),
+                resolution_status=_resolution_status(
+                    pending_resolution,
+                    preview.session.metadata_overrides.get(canonical_key),
+                    source_values,
+                ),
                 resolution_notes=_resolution_notes(
                     canonical_key=canonical_key,
                     source_values=source_values,
                     session_override_value=preview.session.metadata_overrides.get(canonical_key),
                 ),
-                pending_resolution=normalized_value.review_status is ReviewStatus.NEEDS_REVIEW,
+                resolution_history=_resolution_history(
+                    canonical_key=canonical_key,
+                    source_values=source_values,
+                    session_override_value=preview.session.metadata_overrides.get(canonical_key),
+                ),
+                pending_resolution=pending_resolution,
             )
         )
     return tuple(items)
@@ -636,6 +692,43 @@ def _resolution_notes(
                 f"{source_value.override_value}"
             )
     return tuple(notes)
+
+
+def _resolution_status(
+    pending_resolution: bool,
+    session_override_value: str | None,
+    source_values: tuple[MetadataDisagreementSourceItem, ...],
+) -> str:
+    if session_override_value is not None:
+        return "session_override"
+    if any(source_value.override_value is not None for source_value in source_values):
+        return "source_override"
+    if pending_resolution:
+        return "pending"
+    return "resolved"
+
+
+def _resolution_history(
+    *,
+    canonical_key: str,
+    source_values: tuple[MetadataDisagreementSourceItem, ...],
+    session_override_value: str | None,
+) -> tuple[str, ...]:
+    history: list[str] = []
+    if session_override_value is not None:
+        history.append(
+            f"Session override currently resolves {canonical_key} to '{session_override_value}'."
+        )
+    source_override_lines = [
+        f"{source_value.source_label} -> '{source_value.override_value}'"
+        for source_value in source_values
+        if source_value.override_value is not None
+    ]
+    if source_override_lines:
+        history.append("Source overrides: " + "; ".join(source_override_lines))
+    if not history:
+        history.append("No override history recorded for this field yet.")
+    return tuple(history)
 
 
 def _pending_review_entries(bundle: NormalizedMetadataBundle) -> tuple[tuple[str, object], ...]:

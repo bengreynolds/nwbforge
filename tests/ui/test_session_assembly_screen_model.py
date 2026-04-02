@@ -164,6 +164,21 @@ def test_session_assembly_screen_model_can_split_selected_sources_into_individua
     assert len({source.group_label for source in state.sources}) == 3
 
 
+def test_session_assembly_screen_model_can_split_selected_group(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    initial_state = screen.add_paths((manifest_path, custom_path))
+    split_state = screen.split_group(initial_state.groups[0].group_key)
+
+    assert len(split_state.groups) == 2
+    assert len({source.group_label for source in split_state.sources}) == 2
+    assert all(group.group_kind == "manual" for group in split_state.groups)
+
+
 def test_session_assembly_screen_model_surfaces_unmatched_input(tmp_path: Path) -> None:
     unknown_path = tmp_path / "notes.txt"
     unknown_path.write_text("freeform notes", encoding="utf-8")
