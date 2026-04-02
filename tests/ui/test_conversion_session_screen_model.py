@@ -336,6 +336,102 @@ def test_conversion_session_screen_model_projects_metadata_disagreements_from_pr
     assert [item.source_id for item in disagreement.source_values] == ["manifest", "custom"]
 
 
+def test_conversion_session_screen_model_applies_session_override_from_metadata_disagreement() -> None:
+    session = ConversionSession(
+        session_id="session-ui-03",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=Path("C:/tmp/session_manifest.json"),
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=Path("C:/tmp/custom_session.json"),
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview = make_preview(
+        session,
+        extraction_results=(
+            ExtractionResult(
+                source_id="manifest",
+                adapter_id="session_manifest",
+                record_type="session_manifest",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="primary-mouse-01",
+                        source_id="manifest",
+                    )
+                },
+            ),
+            ExtractionResult(
+                source_id="custom",
+                adapter_id="custom_json_session",
+                record_type="custom_session",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="custom-mouse-01",
+                        source_id="custom",
+                    )
+                },
+            ),
+        ),
+        normalized_metadata=NormalizedMetadataBundle(
+            subject=NormalizedSubject(
+                subject_id=NormalizedValue(
+                    "primary-mouse-01",
+                    origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    source_ids=("manifest", "custom"),
+                    review_status=ReviewStatus.NEEDS_REVIEW,
+                )
+            ),
+            session=NormalizedSessionMetadata(),
+        ),
+    )
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    screen.start_preview().result(timeout=5)
+    state = screen.apply_session_override("subject.subject_id", "custom-mouse-01")
+
+    assert state.session is not None
+    assert state.session.metadata_overrides["subject.subject_id"] == "custom-mouse-01"
+    assert state.preview is None
+    assert state.execution is None
+    assert state.metadata_disagreements == ()
+    assert "Applied session override" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_can_clear_session_override() -> None:
+    session = make_session()
+    session = ConversionSession(
+        session_id=session.session_id,
+        pathway=session.pathway,
+        status=session.status,
+        sources=session.sources,
+        metadata_overrides={"subject.subject_id": "override-mouse-01"},
+    )
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.clear_session_override("subject.subject_id")
+
+    assert state.session is not None
+    assert state.session.metadata_overrides == {}
+    assert "Cleared session override" in (state.review_message or "")
+
+
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:
     session = make_session()
     error = PipelineRuntimeError(

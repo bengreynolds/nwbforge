@@ -8,6 +8,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -56,6 +57,7 @@ class SessionAssemblyDialog(QDialog):
         self._input_list = QListWidget(self)
         self._group_list = QListWidget(self)
         self._source_list = QListWidget(self)
+        self._source_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._source_list.currentItemChanged.connect(self._sync_selected_source)
         self._group_list.currentItemChanged.connect(self._sync_selected_group)
         self._issue_list = QListWidget(self)
@@ -87,6 +89,20 @@ class SessionAssemblyDialog(QDialog):
         self._selected_group_pathway_label = QLabel("Not available.", self)
         self._selected_group_counts_label = QLabel("No group selected.", self)
         self._selected_group_counts_label.setWordWrap(True)
+        self._selected_group_edit = QLineEdit(self)
+        self._selected_group_edit.setPlaceholderText("Selected group label")
+        self._selected_group_edit.editingFinished.connect(self._rename_selected_group)
+        self._rename_group_button = QPushButton("Rename Group", self)
+        self._rename_group_button.clicked.connect(self._rename_selected_group)
+        self._move_selected_sources_button = QPushButton("Move Selected Sources To Group", self)
+        self._move_selected_sources_button.clicked.connect(self._move_selected_sources_to_group)
+        self._create_group_from_selection_button = QPushButton("Create Group From Selection", self)
+        self._create_group_from_selection_button.clicked.connect(self._create_group_from_selection)
+        self._group_action_hint_label = QLabel(
+            "Select one or more sources, then move them into the selected group or create a new one.",
+            self,
+        )
+        self._group_action_hint_label.setWordWrap(True)
         self._metadata_override_edits: dict[str, QLineEdit] = {}
         self._source_metadata_override_edits: dict[str, QLineEdit] = {}
 
@@ -137,7 +153,14 @@ class SessionAssemblyDialog(QDialog):
         group_details.addRow("Group", self._selected_group_label)
         group_details.addRow("Pathway", self._selected_group_pathway_label)
         group_details.addRow("Composition", self._selected_group_counts_label)
+        group_details.addRow("Group Label", self._selected_group_edit)
         group_layout.addLayout(group_details)
+        group_action_row = QHBoxLayout()
+        group_action_row.addWidget(self._rename_group_button)
+        group_action_row.addWidget(self._move_selected_sources_button)
+        group_action_row.addWidget(self._create_group_from_selection_button)
+        group_layout.addLayout(group_action_row)
+        group_layout.addWidget(self._group_action_hint_label)
 
         metadata_group = QGroupBox("Metadata Overrides", self)
         metadata_layout = QFormLayout(metadata_group)
@@ -315,6 +338,10 @@ class SessionAssemblyDialog(QDialog):
 
         self._remove_selected_button.setEnabled(self._input_list.count() > 0)
         self._create_button.setEnabled(state.can_create_session)
+        self._move_selected_sources_button.setEnabled(
+            bool(self._selected_source_ids()) and self._group_list.currentItem() is not None
+        )
+        self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
         self.setWindowTitle(
             "New Conversion Session"
             if state.project_path is None and not state.has_unsaved_changes
@@ -339,6 +366,8 @@ class SessionAssemblyDialog(QDialog):
             self._group_edit.setEnabled(False)
             for edit in self._source_metadata_override_edits.values():
                 edit.setEnabled(False)
+            self._move_selected_sources_button.setEnabled(False)
+            self._create_group_from_selection_button.setEnabled(False)
             return
 
         source_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -358,6 +387,8 @@ class SessionAssemblyDialog(QDialog):
             self._group_edit.setEnabled(False)
             for edit in self._source_metadata_override_edits.values():
                 edit.setEnabled(False)
+            self._move_selected_sources_button.setEnabled(False)
+            self._create_group_from_selection_button.setEnabled(False)
             return
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
@@ -375,6 +406,10 @@ class SessionAssemblyDialog(QDialog):
         self._group_edit.setEnabled(True)
         for edit in self._source_metadata_override_edits.values():
             edit.setEnabled(True)
+        self._move_selected_sources_button.setEnabled(
+            bool(self._selected_source_ids()) and self._group_list.currentItem() is not None
+        )
+        self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
         group_row = next(
             (
                 row
@@ -393,6 +428,11 @@ class SessionAssemblyDialog(QDialog):
             self._selected_group_label.setText("No group selected.")
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_counts_label.setText("No group selected.")
+            with QSignalBlocker(self._selected_group_edit):
+                self._selected_group_edit.setText("")
+            self._rename_group_button.setEnabled(False)
+            self._move_selected_sources_button.setEnabled(False)
+            self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
             return
 
         group_key = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -401,6 +441,11 @@ class SessionAssemblyDialog(QDialog):
             self._selected_group_label.setText("No group selected.")
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_counts_label.setText("No group selected.")
+            with QSignalBlocker(self._selected_group_edit):
+                self._selected_group_edit.setText("")
+            self._rename_group_button.setEnabled(False)
+            self._move_selected_sources_button.setEnabled(False)
+            self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
             return
 
         self._selected_group_label.setText(group.group_label)
@@ -410,6 +455,11 @@ class SessionAssemblyDialog(QDialog):
             f"{group.metadata_count} metadata"
             + (" | review needed" if group.needs_review else "")
         )
+        with QSignalBlocker(self._selected_group_edit):
+            self._selected_group_edit.setText(group.group_label)
+        self._rename_group_button.setEnabled(True)
+        self._move_selected_sources_button.setEnabled(bool(self._selected_source_ids()))
+        self._create_group_from_selection_button.setEnabled(bool(self._selected_source_ids()))
 
     def _apply_selected_role(self, role: str) -> None:
         selected_item = self._source_list.currentItem()
@@ -428,6 +478,41 @@ class SessionAssemblyDialog(QDialog):
         if source_id is None:
             return
         self._screen_model.set_source_group_label(str(source_id), self._group_edit.text())
+
+    def _selected_source_ids(self) -> tuple[str, ...]:
+        source_ids: list[str] = []
+        for item in self._source_list.selectedItems():
+            source_id = item.data(Qt.ItemDataRole.UserRole)
+            if source_id is not None:
+                source_ids.append(str(source_id))
+        return tuple(source_ids)
+
+    def _rename_selected_group(self) -> None:
+        selected_item = self._group_list.currentItem()
+        if selected_item is None:
+            return
+        group_key = selected_item.data(Qt.ItemDataRole.UserRole)
+        if group_key is None:
+            return
+        self._screen_model.rename_group(str(group_key), self._selected_group_edit.text())
+
+    def _move_selected_sources_to_group(self) -> None:
+        source_ids = self._selected_source_ids()
+        if not source_ids:
+            return
+        target_label = self._selected_group_edit.text().strip() or self._selected_group_label.text().strip()
+        if not target_label:
+            return
+        self._screen_model.set_group_label_for_sources(source_ids, target_label)
+
+    def _create_group_from_selection(self) -> None:
+        source_ids = self._selected_source_ids()
+        if not source_ids:
+            return
+        group_label = self._selected_group_edit.text().strip()
+        if not group_label:
+            return
+        self._screen_model.set_group_label_for_sources(source_ids, group_label)
 
     def _apply_selected_source_metadata_override(self, key: str, value: str) -> None:
         selected_item = self._source_list.currentItem()

@@ -188,6 +188,35 @@ class SessionAssemblyScreenModel:
             next_group_overrides.pop(source_id, None)
         return self._refresh(group_overrides=next_group_overrides)
 
+    def set_group_label_for_sources(
+        self,
+        source_ids: tuple[str, ...],
+        group_label: str,
+    ) -> SessionAssemblyState:
+        normalized_label = group_label.strip()
+        if not source_ids:
+            return self._state
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Updated grouping for multiple direct-ingest sources.",
+            source_count=len(source_ids),
+            group_label=normalized_label,
+        )
+        next_group_overrides = {source.source_id: source.group_label for source in self._state.sources}
+        for source_id in source_ids:
+            if normalized_label:
+                next_group_overrides[source_id] = normalized_label
+            else:
+                next_group_overrides.pop(source_id, None)
+        return self._refresh(group_overrides=next_group_overrides)
+
+    def rename_group(self, group_key: str, group_label: str) -> SessionAssemblyState:
+        source_ids = tuple(
+            source.source_id for source in self._state.sources if source.group_key == group_key
+        )
+        return self.set_group_label_for_sources(source_ids, group_label)
+
     def create_session(self):
         if self._state.draft is None:
             raise ValueError("Session assembly requires at least one selected input.")

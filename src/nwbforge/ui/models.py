@@ -210,6 +210,7 @@ class MetadataDisagreementItem:
     source_ids: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
     source_values: tuple[MetadataDisagreementSourceItem, ...] = ()
+    session_override_value: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

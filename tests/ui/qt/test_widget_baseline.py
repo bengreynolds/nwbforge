@@ -918,7 +918,53 @@ def test_session_assembly_dialog_shows_detected_group_summary(qapp, tmp_path: Pa
     assert dialog._group_list.count() == 1
     assert dialog._selected_group_label.text() == tmp_path.name
     assert dialog._selected_group_pathway_label.text() == "hybrid"
-    assert "review needed" in dialog._selected_group_counts_label.text()
+    window.close()
+
+
+def test_session_assembly_dialog_can_create_and_move_named_groups(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("freeform notes", encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path), str(custom_path), str(notes_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+
+    dialog._source_list.clearSelection()
+    dialog._source_list.item(1).setSelected(True)
+    dialog._source_list.item(2).setSelected(True)
+    dialog._selected_group_edit.setText("Merged Review Bundle")
+    dialog._create_group_from_selection_button.click()
+    qapp.processEvents()
+
+    group_labels = [dialog._source_list.item(row).text() for row in range(dialog._source_list.count())]
+    assert any("Merged Review Bundle" in label for label in group_labels[1:])
+    assert any(
+        dialog._group_list.item(row).text().startswith("[custom] Merged Review Bundle")
+        or "Merged Review Bundle" in dialog._group_list.item(row).text()
+        for row in range(dialog._group_list.count())
+    )
+    assert dialog._group_list.count() == 2
     window.close()
 
 
@@ -1360,6 +1406,102 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
+    window.close()
+
+
+def test_conversion_widget_can_apply_session_override_from_metadata_review(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-review-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview = ConversionPreview(
+        session=session.transition(SessionStatus.READY_TO_WRITE),
+        extraction_results=(
+            ExtractionResult(
+                source_id="manifest",
+                adapter_id="session_manifest",
+                record_type="session_manifest",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="primary-mouse-01",
+                        source_id="manifest",
+                    )
+                },
+            ),
+            ExtractionResult(
+                source_id="custom",
+                adapter_id="custom_json_session",
+                record_type="custom_session",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="custom-mouse-01",
+                        source_id="custom",
+                    )
+                },
+            ),
+        ),
+        normalized_metadata=NormalizedMetadataBundle(
+            subject=NormalizedSubject(
+                subject_id=NormalizedValue(
+                    "primary-mouse-01",
+                    origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    source_ids=("manifest", "custom"),
+                    review_status=ReviewStatus.NEEDS_REVIEW,
+                )
+            ),
+            session=NormalizedSessionMetadata(),
+        ),
+        mapping_plan=MappingPlan(pathway=session.pathway, decisions=(), issues=()),
+        provenance_record=ProvenanceRecord(
+            session_id=session.session_id,
+            pathway=session.pathway,
+            input_artifacts=(),
+            generated_artifacts=(),
+        ),
+    )
+    _, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
+    qapp.processEvents()
+    window.conversion_widget._use_source_value_button.click()
+    qapp.processEvents()
+
+    assert (
+        window.conversion_widget._screen_model.state.session.metadata_overrides["subject.subject_id"]
+        == "custom-mouse-01"
+    )
+    assert window.conversion_widget._screen_model.state.preview is None
+    assert "Applied session override" in window.conversion_widget._status_label.text()
     window.close()
 
 

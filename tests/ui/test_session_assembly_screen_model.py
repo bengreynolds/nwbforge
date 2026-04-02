@@ -100,6 +100,23 @@ def test_session_assembly_screen_model_edits_group_labels_and_persists_manual_ov
     assert {group.group_label for group in restored_screen.state.groups} == {tmp_path.name, "Manual Custom Group"}
 
 
+def test_session_assembly_screen_model_can_move_multiple_sources_into_named_group(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("freeform notes", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    screen.add_paths((manifest_path, custom_path, notes_path))
+    state = screen.set_group_label_for_sources(("custom-session", "notes"), "Merged Review Bundle")
+
+    assert state.sources[1].group_label == "Merged Review Bundle"
+    assert state.sources[2].group_label == "Merged Review Bundle"
+    assert any(group.group_label == "Merged Review Bundle" for group in state.groups)
+
+
 def test_session_assembly_screen_model_surfaces_unmatched_input(tmp_path: Path) -> None:
     unknown_path = tmp_path / "notes.txt"
     unknown_path.write_text("freeform notes", encoding="utf-8")

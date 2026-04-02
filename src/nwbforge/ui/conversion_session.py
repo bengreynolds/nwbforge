@@ -177,6 +177,60 @@ class ConversionSessionScreenModel:
             )
         )
 
+    def apply_session_override(self, canonical_key: str, value: str) -> ConversionSessionScreenState:
+        session = self._require_session()
+        next_overrides = dict(session.metadata_overrides)
+        next_overrides[canonical_key] = value
+        updated_session = replace(session, metadata_overrides=next_overrides)
+        return self._set_state(
+            replace(
+                self._state,
+                session=updated_session,
+                sources=conversion_source_items(updated_session.sources),
+                preview=None,
+                execution=None,
+                generated_artifacts=(),
+                validation_issues=(),
+                metadata_disagreements=(),
+                progress_event=None,
+                last_review_submission=None,
+                review_message=f"Applied session override for {canonical_key}. Rebuild preview to refresh results.",
+                recovery_message=None,
+                error_message=None,
+                user_error=None,
+                persisted_validation_summary=None,
+                persisted_review_outcome=None,
+            )
+        )
+
+    def clear_session_override(self, canonical_key: str) -> ConversionSessionScreenState:
+        session = self._require_session()
+        if canonical_key not in session.metadata_overrides:
+            return self._state
+        next_overrides = dict(session.metadata_overrides)
+        next_overrides.pop(canonical_key, None)
+        updated_session = replace(session, metadata_overrides=next_overrides)
+        return self._set_state(
+            replace(
+                self._state,
+                session=updated_session,
+                sources=conversion_source_items(updated_session.sources),
+                preview=None,
+                execution=None,
+                generated_artifacts=(),
+                validation_issues=(),
+                metadata_disagreements=(),
+                progress_event=None,
+                last_review_submission=None,
+                review_message=f"Cleared session override for {canonical_key}. Rebuild preview to refresh results.",
+                recovery_message=None,
+                error_message=None,
+                user_error=None,
+                persisted_validation_summary=None,
+                persisted_review_outcome=None,
+            )
+        )
+
     def submit_review(self, decision: ReviewStatus) -> ReviewSubmission:
         if self._review_service is None:
             raise ValueError("Review submission is not configured for this conversion session.")
@@ -461,9 +515,7 @@ def metadata_disagreement_items(preview: ConversionPreview) -> tuple[MetadataDis
 
     items: list[MetadataDisagreementItem] = []
     for canonical_key, normalized_value in _pending_review_entries(preview.normalized_metadata):
-        source_values = tuple(
-            extracted_by_canonical.get(canonical_key, ())
-        )
+        source_values = tuple(extracted_by_canonical.get(canonical_key, ()))
         items.append(
             MetadataDisagreementItem(
                 canonical_key=canonical_key,
@@ -472,6 +524,7 @@ def metadata_disagreement_items(preview: ConversionPreview) -> tuple[MetadataDis
                 source_ids=normalized_value.source_ids,
                 notes=normalized_value.notes,
                 source_values=source_values,
+                session_override_value=preview.session.metadata_overrides.get(canonical_key),
             )
         )
     return tuple(items)
