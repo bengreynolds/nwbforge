@@ -45,13 +45,13 @@ Checklist meaning:
 - [x] White Matter
 
 ### Sorting
-- [ ] Blackrock
-- [ ] Cell Explorer
-- [ ] KiloSort
-- [ ] Neuralynx
-- [ ] NeuroScope
-- [ ] Phy
-- [ ] Plexon
+- [x] Blackrock
+- [x] Cell Explorer
+- [x] KiloSort
+- [x] Neuralynx
+- [x] NeuroScope
+- [x] Phy
+- [x] Plexon
 
 ## Intracellular electrophysiology
 - [x] Axon Binary File (ABF)

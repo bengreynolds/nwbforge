@@ -1512,3 +1512,17 @@ Consequences:
 - the `imaging` family now also includes `Scanbox` and generic `TIFF`
 - generic TIFF matching now requires explicit imaging configuration and declines sources that already match more distinctive TIFF-based readers
 - `Spike2` remains implemented in code but only becomes available when the `sonpy` dependency gate is actually satisfied in the current environment
+
+### DEC-118: Sorting routes should use a dedicated family module and conservative auto-detection where sorting and recording sources overlap
+Status: Accepted
+
+Reasoning:
+- The approved NeuroConv sorting catalog is broad enough that it should not be folded back into the recording adapters; it needs its own category-first family boundary.
+- Some sorting interfaces are easy to auto-detect safely, such as Blackrock `.nev`, Cell Explorer spikes cellinfo files, NeuroScope `.res/.clu` folders, KiloSort folders with `ops.npy`, and Phy folders with cluster tables.
+- Other sorting interfaces overlap too directly with recording routes, especially Plexon `.plx` and Neuralynx session folders, so auto-detection would either collide or misclassify until the desktop UI has an explicit sort-vs-record choice.
+
+Consequences:
+- the repo now has a dedicated `supported/sorting/` family for NeuroConv-backed sorting routes
+- `Blackrock`, `Cell Explorer`, `KiloSort`, `Neuralynx`, `NeuroScope`, `Phy`, and `Plexon` sorting routes are now implemented in that family
+- `Plexon` and `Neuralynx` sorting stay hint-driven for now, and `KiloSort` vs `Phy` is split by stronger folder markers instead of letting both claim the same directory
+- future sorting or workflow growth should preserve that explicit family boundary and prefer honest ambiguity handling over optimistic auto-detection

@@ -7,4 +7,4 @@ dependencies:
   - pip
   - pytest=7.4
   - pip:
-      - -e .[audio,alphaomega,axon,axona,biocam,blackrock,brukertiff,deeplabcut,edf,excel,femtonics,hdf5,image,inscopix,intan,lightningpose,mcsraw,maxone,mearec,medpc,micromanager,miniscope,neuralynx,neuroscope,openephys_binary,openephys_legacy,plexon,plexon2,scanbox,scanimage,scanimage_legacy,sleap,spikegadgets,spikeglx,tdt,thor,tiff,videos,whitematter]
+      - -e .[audio,alphaomega,axon,axona,biocam,blackrock,brukertiff,cellexplorer,deeplabcut,edf,excel,femtonics,hdf5,image,inscopix,intan,kilosort,lightningpose,mcsraw,maxone,mearec,medpc,micromanager,miniscope,neuralynx,neuroscope,openephys_binary,openephys_legacy,phy,plexon,plexon2,scanbox,scanimage,scanimage_legacy,sleap,spikegadgets,spikeglx,tdt,thor,tiff,videos,whitematter]
