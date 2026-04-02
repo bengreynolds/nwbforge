@@ -1,6 +1,7 @@
 # NeuroConv Supported Route Catalog
 
 Research date: 2026-03-31
+Last implementation sync: 2026-04-02
 
 ## Purpose
 
@@ -15,88 +16,92 @@ Important caveat:
 - this catalog is a planning and implementation preference list, not a guarantee that every route is equally mature on every Python version or dependency combination
 - always check the exact NeuroConv gallery page for installation notes, caveats, and current interface names before implementation
 
+Checklist meaning:
+- `[x]` adapter backbone implemented in this repository
+- `[ ]` approved NeuroConv-first route not yet implemented here
+
 ## Extracellular electrophysiology
 
 ### Recording
-- AlphaOmega
-- Axon
-- Axona
-- Biocam
-- Blackrock
-- European Data Format (EDF)
-- Intan
-- MaxOne
-- MCSRaw
-- MEArec
-- Neuralynx
-- NeuroScope
-- OpenEphys
-- Plexon
-- Plexon2
-- Spike2
-- Spikegadgets
-- SpikeGLX
-- Tucker-Davis Technologies (TDT)
-- White Matter
+- [x] AlphaOmega
+- [x] Axon
+- [x] Axona
+- [x] Biocam
+- [x] Blackrock
+- [x] European Data Format (EDF)
+- [x] Intan
+- [ ] MaxOne
+- [x] MCSRaw
+- [ ] MEArec
+- [x] Neuralynx
+- [x] NeuroScope
+- [x] OpenEphys
+- [x] Plexon
+- [ ] Plexon2
+- [ ] Spike2
+- [x] Spikegadgets
+- [x] SpikeGLX
+- [x] Tucker-Davis Technologies (TDT)
+- [x] White Matter
 
 ### Sorting
-- Blackrock
-- Cell Explorer
-- KiloSort
-- Neuralynx
-- NeuroScope
-- Phy
-- Plexon
+- [ ] Blackrock
+- [ ] Cell Explorer
+- [ ] KiloSort
+- [ ] Neuralynx
+- [ ] NeuroScope
+- [ ] Phy
+- [ ] Plexon
 
 ## Intracellular electrophysiology
-- Axon Binary File (ABF)
+- [x] Axon Binary File (ABF)
 
 ## Optical physiology
 
 ### Imaging
-- Bruker
-- Femtonics
-- HDF5
-- Micro-Manager
-- Miniscope
-- Inscopix
-- Scanbox
-- ScanImage
-- ScanImage Legacy (v3.8 and older)
-- Thor
-- Tiff
+- [x] Bruker
+- [x] Femtonics
+- [x] HDF5
+- [x] Micro-Manager
+- [x] Miniscope
+- [x] Inscopix
+- [ ] Scanbox
+- [x] ScanImage
+- [x] ScanImage Legacy (v3.8 and older)
+- [x] Thor
+- [ ] Tiff
 
 ### Segmentation
-- Caiman
-- CNMFE
-- EXTRACT
-- Inscopix
-- Suite2P
+- [ ] Caiman
+- [ ] CNMFE
+- [ ] EXTRACT
+- [ ] Inscopix
+- [ ] Suite2P
 
 ## Fiber photometry
-- TDT Fiber Photometry
+- [ ] TDT Fiber Photometry
 
 ## Behavior
-- Audio
-- DeepLabCut
-- FicTrac
-- LightningPose
-- Neuralynx NVT
-- SLEAP
-- Videos
-- MedPC
+- [x] Audio
+- [x] DeepLabCut
+- [x] FicTrac
+- [x] LightningPose
+- [x] Neuralynx NVT
+- [x] SLEAP
+- [x] Videos
+- [x] MedPC
 
 ## Image
-- Image (png, jpeg, tiff, etc.)
+- [x] Image (png, jpeg, tiff, etc.)
 
 ## Text
-- CSV
-- Excel
+- [x] CSV
+- [x] Excel
 
 ## Common interface combinations
-- SpikeGLX & Phy
-- Tiff & Suite2p
-- Electrophysiology and Behavior
+- [ ] SpikeGLX & Phy
+- [ ] Tiff & Suite2p
+- [ ] Electrophysiology and Behavior
 
 ## Implementation rules tied to this catalog
 
