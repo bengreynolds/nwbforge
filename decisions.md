@@ -1470,3 +1470,16 @@ Consequences:
 - the `ecephys` family now also includes `Axon / ABF`, `EDF`, `OpenEphys Binary`, `SpikeGadgets`, and `SpikeGLX`
 - package-gated route growth should continue preferring distinctive suffixes, manifests, and folder-layout signals before broader ambiguous ecephys backbones
 - multi-stream folder routes should stay conservative in `can_handle` and require explicit configuration when stream selection is not unambiguous
+
+### DEC-115: Keep scaling ecephys through strong path signatures and explicit required configuration before generic binary catch-alls
+Status: Accepted
+
+Reasoning:
+- The next honest ecephys expansion comes from routes that still have clear file or folder signatures under direct ingest, or from routes whose ambiguity can be contained by explicit required configuration.
+- `AlphaOmega`, `Axona`, `Blackrock`, `Neuralynx`, `OpenEphys Legacy`, `Plexon`, `TDT`, and `WhiteMatter` extend useful acquisition coverage without forcing the app to claim arbitrary generic binary folders.
+- Some of these routes still overlap with broader file shapes, so the adapter backbone should only match them conservatively: stream-based folders remain gated on unambiguous or configured stream selection, and generic binary routes remain gated on required shape/gain metadata.
+
+Consequences:
+- the `ecephys` family now also includes `AlphaOmega`, `Axona`, `Blackrock`, `Neuralynx`, `OpenEphys Legacy`, `Plexon`, `TDT`, and `WhiteMatter`
+- package-gated scaling should continue to prefer strong suffixes, stream manifests, and required configuration over broad file-type claims
+- generic `.bin` and multi-stream folder routes should remain conservative until richer dataset modeling and ambiguity review affordances exist

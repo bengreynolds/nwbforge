@@ -32,7 +32,10 @@ The repository now includes a Python package-planning layer under `src/nwbforge/
 
 Current route package catalog examples:
 - `audio`
+- `alphaomega`
 - `axon`
+- `axona`
+- `blackrock`
 - `deeplabcut`
 - `edf`
 - `lightningpose`
@@ -42,12 +45,17 @@ Current route package catalog examples:
 - `image`
 - `micromanager`
 - `miniscope`
+- `neuralynx`
 - `openephys_binary`
+- `openephys_legacy`
+- `plexon`
 - `sleap`
 - `spikegadgets`
 - `spikeglx`
+- `tdt`
 - `thor`
 - `videos`
+- `whitematter`
 - `scanimage`
 - `intan`
 
@@ -117,15 +125,23 @@ Examples:
 - `lightningpose` depends on `cv2` and `ndx_pose`
 - `sleap` depends on `sleap_io` and `ndx_pose`
 - `medpc` depends on `ndx_events`
+- `alphaomega` depends on `spikeinterface`
 - `axon` depends on `spikeinterface`
+- `axona` depends on `spikeinterface`
+- `blackrock` depends on `spikeinterface`
 - `edf` depends on `spikeinterface` and `pyedflib`
 - `videos` depends on `cv2`
 - `hdf5` depends on `h5py` and `roiextractors`
 - `scanimage` depends on `roiextractors` and `tifffile`
 - `intan` depends on `spikeinterface`
+- `neuralynx` depends on `spikeinterface` and `natsort`
 - `openephys_binary` depends on `spikeinterface`
+- `openephys_legacy` depends on `spikeinterface`
+- `plexon` depends on `spikeinterface`
 - `spikegadgets` depends on `spikeinterface`
 - `spikeglx` depends on `spikeinterface`
+- `tdt` depends on `spikeinterface`
+- `whitematter` depends on `spikeinterface`
 
 This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.
 

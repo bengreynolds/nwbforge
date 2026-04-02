@@ -33,18 +33,26 @@ Implemented adapters now include:
 - `NeuroConvSLEAPAdapter` for real NeuroConv-backed SLEAP pose-estimation sources
 - `NeuroConvLightningPoseAdapter` for real NeuroConv-backed LightningPose pose-estimation sources
 - `NeuroConvMedPCAdapter` for real NeuroConv-backed MedPC task/event sources
+- `NeuroConvAlphaOmegaAdapter` for real NeuroConv-backed AlphaOmega ecephys sources
 - `NeuroConvAxonAdapter` for real NeuroConv-backed Axon/ABF ecephys sources
+- `NeuroConvAxonaAdapter` for real NeuroConv-backed Axona ecephys sources
+- `NeuroConvBlackrockAdapter` for real NeuroConv-backed Blackrock ecephys sources
 - `NeuroConvEdfAdapter` for real NeuroConv-backed EDF ecephys sources
 - `NeuroConvVideoAdapter` for real NeuroConv-backed external video sources
 - `NeuroConvHdf5ImagingAdapter` for real NeuroConv-backed HDF5 imaging sources
 - `NeuroConvMicroManagerTiffAdapter` for real NeuroConv-backed Micro-Manager TIFF imaging sources
 - `NeuroConvMiniscopeAdapter` for real NeuroConv-backed Miniscope imaging sources
+- `NeuroConvNeuralynxAdapter` for real NeuroConv-backed Neuralynx ecephys sources
 - `NeuroConvOpenEphysBinaryAdapter` for real NeuroConv-backed OpenEphys Binary ecephys sources
+- `NeuroConvOpenEphysLegacyAdapter` for real NeuroConv-backed OpenEphys Legacy ecephys sources
+- `NeuroConvPlexonAdapter` for real NeuroConv-backed Plexon ecephys sources
 - `NeuroConvScanImageAdapter` for real NeuroConv-backed ScanImage imaging sources
 - `NeuroConvSpikeGadgetsAdapter` for real NeuroConv-backed SpikeGadgets ecephys sources
 - `NeuroConvSpikeGLXAdapter` for real NeuroConv-backed SpikeGLX ecephys sources
+- `NeuroConvTdtAdapter` for real NeuroConv-backed TDT ecephys sources
 - `NeuroConvThorAdapter` for real NeuroConv-backed Thor imaging sources
 - `NeuroConvIntanAdapter` for real NeuroConv-backed Intan ecephys sources
+- `NeuroConvWhiteMatterAdapter` for real NeuroConv-backed WhiteMatter ecephys sources
 
 Current package direction:
 - category-first supported packages should hold family modules and route declarations
@@ -68,7 +76,7 @@ Implemented framework pieces:
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
-- the SLEAP, LightningPose, MedPC, Axon/ABF, EDF, Video, HDF5 imaging, Micro-Manager TIFF, Miniscope, OpenEphys Binary, ScanImage, SpikeGadgets, SpikeGLX, Thor, and Intan adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
+- the SLEAP, LightningPose, MedPC, AlphaOmega, Axon/ABF, Axona, Blackrock, EDF, Video, HDF5 imaging, Micro-Manager TIFF, Miniscope, Neuralynx, OpenEphys Binary, OpenEphys Legacy, Plexon, ScanImage, SpikeGadgets, SpikeGLX, TDT, Thor, Intan, and WhiteMatter adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
 - the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:
