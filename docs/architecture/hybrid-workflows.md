@@ -6,6 +6,10 @@ Last updated: 2026-04-01
 
 This note captures the first real hybrid-path workflow in the desktop application. The goal is to prove that one session can combine a supported source and a custom source, move through the shared normalization/mapping/review model, and still produce one validated NWB output with explicit provenance.
 
+Important scope note:
+- `hybrid_session.json` is the current bootstrap descriptor for this workflow, not the intended long-term primary end-user ingest format
+- the long-term hybrid UX should start from real supported and custom files/folders selected in the app, with hybrid session composition assembled through inspection and user confirmation
+
 ## Baseline source
 
 Current hybrid desktop descriptor:
@@ -67,12 +71,12 @@ Current flow:
 
 ## Current limitations
 
-- the current hybrid descriptor is desktop-focused and not yet a persisted general project/session format
+- the current hybrid descriptor is desktop-focused, JSON-based, and not yet the intended direct-ingest UX or a settled general project/session format
 - the first hybrid slice uses repository-owned PyNWB assembly, not a supported-route direct NeuroConv execution merge
 - only one representative supported-plus-custom hybrid combination is implemented so far
 
 ## Immediate follow-on work
 
-1. Expand hybrid workflow presentation in the desktop UI so multi-source provenance and review status are even more visible.
-2. Decide whether the current descriptor should evolve into a broader persisted desktop project/session format.
-3. Add richer hybrid combinations once first-pass internal testing identifies the highest-value real lab scenarios.
+1. Replace descriptor-first hybrid startup with direct multi-source file/folder ingestion plus user-confirmed session grouping.
+2. Expand hybrid workflow presentation in the desktop UI so multi-source provenance and review status are even more visible.
+3. Decide whether the current descriptor should evolve into a broader persisted desktop project/session format.

@@ -6,6 +6,10 @@ Last updated: 2026-04-01
 
 This note captures the first real repo-owned custom-path workflow in the desktop application. The goal of this slice is not to solve arbitrary unsupported lab formats; it is to prove that the product can ingest a non-NeuroConv, lab-defined source, normalize it conservatively, surface uncertain semantics for review, and still write a valid NWB file through the existing PyNWB path.
 
+Important scope note:
+- `custom_session.json` is the current bootstrap fixture for this workflow, not the intended long-term primary end-user ingest format
+- the long-term custom-path UX should start from real custom files, sidecars, folders, and manual metadata entry/override, with any app-owned JSON used only for saved state or compatibility
+
 ## Baseline source
 
 Current custom source:
@@ -69,12 +73,12 @@ Current flow:
 
 ## Current limitations
 
-- the custom source format is repo-defined, not yet tied to a real departmental lab dataset
+- the custom source format is repo-defined and JSON-based, not yet tied to a real departmental lab dataset or the intended direct-ingest UX
 - no custom extension / NDX path is implemented yet
 - custom metadata inside acquisition or device records still needs broader review-first handling in later slices if more lab-specific fields become important
 
 ## Immediate follow-on work
 
-1. Expand review/report presentation so custom-path assumptions are even more visible in the desktop UI.
-2. Decide when custom concepts should remain descriptive metadata versus become an NWB extension.
-3. Validate the current custom-path baseline against a real departmental lab dataset.
+1. Replace JSON-first custom-session startup with direct file/folder ingestion plus metadata override for at least one real custom dataset shape.
+2. Expand review/report presentation so custom-path assumptions are even more visible in the desktop UI.
+3. Decide when custom concepts should remain descriptive metadata versus become an NWB extension.

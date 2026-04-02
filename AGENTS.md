@@ -69,6 +69,9 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - NWB assembly code must not contain raw source-format parsing logic
 - Normalize metadata into canonical internal models before NWB mapping
 - Treat supported, custom, and hybrid pathways as different workflows over shared contracts, not as unrelated codepaths
+- Do not design the primary user workflow around hand-authored app-specific session JSON files
+- Prefer real file and folder ingestion, followed by inspection, grouping, classification, and explicit metadata override/review
+- App-owned session or project files may exist for internal persistence, reopen behavior, or future `Save Project` flows, but they should not be the required initial user input format
 - For supported-path conversions, check NeuroConv support before designing a custom parser or direct PyNWB converter
 - For supported proprietary or acquisition-system routes that NeuroConv documents, use direct NeuroConv conversion APIs as the primary execution path
 - Use UI/orchestration code to collect metadata and user selections, then feed those into NeuroConv rather than rebuilding supported conversion logic in custom PyNWB code

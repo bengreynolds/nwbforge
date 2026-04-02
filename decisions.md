@@ -955,6 +955,20 @@ Consequences:
 - failed artifact opens now surface shell-level user-facing errors instead of only console noise
 - the conversion widget remains thin by delegating artifact-open behavior to shell callbacks
 
+### DEC-077: Make real file and folder ingestion the primary desktop entry model, not hand-authored session JSON
+Status: Accepted
+
+Reasoning:
+- The current `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` loaders are useful for internal testing and bootstrapping, but they are not the right primary UX for a lab-facing desktop application.
+- Requiring users to hand-author NWB Forge-specific JSON duplicates source truth, hides the real ingestion problem, and makes the app feel like a developer harness rather than a finished product.
+- The product still needs some form of persisted internal state for reopen, recovery, and likely future `Save Project` behavior, so app-owned session/project files should be demoted rather than eliminated.
+
+Consequences:
+- the intended primary desktop entry flow is `New Conversion Session` followed by additive real file and folder ingestion
+- the app should inspect inputs, suggest grouping, classify source contributions as supported/custom/hybrid, and surface metadata overrides before preview/build
+- the current JSON-backed session loaders remain valid as testing fixtures, bootstrap helpers, and future saved-state compatibility paths, but not as the desired primary user-authored input format
+- future UI and workflow planning should prefer direct input ingestion plus optional saved project state over expanding JSON-first entry behavior
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 

@@ -21,7 +21,7 @@ Responsibilities:
 - open and close the package-install dialog
 - open and close the settings dialog
 - host a manually testable real desktop composition built from the current backend services
-- open supported, custom, and hybrid sessions from disk through `File -> Open Session...`
+- open supported, custom, and hybrid session fixtures or saved-state descriptors from disk through `File -> Open Session...`
 - rebuild the `Open Recent` submenu from persisted session-history state
 - expose explicit `New Session` and `Reopen Last Session` actions
 
@@ -131,8 +131,14 @@ Responsibilities:
 - it loads either a user-provided `session_manifest.json`, `custom_session.json`, or `hybrid_session.json` path via `--session`, the last-opened session from persisted settings, or a generated demo manifest under `.nwbforge/demo-data/`
 - it should be treated as a development aid, not as the final application startup path
 
+## Ingest direction
+
+- the current Qt shell can open JSON session fixtures and descriptors, but that is not the intended primary user workflow
+- the primary future desktop entry should be `New Conversion Session`, where users add real files and folders directly and the app assembles a candidate session from inspection results
+- JSON session files may remain as saved-project or recovery/reopen artifacts, but the widget layer should not be optimized around requiring users to author them by hand
+
 ## Immediate follow-on work
 
-1. Add additional screens and navigation while keeping the current model-first boundary intact.
-2. Improve multi-source/hybrid provenance presentation without losing the current source/session clarity.
+1. Add a real session-assembly screen and source-ingestion workflow while keeping the current model-first boundary intact.
+2. Improve multi-source/hybrid provenance presentation and metadata-override UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

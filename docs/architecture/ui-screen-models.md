@@ -92,6 +92,7 @@ Responsibilities:
 
 - `src/nwbforge/ui/qt/main_window.py` binds `DesktopShellModel`, `PackageInstallerScreenModel`, and `ConversionSessionScreenModel` into a thin `QMainWindow`
 - the shell now also owns the first file-based session-loading step through `File -> Open Session...`, with supported/custom/hybrid session loading delegated to the desktop bootstrap helper
+- the current `File -> Open Session...` path is a testing/bootstrap and compatibility path; the intended primary desktop flow should shift toward `New Conversion Session` plus direct file/folder ingestion and optional saved-project reopen behavior
 - the shell's recent-session submenu is now rebuilt from settings-backed recent-session state rather than widget-local memory
 - the shell now also owns explicit `New Session` and `Reopen Last Session` actions while the app remains single-session
 - `src/nwbforge/ui/qt/package_dialog.py` binds the route-based package-install flow into a modal dialog
@@ -115,6 +116,6 @@ The current Qt layer is intentionally thin:
 
 ## Immediate follow-on work
 
-1. Add broader shell/navigation state while preserving the current model-first architecture.
+1. Add a real session-assembly screen model for direct file/folder ingestion while preserving the current model-first architecture.
 2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
-3. Strengthen multi-source presentation now that hybrid sessions are real desktop flows.
+3. Strengthen multi-source presentation and metadata-override workflows once direct session assembly replaces JSON-first startup as the primary UX.

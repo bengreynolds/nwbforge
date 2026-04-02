@@ -74,6 +74,7 @@ Completed:
 - Added the first real custom-path workflow through a repo-owned `custom_session.json` adapter, desktop session loader, and direct PyNWB execution path
 - Added richer session/source detail presentation to the desktop conversion panel, including explicit pathway, source count, and selected-source details
 - Added the first real hybrid-path workflow through a desktop `hybrid_session.json` descriptor that combines supported and custom sources in one session
+- Clarified that the current JSON-backed desktop session loaders are temporary testing/bootstrap paths and not the intended primary ingest UX
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -99,6 +100,9 @@ Next:
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
+- The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.
+- The intended desktop entry point is `New Conversion Session`, followed by additive file/folder ingestion, source inspection, grouping, pathway classification, and explicit metadata override/review before preview or write.
+- “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real direct-NeuroConv workflow route is implemented yet.
@@ -161,6 +165,9 @@ Required direction:
 - session loading, navigation, output selection, review, validation, settings, and logs should be reachable through clear product-level workflows
 - major conversion surfaces should present summary, status, review, and artifact information intentionally rather than as stacked debug fields
 - major conversion workspaces should use intentional desktop navigation patterns such as tabs or dedicated panes when that improves readability and task focus
+- the primary start flow should become `New Conversion Session`, not “prepare an app-specific JSON file by hand”
+- users should be able to add real files and folders incrementally, combine supported and custom inputs in one session, and review the resulting source grouping before preview/build
+- metadata such as subject identifiers, species, session timing, and related canonical fields must be overridable from the UI rather than assumed to be fixed in a prepared session descriptor
 
 ### Priority 2: Custom and hybrid workflows
 
@@ -227,6 +234,12 @@ Current status:
 - user-facing error handling, structured logging, and progress reporting are reliable across the core desktop workflow
 - validation reports and review artifacts are accessible from the application
 
+### Post-first-pass ingest direction
+- first-pass internal testing may continue to use checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` examples plus equivalent desktop session descriptors
+- this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
+- the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
+- if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
+
 ### Testing baseline for first-pass handoff
 - automated tests covering the current desktop workflow and the representative supported/custom/hybrid paths are green
 - the application is ready for manual internal testing in the dedicated Conda environment
@@ -253,11 +266,14 @@ Build a UI-driven conversion platform that helps labs transform heterogeneous ac
 
 In scope for the product:
 - Guided conversion workflows for multiple lab archetypes
+- Real file/folder ingestion with user-guided organization into supported, custom, or hybrid conversion sessions
 - Clear distinction between supported, custom, and hybrid conversion pathways
 - Plugin-style source adapters for lab- or system-specific inputs
+- Explicit metadata override and review before preview/build when source data is incomplete or ambiguous
 - Metadata normalization before NWB assembly
 - NWB assembly using the appropriate level of abstraction
 - Validation, provenance capture, and human-readable conversion summaries
+- Optional persisted app-owned session/project state for reopen, recovery, and future `Save Project` workflows
 - User review steps for ambiguous mappings
 - Formal cross-platform packaging, installation, update, and distribution support
 
@@ -381,6 +397,12 @@ Needs to combine proprietary acquisition output, derived signals, annotations, a
 
 ### Persona 4: Platform maintainer
 Adds adapters, normalization rules, and lab profiles. Needs stable contracts, tests, traceability, and a clear place to encode assumptions.
+
+Primary desktop ingest expectations:
+- users should be able to select one or more files and folders without pre-authoring an NWB Forge-specific session descriptor
+- the application should inspect those inputs, suggest grouping into one or more conversion sessions, and classify each source contribution as supported, custom, or hybrid-relevant
+- users should be able to confirm or correct grouping and override canonical metadata before preview/build
+- app-owned session descriptors may still exist as saved internal state, but they are not the desired primary ingestion requirement
 
 ## Data Source Taxonomy
 
@@ -1016,6 +1038,7 @@ Current status:
 - Additional supported routes and a minimal operator-facing shell remain outstanding
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
 - This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
+- The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
@@ -1024,7 +1047,7 @@ Current status:
 
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
-- The current repo has strong contract scaffolding for custom workflows, but does not yet have a representative end-to-end custom-path desktop workflow slice
+- The current repo now has a representative end-to-end custom-path desktop workflow slice through `custom_session.json`, but that JSON source should be treated as a narrow bootstrap fixture and possible future saved-state compatibility path rather than the intended long-term user input model
 
 ### Phase 5: Hybrid-path MVP
 - Support multi-input conversion sessions
@@ -1033,7 +1056,7 @@ Current status:
 
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
-- The current repo can combine some supported sources and manifest metadata, but it does not yet have a representative end-to-end hybrid desktop workflow that proves supported-plus-custom composition honestly
+- The current repo now has a representative hybrid desktop workflow through `hybrid_session.json`, but that descriptor should be treated as a temporary composition/bootstrap artifact and possible future saved-project compatibility path rather than the intended long-term primary user input model
 
 ### Phase 6: Department rollout
 - Add lab profiles
@@ -1053,6 +1076,9 @@ Current status:
 - When should the system recommend descriptive metadata versus a formal NDX?
 - How should lab vocabularies be versioned and reviewed?
 - Which validation findings should block export by default for each lab profile or deployment mode?
+- Should app-owned saved state remain internal-only at first, or become an explicit `Save Project` / `Open Project` workflow after direct file/folder ingest lands?
+- How much of source grouping should be automatic versus explicitly confirmed by the user before preview/build?
+- Which metadata overrides should be session-wide versus source-specific when mixed inputs disagree?
 
 ## Decisions Log
 
