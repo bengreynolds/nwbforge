@@ -20,13 +20,17 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QSplitter,
+    QTabWidget,
     QVBoxLayout,
+    QWidget,
 )
 
 from nwbforge.domain.models import ConversionSession
 from nwbforge.ui.models import SessionAssemblyState
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
 class SessionAssemblyDialog(QDialog):
@@ -49,7 +53,8 @@ class SessionAssemblyDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("New Conversion Session")
-        self.resize(760, 620)
+        self.resize(1120, 820)
+        apply_window_chrome(self)
 
         self._screen_model = screen_model
         self._session_created = session_created
@@ -57,10 +62,14 @@ class SessionAssemblyDialog(QDialog):
         self._input_list = QListWidget(self)
         self._group_list = QListWidget(self)
         self._source_list = QListWidget(self)
+        self._input_list.setAlternatingRowColors(True)
+        self._group_list.setAlternatingRowColors(True)
+        self._source_list.setAlternatingRowColors(True)
         self._source_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._source_list.currentItemChanged.connect(self._sync_selected_source)
         self._group_list.currentItemChanged.connect(self._sync_selected_group)
         self._issue_list = QListWidget(self)
+        self._issue_list.setAlternatingRowColors(True)
         self._session_id_edit = QLineEdit(self)
         self._session_id_edit.textChanged.connect(self._screen_model.set_session_id)
         self._title_edit = QLineEdit(self)
@@ -131,6 +140,27 @@ class SessionAssemblyDialog(QDialog):
         self._create_button.clicked.connect(self._create_session)
         self._cancel_button = QPushButton("Cancel", self)
         self._cancel_button.clicked.connect(self.reject)
+        self._remove_selected_button.setProperty("secondary", True)
+        self._rename_group_button.setProperty("secondary", True)
+        self._confirm_group_button.setProperty("secondary", True)
+        self._confirm_all_groups_button.setProperty("secondary", True)
+        self._move_selected_sources_button.setProperty("secondary", True)
+        self._create_group_from_selection_button.setProperty("secondary", True)
+        self._split_selection_button.setProperty("secondary", True)
+        self._split_group_button.setProperty("secondary", True)
+        self._cancel_button.setProperty("secondary", True)
+
+        (
+            self._header_frame,
+            self._header_title_label,
+            self._header_subtitle_label,
+            self._header_badge_label,
+        ) = build_page_header(
+            "New Conversion Session",
+            "Add files or folders, review detected dataset bundles, set metadata, and create a draft session before preview or write.",
+            badge_text="Direct Ingest",
+            parent=self,
+        )
 
         summary_group = QGroupBox("Session Draft", self)
         summary_layout = QFormLayout(summary_group)
@@ -210,19 +240,67 @@ class SessionAssemblyDialog(QDialog):
         issue_layout.addWidget(self._issue_list)
         issue_layout.addWidget(self._error_label)
 
+        left_column = QVBoxLayout()
+        left_column.setContentsMargins(0, 0, 0, 0)
+        left_column.setSpacing(12)
+        left_column.addWidget(input_group, stretch=1)
+        left_column.addWidget(source_group, stretch=1)
+
+        grouping_page = QWidget(self)
+        grouping_layout = QVBoxLayout(grouping_page)
+        grouping_layout.setContentsMargins(0, 0, 0, 0)
+        grouping_layout.setSpacing(12)
+        grouping_layout.addWidget(group_group, stretch=2)
+        grouping_layout.addWidget(issue_group, stretch=1)
+
+        session_metadata_page = QWidget(self)
+        session_metadata_layout = QVBoxLayout(session_metadata_page)
+        session_metadata_layout.setContentsMargins(0, 0, 0, 0)
+        session_metadata_layout.addWidget(metadata_group)
+        session_metadata_layout.addStretch(1)
+
+        source_metadata_page = QWidget(self)
+        source_metadata_layout = QVBoxLayout(source_metadata_page)
+        source_metadata_layout.setContentsMargins(0, 0, 0, 0)
+        source_metadata_layout.addWidget(source_metadata_group)
+        source_metadata_layout.addStretch(1)
+
+        self._workspace_tabs = QTabWidget(self)
+        self._workspace_tabs.setDocumentMode(True)
+        self._workspace_tabs.addTab(grouping_page, "Grouping")
+        self._workspace_tabs.addTab(session_metadata_page, "Session Metadata")
+        self._workspace_tabs.addTab(source_metadata_page, "Selected Source Metadata")
+
+        left_column_widget = QWidget(self)
+        left_column_widget.setLayout(left_column)
+
+        right_column = QVBoxLayout()
+        right_column.setContentsMargins(0, 0, 0, 0)
+        right_column.setSpacing(12)
+        right_column.addWidget(self._workspace_tabs, stretch=1)
+
+        right_column_widget = QWidget(self)
+        right_column_widget.setLayout(right_column)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        splitter.addWidget(left_column_widget)
+        splitter.addWidget(right_column_widget)
+        splitter.setChildrenCollapsible(False)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        self._workspace_splitter = splitter
+
         action_row = QHBoxLayout()
         action_row.addStretch(1)
         action_row.addWidget(self._cancel_button)
         action_row.addWidget(self._create_button)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+        layout.addWidget(self._header_frame)
         layout.addWidget(summary_group)
-        layout.addWidget(input_group, stretch=1)
-        layout.addWidget(group_group, stretch=1)
-        layout.addWidget(source_group, stretch=1)
-        layout.addWidget(metadata_group)
-        layout.addWidget(source_metadata_group)
-        layout.addWidget(issue_group, stretch=1)
+        layout.addWidget(splitter, stretch=1)
         layout.addLayout(action_row)
 
         self._bridge = StateBridge(self)
@@ -280,6 +358,11 @@ class SessionAssemblyDialog(QDialog):
                 self._title_edit.setText(state.title)
 
         self._pathway_label.setText(state.suggested_pathway)
+        if self._header_badge_label is not None:
+            badge_text = state.suggested_pathway.title() if state.selected_paths else "Direct Ingest"
+            if state.has_unsaved_changes and state.selected_paths:
+                badge_text += " Draft"
+            self._header_badge_label.setText(badge_text)
         project_text = "Unsaved project"
         if state.project_path is not None:
             project_text = str(state.project_path)

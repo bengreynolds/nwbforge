@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QGroupBox,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -19,6 +20,7 @@ from nwbforge.app.packages import InstallMode, InstallPreset
 from nwbforge.ui.models import PackageInstallerState
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
 from nwbforge.ui.qt.bridge import StateBridge
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
 class PackageInstallerDialog(QDialog):
@@ -27,7 +29,8 @@ class PackageInstallerDialog(QDialog):
     def __init__(self, screen_model: PackageInstallerScreenModel, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Install Extensions / Packages")
-        self.resize(560, 520)
+        self.resize(680, 620)
+        apply_window_chrome(self)
         self._screen_model = screen_model
 
         self._mode_combo = QComboBox(self)
@@ -55,22 +58,47 @@ class PackageInstallerDialog(QDialog):
         self._install_button.clicked.connect(self._on_install_clicked)
         self._close_button = QPushButton("Close", self)
         self._close_button.clicked.connect(self.reject)
+        self._close_button.setProperty("secondary", True)
+
+        (
+            self._header_frame,
+            self._header_title_label,
+            self._header_subtitle_label,
+            self._header_badge_label,
+        ) = build_page_header(
+            "Install Extensions / Packages",
+            "Choose route-based optional dependencies for the dedicated development environment without reinstalling everything.",
+            badge_text="Route Packages",
+            parent=self,
+        )
 
         form_layout = QFormLayout()
         form_layout.addRow("Install mode", self._mode_combo)
         form_layout.addRow("Preset", self._preset_combo)
+        options_group = QGroupBox("Install Options", self)
+        options_group.setLayout(form_layout)
+
+        route_group = QGroupBox("Route Packages", self)
+        route_layout = QVBoxLayout(route_group)
+        route_layout.addWidget(self._route_list)
+
+        summary_group = QGroupBox("Resolution Summary", self)
+        summary_layout = QVBoxLayout(summary_group)
+        summary_layout.addWidget(self._extras_label)
+        summary_layout.addWidget(self._issues_label)
+        summary_layout.addWidget(self._status_label)
 
         buttons = QDialogButtonBox(self)
         buttons.addButton(self._install_button, QDialogButtonBox.ButtonRole.AcceptRole)
         buttons.addButton(self._close_button, QDialogButtonBox.ButtonRole.RejectRole)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form_layout)
-        layout.addWidget(QLabel("Route packages", self))
-        layout.addWidget(self._route_list, stretch=1)
-        layout.addWidget(self._extras_label)
-        layout.addWidget(self._issues_label)
-        layout.addWidget(self._status_label)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+        layout.addWidget(self._header_frame)
+        layout.addWidget(options_group)
+        layout.addWidget(route_group, stretch=1)
+        layout.addWidget(summary_group)
         layout.addWidget(buttons)
 
         self._bridge = StateBridge(self)

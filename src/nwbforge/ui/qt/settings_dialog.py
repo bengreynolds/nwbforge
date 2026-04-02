@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 from nwbforge.ui.models import SettingsScreenState
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.settings import SettingsScreenModel
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
 class SettingsDialog(QDialog):
@@ -26,7 +28,8 @@ class SettingsDialog(QDialog):
     def __init__(self, screen_model: SettingsScreenModel, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Settings")
-        self.resize(560, 260)
+        self.resize(640, 360)
+        apply_window_chrome(self)
         self._screen_model = screen_model
 
         self._verbose_checkbox = QCheckBox("Enable verbose logging", self)
@@ -52,6 +55,23 @@ class SettingsDialog(QDialog):
         self._discard_button.clicked.connect(self._screen_model.discard_changes)
         self._close_button = QPushButton("Close", self)
         self._close_button.clicked.connect(self.reject)
+        self._discard_button.setProperty("secondary", True)
+        self._close_button.setProperty("secondary", True)
+
+        (
+            self._header_frame,
+            self._header_title_label,
+            self._header_subtitle_label,
+            self._header_badge_label,
+        ) = build_page_header(
+            "Settings",
+            "Control desktop logging behavior, file-log mirroring, and other persisted local preferences.",
+            badge_text="Desktop Preferences",
+            parent=self,
+        )
+
+        logging_group = QGroupBox("Logging", self)
+        logging_group.setLayout(form_layout)
 
         button_row = QHBoxLayout()
         button_row.addWidget(self._save_button)
@@ -63,7 +83,10 @@ class SettingsDialog(QDialog):
         button_widget.setLayout(button_row)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form_layout)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+        layout.addWidget(self._header_frame)
+        layout.addWidget(logging_group)
         layout.addWidget(self._status_label)
         layout.addWidget(button_widget)
 

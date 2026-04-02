@@ -295,6 +295,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
 
     window.conversion_widget.load_session(session)
     qapp.processEvents()
+    assert window._workspace_title_label.text() == "sess-qt"
+    assert "Supported pathway" in window._workspace_subtitle_label.text()
     assert "sess-qt" in window.conversion_widget._session_label.text()
     assert window.conversion_widget._session_summary_group.title() == "Session Summary"
     assert window.conversion_widget._source_detail_group.title() == "Source Details"
@@ -317,6 +319,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._workspace_tabs.tabText(2) == "Metadata Review"
     assert window.conversion_widget._workspace_tabs.tabText(3) == "Artifacts"
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
+    assert window.conversion_widget._pathway_metric_value.text() == "supported"
+    assert window.conversion_widget._stage_metric_value.text() == "sources added"
 
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
@@ -335,6 +339,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
 
     window.package_dialog.show()
     qapp.processEvents()
+    assert window.package_dialog._header_title_label.text() == "Install Extensions / Packages"
     assert window.package_dialog._route_list.count() > 0
     assert window.package_dialog._install_button.isEnabled() is True
 
@@ -512,6 +517,7 @@ def test_settings_dialog_updates_runtime_logging_preferences(qapp, tmp_path: Pat
     assert window.settings_dialog.isVisible() is True
 
     settings_dialog = window.settings_dialog
+    assert settings_dialog._header_title_label.text() == "Settings"
     settings_dialog._verbose_checkbox.setChecked(True)
     settings_dialog._file_logging_checkbox.setChecked(True)
     settings_dialog._log_path_edit.setText(str(tmp_path / "logs" / "runtime.jsonl"))
@@ -739,6 +745,10 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     assert window.session_assembly_dialog.isVisible() is True
 
     dialog = window.session_assembly_dialog
+    assert dialog._workspace_tabs.count() == 3
+    assert dialog._workspace_tabs.tabText(0) == "Grouping"
+    assert dialog._workspace_tabs.tabText(1) == "Session Metadata"
+    assert dialog._workspace_tabs.tabText(2) == "Selected Source Metadata"
     dialog._add_files_button.click()
     qapp.processEvents()
     assert dialog._input_list.count() == 1

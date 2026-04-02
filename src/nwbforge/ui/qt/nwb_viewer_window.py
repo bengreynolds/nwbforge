@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QSplitter, 
 from nwbforge.app.services.nwb_viewer import NwbFileController, NwbTreeNode, NwbViewerError
 from nwbforge.app.services.nwb_viewer_rich import BaseRichNodeRenderer, NwbWidgetsPanelRenderer
 from nwbforge.ui.qt.nwb_detail_pane import NwbDetailPane
+from nwbforge.ui.qt.styling import apply_window_chrome
 
 
 class NwbViewerWindow(QMainWindow):
@@ -23,16 +24,19 @@ class NwbViewerWindow(QMainWindow):
         rich_renderer: BaseRichNodeRenderer | None = None,
         file_path: Path | None = None,
         parent=None,
-    ) -> None:
+        ) -> None:
         super().__init__(parent)
         self.setWindowTitle("NWB Viewer")
         self.resize(1100, 760)
+        apply_window_chrome(self)
 
         self._controller = controller or NwbFileController()
         self._rich_renderer = rich_renderer or NwbWidgetsPanelRenderer()
 
         self._tree = QTreeWidget(self)
         self._tree.setHeaderLabels(("NWB Node", "Type"))
+        self._tree.setAlternatingRowColors(True)
+        self._tree.setUniformRowHeights(True)
         self._tree.itemExpanded.connect(self._handle_item_expanded)
         self._tree.currentItemChanged.connect(self._handle_current_item_changed)
 

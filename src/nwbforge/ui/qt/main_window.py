@@ -9,7 +9,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QDesktopServices
 from PySide6.QtCore import QUrl
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar, QVBoxLayout, QWidget
 
 from nwbforge.app.logging import get_logger, log_event
 from nwbforge.domain.models import ConversionSession
@@ -41,6 +41,7 @@ from nwbforge.ui.qt.nwb_viewer_window import NwbViewerWindow
 from nwbforge.ui.qt.package_dialog import PackageInstallerDialog
 from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.ui.qt.settings_dialog import SettingsDialog
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
 class MainWindow(QMainWindow):
@@ -63,7 +64,8 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("NWB Forge")
-        self.resize(1120, 760)
+        self.resize(1220, 820)
+        apply_window_chrome(self)
 
         self._shell_model = shell_model
         self._settings_screen_model = settings_screen_model
@@ -97,7 +99,25 @@ class MainWindow(QMainWindow):
             artifact_opener=self._open_artifact_path,
             artifact_revealer=self._reveal_artifact_path,
         )
-        self.setCentralWidget(self._conversion_widget)
+        (
+            self._workspace_header,
+            self._workspace_title_label,
+            self._workspace_subtitle_label,
+            self._workspace_badge_label,
+        ) = build_page_header(
+            "Conversion Workspace",
+            "Create sessions, review metadata, run conversions, and inspect generated artifacts in one desktop workflow.",
+            badge_text="Direct Ingest Ready",
+            parent=self,
+        )
+
+        central = QWidget(self)
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(18, 18, 18, 18)
+        central_layout.setSpacing(14)
+        central_layout.addWidget(self._workspace_header)
+        central_layout.addWidget(self._conversion_widget, 1)
+        self.setCentralWidget(central)
 
         self._log_dock = LogViewerDockWidget(self)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self._log_dock)
@@ -786,6 +806,7 @@ class MainWindow(QMainWindow):
             )
 
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
+        self._sync_workspace_header(state)
         if state.output_path is not None:
             candidate_directory = state.output_path.parent.resolve()
             if candidate_directory != self._last_recorded_output_directory:
@@ -832,3 +853,25 @@ class MainWindow(QMainWindow):
     def _apply_session_assembly_state(self, state: SessionAssemblyState) -> None:
         self._save_project_action.setEnabled(bool(state.selected_paths))
         self._save_project_as_action.setEnabled(bool(state.selected_paths))
+
+    def _sync_workspace_header(self, state: ConversionSessionScreenState) -> None:
+        if state.session is None:
+            self._workspace_title_label.setText("Conversion Workspace")
+            self._workspace_subtitle_label.setText(
+                "Start a new conversion session, review grouped inputs, and run preview or write workflows."
+            )
+            if self._workspace_badge_label is not None:
+                self._workspace_badge_label.setText("Awaiting Session")
+            return
+
+        source_count = len(state.session.sources)
+        project_text = f"{state.session.pathway.value.title()} pathway | {source_count} source"
+        if source_count != 1:
+            project_text += "s"
+        if state.output_path is not None:
+            project_text += f" | Output: {state.output_path.name}"
+        self._workspace_title_label.setText(state.session.session_id)
+        self._workspace_subtitle_label.setText(project_text)
+        if self._workspace_badge_label is not None:
+            badge_text = state.progress_event.stage.value if state.progress_event is not None else state.session.status.value
+            self._workspace_badge_label.setText(badge_text.replace("_", " ").title())

@@ -30,6 +30,7 @@ from nwbforge.domain.models import ConversionSession
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.models import ConversionSessionScreenState
 from nwbforge.ui.qt.bridge import StateBridge
+from nwbforge.ui.qt.styling import build_metric_card
 
 
 class ConversionSessionWidget(QWidget):
@@ -154,6 +155,31 @@ class ConversionSessionWidget(QWidget):
         self._review_group = QGroupBox("Validation and Review", self)
         self._artifact_group = QGroupBox("Generated Artifacts", self)
         self._workspace_tabs = QTabWidget(self)
+        self._workspace_tabs.setDocumentMode(True)
+
+        self._source_list.setAlternatingRowColors(True)
+        self._issue_list.setAlternatingRowColors(True)
+        self._artifact_list.setAlternatingRowColors(True)
+        self._disagreement_list.setAlternatingRowColors(True)
+        self._selected_disagreement_source_list.setAlternatingRowColors(True)
+        self._source_list.setMinimumWidth(300)
+        self._artifact_list.setMinimumHeight(180)
+        self._issue_list.setMinimumHeight(170)
+
+        self._choose_output_button.setProperty("secondary", True)
+        self._open_artifact_button.setProperty("secondary", True)
+        self._reveal_artifact_button.setProperty("secondary", True)
+        self._open_validation_report_button.setProperty("secondary", True)
+        self._open_review_artifact_button.setProperty("secondary", True)
+        self._clear_override_button.setProperty("secondary", True)
+        self._clear_source_override_button.setProperty("secondary", True)
+        self._clear_all_field_overrides_button.setProperty("danger", True)
+        self._reject_button.setProperty("danger", True)
+
+        self._pathway_metric_card, self._pathway_metric_value = build_metric_card("Pathway", "Not loaded", accent=True, parent=self)
+        self._stage_metric_card, self._stage_metric_value = build_metric_card("Stage", "idle", parent=self)
+        self._validation_metric_card, self._validation_metric_value = build_metric_card("Validation", "Not available", parent=self)
+        self._artifact_metric_card, self._artifact_metric_value = build_metric_card("Artifacts", "0 artifacts", parent=self)
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
@@ -289,7 +315,17 @@ class ConversionSessionWidget(QWidget):
         splitter.setStretchFactor(1, 2)
         self._splitter = splitter
 
+        metric_row = QHBoxLayout()
+        metric_row.setSpacing(10)
+        metric_row.addWidget(self._pathway_metric_card, 1)
+        metric_row.addWidget(self._stage_metric_card, 1)
+        metric_row.addWidget(self._validation_metric_card, 1)
+        metric_row.addWidget(self._artifact_metric_card, 1)
+
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+        layout.addLayout(metric_row)
         layout.addWidget(splitter)
 
         self._bridge = StateBridge(self)
@@ -348,6 +384,10 @@ class ConversionSessionWidget(QWidget):
         self._issue_count_value_label.setText(self._issue_count_text(state))
         self._artifact_count_value_label.setText(self._artifact_count_text(state))
         self._disagreement_count_value_label.setText(self._disagreement_count_text(state))
+        self._pathway_metric_value.setText(self._pathway_label.text())
+        self._stage_metric_value.setText(self._stage_value_label.text().replace("_", " "))
+        self._validation_metric_value.setText(self._issue_count_value_label.text())
+        self._artifact_metric_value.setText(self._artifact_count_value_label.text())
         self._review_guidance_label.setText(self._review_guidance_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
