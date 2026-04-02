@@ -1498,3 +1498,17 @@ Consequences:
 - the `openephys_binary` install gate now enables both OpenEphys Binary recording and OpenEphys Binary analog adapters
 - ScanImage current and legacy matching are now split so the current adapter stops claiming legacy TIFFs
 - future optional-route growth can reuse one curated install gate for multiple semantically distinct adapters when that reflects one real software stack rather than unrelated formats
+
+### DEC-117: Finish the approved recording and imaging route catalog with conservative gates for ambiguous or partially supported readers
+Status: Accepted
+
+Reasoning:
+- The approved NeuroConv-first recording and imaging catalog is now complete only if the remaining approved routes land in the same family-backed, package-gated architecture as the earlier slices.
+- `MaxOne`, `MEArec`, `Plexon2`, `Spike2`, `Scanbox`, and generic `TIFF` all have legitimate NeuroConv interfaces, but not all of them should auto-claim sources equally aggressively.
+- `Spike2` still depends on the external `sonpy` stack, and generic TIFF overlaps with several more distinctive imaging routes, so both need stricter availability or matching behavior than the simpler suffix-based cases.
+
+Consequences:
+- the `ecephys` family now also includes `MaxOne`, `MEArec`, `Plexon2`, and `Spike2`
+- the `imaging` family now also includes `Scanbox` and generic `TIFF`
+- generic TIFF matching now requires explicit imaging configuration and declines sources that already match more distinctive TIFF-based readers
+- `Spike2` remains implemented in code but only becomes available when the `sonpy` dependency gate is actually satisfied in the current environment

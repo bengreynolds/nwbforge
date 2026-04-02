@@ -30,15 +30,15 @@ Checklist meaning:
 - [x] Blackrock
 - [x] European Data Format (EDF)
 - [x] Intan
-- [ ] MaxOne
+- [x] MaxOne
 - [x] MCSRaw
-- [ ] MEArec
+- [x] MEArec
 - [x] Neuralynx
 - [x] NeuroScope
 - [x] OpenEphys
 - [x] Plexon
-- [ ] Plexon2
-- [ ] Spike2
+- [x] Plexon2
+- [x] Spike2
 - [x] Spikegadgets
 - [x] SpikeGLX
 - [x] Tucker-Davis Technologies (TDT)
@@ -65,11 +65,11 @@ Checklist meaning:
 - [x] Micro-Manager
 - [x] Miniscope
 - [x] Inscopix
-- [ ] Scanbox
+- [x] Scanbox
 - [x] ScanImage
 - [x] ScanImage Legacy (v3.8 and older)
 - [x] Thor
-- [ ] Tiff
+- [x] Tiff
 
 ### Segmentation
 - [ ] Caiman

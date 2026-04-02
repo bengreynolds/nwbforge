@@ -66,10 +66,16 @@ Completed:
 - Added a NeuroConv-backed Femtonics imaging route using `FemtonicsImagingInterface`
 - Added a NeuroConv-backed Inscopix imaging route using `InscopixImagingInterface`
 - Added a NeuroConv-backed MCSRaw ecephys route using `MCSRawRecordingInterface`
+- Added a NeuroConv-backed MaxOne ecephys route using `MaxOneRecordingInterface`
+- Added a NeuroConv-backed MEArec ecephys route using `MEArecRecordingInterface`
 - Added a NeuroConv-backed NeuroScope ecephys route using `NeuroScopeRecordingInterface`
 - Added a NeuroConv-backed OpenEphys Binary analog route using `OpenEphysBinaryAnalogInterface`
+- Added a NeuroConv-backed Plexon2 ecephys route using `Plexon2RecordingInterface`
+- Added a NeuroConv-backed Scanbox imaging route using `SbxImagingInterface`
 - Added a NeuroConv-backed ScanImage Legacy imaging route using `ScanImageLegacyImagingInterface`
+- Added a NeuroConv-backed Spike2 ecephys route using `Spike2RecordingInterface`
 - Added a NeuroConv-backed Neuralynx NVT behavior route using `NeuralynxNvtInterface`
+- Added a NeuroConv-backed TIFF imaging route using `TiffImagingInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -152,8 +158,8 @@ In progress:
 - UI runtime and observability expansion beyond the current logging/progress baseline
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Availability-gated supported-route expansion so newly implemented NeuroConv routes only appear in the app when their route packages are actually installed
-- The current route-scaling slice has extended the distinctive imaging/ecephys backbone further with Bruker TIFF, Femtonics, Inscopix, ScanImage Legacy, Biocam, MCSRaw, NeuroScope, OpenEphys Binary Analog, and Neuralynx NVT under the same optional dependency-gated model
-- The next route-scaling slice should continue scaling with distinctive behavior/task and acquisition routes before broader ambiguous backbones
+- The current route-scaling slice has finished the remaining approved NeuroConv recording and imaging routes with MaxOne, MEArec, Plexon2, Spike2, Scanbox, and TIFF under the same optional dependency-gated model
+- After the remaining approved recording and imaging routes are finished, the next route-scaling slice should continue with sorting, segmentation, fiber-photometry, and combined-workflow routes before reopening already-complete recording/imaging coverage
 - Broader supported-route implementation work to start scaling beyond the current CSV, Excel, image, audio, videos, FicTrac, and DeepLabCut baseline
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
@@ -175,7 +181,7 @@ Next:
 - The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
 - Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
-- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `AlphaOmega`, `Axon/ABF`, `Axona`, `Biocam`, `Blackrock`, `Bruker TIFF` (single-plane and multi-plane), `EDF`, `Femtonics`, `Videos`, `HDF5 Imaging`, `Inscopix`, `MCSRaw`, `Micro-Manager TIFF`, `Miniscope`, `Neuralynx`, `Neuralynx NVT`, `NeuroScope`, `OpenEphys Binary`, `OpenEphys Binary Analog`, `OpenEphys Legacy`, `Plexon`, `ScanImage`, `ScanImage Legacy`, `SpikeGadgets`, `SpikeGLX`, `TDT`, `Thor`, `Intan`, and `WhiteMatter` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
+- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `AlphaOmega`, `Axon/ABF`, `Axona`, `Biocam`, `Blackrock`, `Bruker TIFF` (single-plane and multi-plane), `EDF`, `Femtonics`, `Videos`, `HDF5 Imaging`, `Inscopix`, `MCSRaw`, `MaxOne`, `MEArec`, `Micro-Manager TIFF`, `Miniscope`, `Neuralynx`, `Neuralynx NVT`, `NeuroScope`, `OpenEphys Binary`, `OpenEphys Binary Analog`, `OpenEphys Legacy`, `Plexon`, `Plexon2`, `Scanbox`, `ScanImage`, `ScanImage Legacy`, `Spike2`, `SpikeGadgets`, `SpikeGLX`, `TDT`, `TIFF`, `Thor`, `Intan`, and `WhiteMatter` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment.
 - The next supported-route scaling step should add more NeuroConv-backed acquisition and behavior routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
