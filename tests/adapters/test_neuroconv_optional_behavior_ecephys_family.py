@@ -5,11 +5,16 @@ from nwbforge.adapters import (
     NeuroConvAlphaOmegaAdapter,
     NeuroConvAxonAdapter,
     NeuroConvAxonaAdapter,
+    NeuroConvBiocamAdapter,
     NeuroConvBlackrockAdapter,
     NeuroConvEdfAdapter,
     NeuroConvIntanAdapter,
+    NeuroConvMCSRawAdapter,
     NeuroConvMedPCAdapter,
     NeuroConvNeuralynxAdapter,
+    NeuroConvNeuralynxNvtAdapter,
+    NeuroConvNeuroScopeAdapter,
+    NeuroConvOpenEphysBinaryAnalogAdapter,
     NeuroConvOpenEphysBinaryAdapter,
     NeuroConvOpenEphysLegacyAdapter,
     NeuroConvPlexonAdapter,
@@ -186,6 +191,29 @@ def test_blackrock_adapter_matches_nsx_and_extracts_suffix(tmp_path: Path, monke
     assert result.fields["ecephys.blackrock.nsx_suffix"].value == ".ns6"
 
 
+def test_biocam_adapter_matches_bwr_and_extracts_fields(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.bwr"
+    source_path.write_bytes(b"fake-bwr")
+    source = SourceReference(
+        source_id="biocam-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Biocam recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "Biocam"}], "ElectrodeGroup": [{"name": "A"}]}}
+
+    adapter = NeuroConvBiocamAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ecephys.biocam.device_name"].value == "Biocam"
+
+
 def test_edf_adapter_matches_edf_and_tracks_skipped_channels(tmp_path: Path, monkeypatch) -> None:
     source_path = tmp_path / "recording.edf"
     source_path.write_bytes(b"fake-edf")
@@ -208,6 +236,29 @@ def test_edf_adapter_matches_edf_and_tracks_skipped_channels(tmp_path: Path, mon
 
     assert adapter.can_handle(source) is True
     assert result.fields["ecephys.edf.channels_to_skip_count"].value == 1
+
+
+def test_mcsraw_adapter_matches_raw_and_extracts_fields(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.raw"
+    source_path.write_bytes(b"fake-raw")
+    source = SourceReference(
+        source_id="mcsraw-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="MCSRaw recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "MCSRaw"}], "ElectrodeGroup": [{"name": "MEA"}]}}
+
+    adapter = NeuroConvMCSRawAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ecephys.mcsraw.device_name"].value == "MCSRaw"
 
 
 def test_neuralynx_adapter_requires_unambiguous_or_configured_stream(tmp_path: Path, monkeypatch) -> None:
@@ -244,6 +295,102 @@ def test_neuralynx_adapter_requires_unambiguous_or_configured_stream(tmp_path: P
     assert adapter.can_handle(ambiguous_source) is False
     result = adapter.inspect(configured_source)
     assert result.fields["ecephys.neuralynx.stream_name"].value == "StreamA"
+
+
+def test_neuralynx_nvt_adapter_matches_nvt_and_extracts_behavior_summary(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "tracking.nvt"
+    source_path.write_bytes(b"fake-nvt")
+    source = SourceReference(
+        source_id="nvt-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Neuralynx NVT tracking",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {
+                "NWBFile": {"session_start_time": "2026-04-02T09:00:00-06:00"},
+                "Behavior": {"tracking.nvt": {"position_name": "NvtSpatialSeries"}},
+            }
+
+    adapter = NeuroConvNeuralynxNvtAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["behavior.neuralynx_nvt.container_name"].value == "tracking.nvt"
+
+
+def test_neuroscope_adapter_requires_xml_sidecar_or_config(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.dat"
+    source_path.write_bytes(b"fake-dat")
+    adapter = NeuroConvNeuroScopeAdapter()
+    source_without_xml = SourceReference(
+        source_id="neuroscope-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="NeuroScope recording",
+    )
+    source_with_config = SourceReference(
+        source_id="neuroscope-2",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="NeuroScope recording",
+        metadata={"neuroconv.interface_kwargs_json": json.dumps({"xml_file_path": str(tmp_path / "recording.xml")})},
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "NeuroScope"}], "ElectrodeGroup": [{"name": "A"}]}}
+
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    assert adapter.can_handle(source_without_xml) is False
+    result = adapter.inspect(source_with_config)
+    assert result.fields["ecephys.neuroscope.has_xml_sidecar"].value is True
+
+
+def test_openephys_binary_analog_adapter_requires_unambiguous_or_configured_stream(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    source_dir = tmp_path / "openephys-analog"
+    source_dir.mkdir()
+    (source_dir / "structure.oebin").write_text("{}", encoding="utf-8")
+
+    adapter = NeuroConvOpenEphysBinaryAnalogAdapter()
+    monkeypatch.setattr(
+        adapter.interface_cls,
+        "get_stream_names",
+        classmethod(lambda cls, folder_path: ["AnalogA", "AnalogB"]),
+        raising=False,
+    )
+
+    ambiguous_source = SourceReference(
+        source_id="oe-analog-1",
+        location=source_dir,
+        source_type=SourceType.DIRECTORY,
+        label="OpenEphys analog folder",
+    )
+    configured_source = SourceReference(
+        source_id="oe-analog-2",
+        location=source_dir,
+        source_type=SourceType.DIRECTORY,
+        label="OpenEphys analog folder",
+        metadata={"neuroconv.interface_kwargs_json": json.dumps({"stream_name": "AnalogA"})},
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"NWBFile": {"session_start_time": "2026-04-02T09:00:00-06:00"}}
+
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    assert adapter.can_handle(ambiguous_source) is False
+    result = adapter.inspect(configured_source)
+    assert result.fields["ecephys.openephys_binary_analog.stream_name"].value == "AnalogA"
 
 
 def test_spikegadgets_adapter_matches_rec_and_extracts_stream_info(tmp_path: Path, monkeypatch) -> None:

@@ -32,8 +32,14 @@ axon = [
 axona = [
   "neuroconv[axona]>=0.9,<0.10",
 ]
+biocam = [
+  "neuroconv[biocam]>=0.9,<0.10",
+]
 blackrock = [
   "neuroconv[blackrock]>=0.9,<0.10",
+]
+brukertiff = [
+  "neuroconv[brukertiff]>=0.9,<0.10",
 ]
 deeplabcut = [
   "ndx-pose>=0.2,<0.3",
@@ -42,8 +48,14 @@ edf = [
   "spikeinterface>=0.103,<0.104",
   "pyedflib>=0.1,<0.2",
 ]
+femtonics = [
+  "neuroconv[femtonics]>=0.9,<0.10",
+]
 intan = [
   "neuroconv[intan]>=0.9,<0.10",
+]
+inscopix = [
+  "neuroconv[inscopix]>=0.9,<0.10",
 ]
 neuralynx = [
   "neuroconv[neuralynx]>=0.9,<0.10",
@@ -51,6 +63,9 @@ neuralynx = [
 lightningpose = [
   "ndx-pose>=0.2,<0.3",
   "opencv-python-headless>=4.10,<5",
+]
+mcsraw = [
+  "neuroconv[mcsraw]>=0.9,<0.10",
 ]
 medpc = [
   "neuroconv[medpc]>=0.9,<0.10",
@@ -70,6 +85,9 @@ micromanager = [
 ]
 miniscope = [
   "neuroconv[miniscope]>=0.9,<0.10",
+]
+neuroscope = [
+  "neuroconv[neuroscope]>=0.9,<0.10",
 ]
 sleap = [
   "neuroconv[sleap]>=0.9,<0.10",
@@ -107,6 +125,9 @@ whitematter = [
 ]
 scanimage = [
   "neuroconv[scanimage]>=0.9,<0.10",
+]
+scanimage_legacy = [
+  "neuroconv[scanimage_legacy]>=0.9,<0.10",
 ]
 
 [tool.setuptools]

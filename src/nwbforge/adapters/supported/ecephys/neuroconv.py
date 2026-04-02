@@ -21,6 +21,11 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     AxonaRecordingInterface = None
 
 try:
+    from neuroconv.datainterfaces import BiocamRecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    BiocamRecordingInterface = None
+
+try:
     from neuroconv.datainterfaces import BlackrockRecordingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     BlackrockRecordingInterface = None
@@ -36,9 +41,24 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     IntanRecordingInterface = None
 
 try:
+    from neuroconv.datainterfaces import MCSRawRecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    MCSRawRecordingInterface = None
+
+try:
     from neuroconv.datainterfaces import NeuralynxRecordingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     NeuralynxRecordingInterface = None
+
+try:
+    from neuroconv.datainterfaces import NeuroScopeRecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    NeuroScopeRecordingInterface = None
+
+try:
+    from neuroconv.datainterfaces import OpenEphysBinaryAnalogInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    OpenEphysBinaryAnalogInterface = None
 
 try:
     from neuroconv.datainterfaces import OpenEphysBinaryRecordingInterface
@@ -264,6 +284,37 @@ if AxonaRecordingInterface is not None:
             )
 
 
+if BiocamRecordingInterface is not None:
+
+    class NeuroConvBiocamAdapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert Biocam `.bwr` sources through NeuroConv."""
+
+        adapter_id = "neuroconv_biocam"
+        display_name = "NeuroConv Biocam adapter"
+        version = "0.1.0"
+        interface_cls = BiocamRecordingInterface
+        record_type = "neuroconv_biocam"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".bwr",)
+        extraction_prefix = "ecephys.biocam"
+        default_device_name = "Biocam"
+        source_format = "biocam_bwr"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv Biocam conversion into ecephys acquisition data.",
+                "Biocam route matching prefers distinctive .bwr MEA recordings.",
+            )
+
+
 if BlackrockRecordingInterface is not None:
 
     class NeuroConvBlackrockAdapter(_NeuroConvEcephysRecordingAdapter):
@@ -394,6 +445,37 @@ if IntanRecordingInterface is not None:
             )
 
 
+if MCSRawRecordingInterface is not None:
+
+    class NeuroConvMCSRawAdapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert MCSRaw `.raw` sources through NeuroConv."""
+
+        adapter_id = "neuroconv_mcsraw"
+        display_name = "NeuroConv MCSRaw adapter"
+        version = "0.1.0"
+        interface_cls = MCSRawRecordingInterface
+        record_type = "neuroconv_mcsraw"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".raw",)
+        extraction_prefix = "ecephys.mcsraw"
+        default_device_name = "MCSRaw"
+        source_format = "mcsraw_raw"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv MCSRaw conversion into ecephys acquisition data.",
+                "MCSRaw route matching prefers distinctive .raw MEA recordings.",
+            )
+
+
 if NeuralynxRecordingInterface is not None:
 
     class NeuroConvNeuralynxAdapter(_NeuroConvEcephysRecordingAdapter):
@@ -448,6 +530,126 @@ if NeuralynxRecordingInterface is not None:
                 "Prepared NeuroConv Neuralynx conversion into ecephys acquisition data.",
                 "Neuralynx route matching prefers directories containing Neuralynx stream files and requires stream selection only when multiple streams are detected.",
             )
+
+
+if NeuroScopeRecordingInterface is not None:
+
+    class NeuroConvNeuroScopeAdapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert NeuroScope recordings through NeuroConv."""
+
+        adapter_id = "neuroconv_neuroscope"
+        display_name = "NeuroConv NeuroScope adapter"
+        version = "0.1.0"
+        interface_cls = NeuroScopeRecordingInterface
+        record_type = "neuroconv_neuroscope"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".dat",)
+        extraction_prefix = "ecephys.neuroscope"
+        default_device_name = "NeuroScope"
+        source_format = "neuroscope_dat"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            if source.location.suffix.lower() not in self.supported_suffixes:
+                return False
+            return source.location.with_suffix(".xml").is_file() or "xml_file_path" in config.interface_kwargs
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {self.source_path_kwarg: source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            if "xml_file_path" not in interface_kwargs:
+                candidate = source.location.with_suffix(".xml")
+                if candidate.is_file():
+                    interface_kwargs["xml_file_path"] = candidate
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def additional_payload(
+            self,
+            *,
+            source: SourceReference,
+            metadata: dict[str, object],
+            config: NeuroConvSourceConfig,
+        ) -> dict[str, object]:
+            del metadata
+            return {
+                "gain": config.interface_kwargs.get("gain"),
+                "has_xml_sidecar": source.location.with_suffix(".xml").is_file()
+                or "xml_file_path" in config.interface_kwargs,
+            }
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv NeuroScope conversion into ecephys acquisition data.",
+                "NeuroScope route matching prefers .dat files only when the corresponding XML descriptor is available or configured.",
+            )
+
+
+if OpenEphysBinaryAnalogInterface is not None:
+
+    class NeuroConvOpenEphysBinaryAnalogAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert OpenEphys binary analog folders through NeuroConv."""
+
+        adapter_id = "neuroconv_openephys_binary_analog"
+        display_name = "NeuroConv OpenEphys Binary analog adapter"
+        version = "0.1.0"
+        interface_cls = OpenEphysBinaryAnalogInterface
+        source_path_kwarg = "folder_path"
+        record_type = "neuroconv_openephys_binary_analog"
+        source_types = (SourceType.DIRECTORY,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            if not source.location.is_dir():
+                return False
+            has_binary_manifest = any(
+                path.is_file() and path.suffix.lower() == ".oebin" for path in source.location.rglob("*")
+            )
+            if not has_binary_manifest:
+                return False
+            if config.interface_kwargs.get("stream_name") is not None:
+                return True
+            try:
+                return len(self.interface_cls.get_stream_names(folder_path=source.location)) <= 1
+            except Exception:
+                return False
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {"folder_path": source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            fields = extracted_fields_from_mapping(
+                prefix="ecephys.openephys_binary_analog",
+                payload={
+                    "source_format": "openephys_binary_folder",
+                    "stream_name": config.interface_kwargs.get("stream_name"),
+                    "block_index": config.interface_kwargs.get("block_index"),
+                    "time_series_name": config.interface_kwargs.get("time_series_name", "TimeSeriesOpenEphysAnalog"),
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv OpenEphys Binary analog conversion into acquisition time series data.",
+                "OpenEphys Binary analog routing shares the install gate with the binary recording route while keeping analog reads distinct.",
+            )
+            return fields, [], notes
 
 
 if OpenEphysBinaryRecordingInterface is not None:

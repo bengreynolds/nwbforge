@@ -18,6 +18,11 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     MedPCInterface = None
 
 try:
+    from neuroconv.datainterfaces import NeuralynxNvtInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    NeuralynxNvtInterface = None
+
+try:
     from neuroconv.datainterfaces import SLEAPInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     SLEAPInterface = None
@@ -372,4 +377,54 @@ if SLEAPInterface is not None:
                 source_id=source.source_id,
             )
             notes = ("Prepared NeuroConv SLEAP conversion into pose-estimation processing data.",)
+            return fields, [], notes
+
+
+if NeuralynxNvtInterface is not None:
+
+    class NeuroConvNeuralynxNvtAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert Neuralynx NVT position-tracking files through NeuroConv."""
+
+        adapter_id = "neuroconv_neuralynx_nvt"
+        display_name = "NeuroConv Neuralynx NVT adapter"
+        version = "0.1.0"
+        interface_cls = NeuralynxNvtInterface
+        record_type = "neuroconv_neuralynx_nvt"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".nvt",)
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            del config
+            metadata = interface.get_metadata()
+            behavior_metadata = metadata.get("Behavior", {})
+            container_name = next(iter(behavior_metadata.keys()), source.location.name)
+            fields = extracted_fields_from_mapping(
+                prefix="behavior.neuralynx_nvt",
+                payload={
+                    "source_format": "nvt",
+                    "container_name": container_name,
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                    "writes_position": True,
+                    "writes_angle": True,
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv Neuralynx NVT conversion into behavior position tracking data.",
+                "Neuralynx NVT support shares the Neuralynx install gate but stays distinct from Neuralynx ecephys folder ingestion.",
+            )
             return fields, [], notes

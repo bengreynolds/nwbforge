@@ -40,11 +40,17 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_alphaomega" not in registered
     assert "neuroconv_axon" not in registered
     assert "neuroconv_axona" not in registered
+    assert "neuroconv_biocam" not in registered
     assert "neuroconv_blackrock" not in registered
+    assert "neuroconv_brukertiff_singleplane" not in registered
+    assert "neuroconv_brukertiff_multiplane" not in registered
     assert "neuroconv_excel_time_intervals" in registered
     assert "neuroconv_deeplabcut" not in registered
     assert "neuroconv_edf" not in registered
+    assert "neuroconv_femtonics" not in registered
     assert "neuroconv_lightningpose" not in registered
+    assert "neuroconv_inscopix" not in registered
+    assert "neuroconv_mcsraw" not in registered
     assert "neuroconv_medpc" not in registered
     assert "neuroconv_audio" not in registered
     assert "neuroconv_image" not in registered
@@ -52,6 +58,9 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_sleap" not in registered
     assert "neuroconv_intan" not in registered
     assert "neuroconv_neuralynx" not in registered
+    assert "neuroconv_neuralynx_nvt" not in registered
+    assert "neuroconv_neuroscope" not in registered
+    assert "neuroconv_openephys_binary_analog" not in registered
     assert "neuroconv_openephys_binary" not in registered
     assert "neuroconv_openephys_legacy" not in registered
     assert "neuroconv_plexon" not in registered
@@ -63,6 +72,7 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_micromanager_tiff" not in registered
     assert "neuroconv_miniscope" not in registered
     assert "neuroconv_scanimage" not in registered
+    assert "neuroconv_scanimage_legacy" not in registered
     assert "neuroconv_thor" not in registered
 
 

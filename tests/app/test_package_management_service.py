@@ -16,14 +16,20 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "alphaomega" in route_names
     assert "axon" in route_names
     assert "axona" in route_names
+    assert "biocam" in route_names
     assert "blackrock" in route_names
+    assert "brukertiff" in route_names
     assert "deeplabcut" in route_names
     assert "edf" in route_names
+    assert "femtonics" in route_names
     assert "lightningpose" in route_names
+    assert "inscopix" in route_names
+    assert "mcsraw" in route_names
     assert "medpc" in route_names
     assert "sleap" in route_names
     assert "intan" in route_names
     assert "neuralynx" in route_names
+    assert "neuroscope" in route_names
     assert "openephys_binary" in route_names
     assert "openephys_legacy" in route_names
     assert "plexon" in route_names
@@ -36,6 +42,7 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "micromanager" in route_names
     assert "miniscope" in route_names
     assert "scanimage" in route_names
+    assert "scanimage_legacy" in route_names
     assert "thor" in route_names
 
 

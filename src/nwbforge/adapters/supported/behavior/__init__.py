@@ -27,4 +27,5 @@ def _try_import_optional(export_name: str) -> None:
 
 _try_import_optional("NeuroConvLightningPoseAdapter")
 _try_import_optional("NeuroConvMedPCAdapter")
+_try_import_optional("NeuroConvNeuralynxNvtAdapter")
 _try_import_optional("NeuroConvSLEAPAdapter")

@@ -18,7 +18,12 @@ def _try_import_optional(export_name: str) -> None:
 
 
 _try_import_optional("NeuroConvScanImageAdapter")
+_try_import_optional("NeuroConvScanImageLegacyAdapter")
+_try_import_optional("NeuroConvBrukerTiffSinglePlaneAdapter")
+_try_import_optional("NeuroConvBrukerTiffMultiPlaneAdapter")
+_try_import_optional("NeuroConvFemtonicsAdapter")
 _try_import_optional("NeuroConvHdf5ImagingAdapter")
+_try_import_optional("NeuroConvInscopixAdapter")
 _try_import_optional("NeuroConvMicroManagerTiffAdapter")
 _try_import_optional("NeuroConvMiniscopeAdapter")
 _try_import_optional("NeuroConvThorAdapter")
