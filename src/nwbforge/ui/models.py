@@ -18,6 +18,7 @@ from nwbforge.app.packages import (
 )
 from nwbforge.app.runtime import PipelineProgressEvent
 from nwbforge.app.services import UiSettings
+from nwbforge.app.services.session_assembly import SessionAssemblyDraft
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import (
@@ -92,6 +93,49 @@ class ConversionSourceItem:
     role: str
     adapter_hint: str | None = None
     media_type: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SessionAssemblySourceItem:
+    """A UI-facing summary of one selected input in session assembly."""
+
+    source_id: str
+    label: str
+    location: Path
+    source_type: str
+    suggested_pathway: str
+    matching_adapter_ids: tuple[str, ...] = ()
+    suggested_adapter_id: str | None = None
+    needs_review: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SessionAssemblyIssueItem:
+    """A UI-facing issue discovered while assembling a draft session."""
+
+    code: str
+    message: str
+    severity: str
+    location: Path | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SessionAssemblyState:
+    """State consumable by a direct-ingest session-assembly screen."""
+
+    selected_paths: tuple[Path, ...] = ()
+    session_id: str = ""
+    title: str = ""
+    suggested_pathway: str = "custom"
+    sources: tuple[SessionAssemblySourceItem, ...] = ()
+    issues: tuple[SessionAssemblyIssueItem, ...] = ()
+    draft: SessionAssemblyDraft | None = None
+    error_message: str | None = None
+    user_error: UserFacingError | None = None
+
+    @property
+    def can_create_session(self) -> bool:
+        return self.draft is not None and self.draft.can_create_session
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,3 +296,4 @@ ShellStateListener = Callable[[DesktopShellState], None]
 PackageInstallerStateListener = Callable[[PackageInstallerState], None]
 ConversionSessionStateListener = Callable[[ConversionSessionScreenState], None]
 SettingsScreenStateListener = Callable[[SettingsScreenState], None]
+SessionAssemblyStateListener = Callable[[SessionAssemblyState], None]

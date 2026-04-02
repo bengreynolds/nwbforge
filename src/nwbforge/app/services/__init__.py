@@ -14,6 +14,12 @@ from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.pipeline import ConversionPipelineService
 from nwbforge.app.services.provenance import SessionProvenanceService
 from nwbforge.app.services.review import ExecutionReviewService
+from nwbforge.app.services.session_assembly import (
+    SessionAssemblyDraft,
+    SessionAssemblyIssue,
+    SessionAssemblyService,
+    SessionAssemblySource,
+)
 from nwbforge.app.services.settings import UiSettings, UiSettingsService
 from nwbforge.app.services.supported_execution import NeuroConvSupportedExecutionService
 
@@ -29,6 +35,10 @@ __all__ = [
     "RegistrySourceInspectionService",
     "ReviewDecisionError",
     "ReviewSubmission",
+    "SessionAssemblyDraft",
+    "SessionAssemblyIssue",
+    "SessionAssemblyService",
+    "SessionAssemblySource",
     "SessionPersistenceService",
     "SessionProvenanceService",
     "SourceNotFoundError",

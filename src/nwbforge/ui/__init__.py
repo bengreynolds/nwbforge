@@ -6,6 +6,7 @@ from nwbforge.ui.models import (
     FileMenuAction,
     FileMenuEntry,
     PackageInstallerState,
+    SessionAssemblyState,
     SettingsScreenState,
     StatusBarState,
 )
@@ -21,6 +22,7 @@ from nwbforge.ui.logs import (
     UiLogSubscriptionSink,
 )
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
+from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 from nwbforge.ui.settings import SettingsScreenModel
 from nwbforge.ui.shell import DesktopShellModel
 
@@ -37,6 +39,8 @@ __all__ = [
     "InMemoryUiLogSink",
     "PackageInstallerScreenModel",
     "PackageInstallerState",
+    "SessionAssemblyScreenModel",
+    "SessionAssemblyState",
     "SettingsScreenModel",
     "SettingsScreenState",
     "StatusBarState",
