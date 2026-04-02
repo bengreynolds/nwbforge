@@ -1257,3 +1257,29 @@ Consequences:
 - the conversion workspace now projects pending normalized conflicts into a dedicated metadata-review tab
 - the metadata-review tab shows canonical keys, retained values, contributing source values, and normalization notes
 - direct field-by-field resolution actions remain follow-on work; users still resolve conflicts through the existing override/edit flows
+
+### DEC-099: Add dataset-level grouping actions on top of heuristic direct-ingest grouping
+Status: Accepted
+
+Reasoning:
+- First-class group summaries improved visibility, but the `New Session` workflow was still too dependent on per-source text edits.
+- Users need small dataset-level actions now to make heuristic grouping honest enough for internal testing.
+- A lightweight rename plus create/move model is enough to improve usability without inventing a full dataset editor yet.
+
+Consequences:
+- the `SessionAssemblyDialog` now supports selected-group rename and selected-source create/move actions
+- `SessionAssemblyScreenModel` now exposes bulk grouping operations instead of only per-source group-label edits
+- richer dataset confirmation, merge/split history, and a stronger dataset model remain follow-on work
+
+### DEC-100: Start actionable metadata resolution with session-wide overrides from the metadata-review workspace
+Status: Accepted
+
+Reasoning:
+- The dedicated metadata-review tab made mixed-source conflicts visible, but it was still read-only.
+- The current product direction still prefers session-wide overrides as the first simple user-facing resolution path.
+- Letting users promote a selected source value into a session-wide override directly from the review workspace is the narrowest truthful next step.
+
+Consequences:
+- `ConversionSessionScreenModel` now supports applying and clearing session-wide overrides from the conversion workspace
+- using a metadata-review resolution action clears stale preview/execution state and prompts the user to rebuild
+- fuller field-by-field conflict policy, source-specific post-preview resolution, and richer resolution history remain follow-on work

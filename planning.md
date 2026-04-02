@@ -91,6 +91,9 @@ Completed:
 - Promoted direct-ingest groups into first-class session-assembly state with dataset/group summaries, mixed-pathway group review, and richer same-stem sidecar bundle grouping
 - Added a dedicated metadata-review workspace after preview/build so mixed-source normalized conflicts surface as explicit canonical-value comparisons instead of living only in override notes
 - Polished the desktop `New Session` and conversion workspaces with explicit detected-group summaries and a dedicated metadata-review tab
+- Added dataset-level grouping actions in `New Session`, including group rename plus create/move flows over selected sources
+- Added first actionable mixed-source conflict resolution in the metadata-review tab through session-wide override actions on selected source values
+- Polished the desktop review flow so metadata-resolution actions clear stale preview/execution state and explicitly prompt a rebuild
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -101,13 +104,13 @@ In progress:
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, and per-source correction baseline
+- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, and current group-action baseline
 
 Next:
 - Continue formal first-pass internal testing in the dedicated Conda environment using the full suite plus the internal smoke baseline
 - Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
 - Deepen direct-ingest grouping from current heuristics and manual correction toward a richer dataset/session model
-- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace toward explicit field-by-field conflict resolution
+- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and session-wide override actions toward fuller field-by-field conflict resolution
 - Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
 - Keep release engineering planned but defer implementation until after first-pass internal testing
 
@@ -121,6 +124,7 @@ Next:
 - The first concrete direct-ingest slice now exists: `New Session` opens a draft session-assembly workflow over real files/folders instead of behaving only as a shell reset.
 - Direct ingest now has explicit saved-project behavior through app-owned `.nwbforge-project.json` files, with open/save/recent project desktop flows layered on top of the in-progress draft workspace.
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
+- Direct ingest now also has first-pass dataset-level grouping actions, including selected-group rename plus create/move flows for selected sources on top of heuristic grouping and first-class group summaries.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Supported NeuroConv routes now use category-first package layout for the `behavior`, `tabular`, and `media` families, while keeping stable public adapter exports.
@@ -143,6 +147,7 @@ Next:
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 - The PySide6 shell now also includes a `SessionAssemblyDialog`, so `New Session` begins the direct-ingest workflow by letting users add real files/folders and create a draft `ConversionSession`.
+- The `SessionAssemblyDialog` now also supports dataset-level grouping actions so users can rename a detected group, create a new group from selected sources, or move selected sources into the currently selected group.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
@@ -161,6 +166,7 @@ Next:
 - The conversion-session panel is now organized into dedicated sections for session summary, execution status, validation/review, and generated artifacts instead of one long stacked column, which makes the desktop workflow read more like an application surface than a debug panel.
 - The desktop conversion surface now also summarizes current stage, output target, validation counts, artifact counts, and review guidance explicitly, so users can read session readiness before interacting with raw issue lists or artifact tables.
 - The desktop conversion surface now also uses a tabbed workspace for run overview, review work, and artifacts, which makes the right-hand side behave more like a desktop application workspace than a stacked panel.
+- The desktop conversion surface now also supports actionable metadata review, including session-wide override actions from selected source values and explicit stale-preview clearing after those edits.
 - The desktop conversion surface now also exposes pathway, source-count, and selected-source detail fields so supported and custom sessions read more like one intentional desktop workflow rather than a raw source list.
 - The real desktop path now persists latest preview, execution, and review snapshots automatically under the app-state directory, which improves resumability and operational readiness for repeated internal testing without waiting for a fuller history store.
 - The real desktop path now also restores the latest saved snapshot when a session is reopened, surfacing recovered artifacts, validation state, review status, and the last known NWB output path directly in the conversion workspace.
@@ -1083,7 +1089,7 @@ Current status:
 
 The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
 
-### 1. Direct ingest now has first-class group summaries, but grouping confirmation is still not a full dataset model
+### 1. Direct ingest now has first-class group actions, but grouping confirmation is still not a full dataset model
 - Target direction:
   - the app should help users load combinations of files/folders and organize them into one session intentionally
   - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
@@ -1092,7 +1098,8 @@ The repository is now in internal-testing mode. The following deviations between
   - grouping heuristics now distinguish descriptor-parent groups and same-stem sidecar bundles instead of relying only on flat parent-folder grouping
   - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group, and mixed supported/custom-looking groups now emit an explicit warning
   - users can now correct grouping per source in the `New Session` workflow, and the dialog now shows a dedicated detected-group summary panel
-  - there is still no dataset-level confirmation workflow with merge/split actions and no richer dataset model beyond grouped selected paths
+  - the dialog now also supports dataset-level actions, including group rename plus create/move flows for selected sources
+  - there is still no richer dataset model beyond grouped selected paths, no explicit merge/split history, and no stronger dataset confirmation artifact beyond the current group overrides
 - Why this matters:
   - the current ingest path is now honest enough for broader internal testing, but it is still too shallow for heterogeneous lab datasets with ambiguous multi-file bundles
 
@@ -1108,7 +1115,7 @@ The repository is now in internal-testing mode. The following deviations between
 - Why this matters:
   - the role control is now honest enough for first-pass review, but it is not yet a full mixed-source policy model
 
-### 3. Direct ingest now supports source-specific overrides and post-preview metadata review, but conflict resolution is still partial
+### 3. Direct ingest now supports source-specific overrides and actionable post-preview metadata review, but conflict resolution is still partial
 - Target direction:
   - users should be able to review and override metadata before preview/build in a way that remains correct for supported, custom, and hybrid sessions
   - mixed-source disagreement handling should be explicit rather than accidental
@@ -1116,7 +1123,8 @@ The repository is now in internal-testing mode. The following deviations between
   - `ConversionSession.metadata_overrides` remains the session-wide path for simple canonical overrides
   - direct ingest now also supports per-source overrides for the same core canonical field set, and those overrides are applied at the inspection boundary and normalized as user-supplied values
   - the desktop conversion workspace now includes a dedicated metadata-review tab that surfaces pending normalized conflicts, their retained canonical values, contributing source values, and normalization notes after preview or execution
-  - the desktop UI still does not offer a post-preview field-by-field source chooser or direct conflict-resolution action beyond returning to overrides
+  - the metadata-review tab now lets users promote a selected source value into a session-wide override directly from that workspace and then rebuild preview
+  - the desktop UI still does not offer fuller field-by-field resolution policy, source-specific conflict actions from the post-preview workspace, or a richer conflict-resolution history beyond the override state itself
 - Why this matters:
   - the architectural shortcut is gone and a real disagreement-review surface now exists, but resolution is still narrower than a fuller mixed-source conflict workspace
 

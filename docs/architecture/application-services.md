@@ -79,6 +79,7 @@ Responsibilities:
 - apply first-pass automatic grouping heuristics to related selected inputs before session creation
 - promote detected groups into first-class draft state with pathway and composition summaries
 - support explicit per-source grouping correction on top of those heuristics
+- support lightweight dataset-level grouping actions over selected sources on top of those heuristics
 - detect simple same-stem metadata sidecars before session creation
 - carry both session-wide and source-specific metadata overrides into the assembled session model
 - surface no-match and ambiguous-match conditions as reviewable issues
@@ -110,6 +111,6 @@ This gives the desktop app a truthful `Save Project` / `Open Project` path witho
 
 ## Immediate follow-on work
 
-1. Expand session assembly from current path selection, heuristic grouping, first-class group summaries, grouping correction, simple sidecar association, explicit project files, and current session/source override support into richer dataset confirmation and post-preview conflict-resolution workflows.
+1. Expand session assembly from current path selection, heuristic grouping, first-class group summaries, group actions, simple sidecar association, explicit project files, and current session/source override support into richer dataset confirmation and post-preview conflict-resolution workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.

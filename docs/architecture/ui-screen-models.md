@@ -56,6 +56,7 @@ Responsibilities:
 - surface `PipelineRuntimeError` user messages into screen state
 - project validation issues into UI-facing acknowledgement items
 - project pending mixed-source normalized conflicts into a dedicated metadata-review workspace
+- apply and clear session-wide metadata overrides directly from that metadata-review workspace
 - project generated provenance artifacts into UI-facing artifact items
 - capture reviewer name, rationale, override, and acknowledgement state for review submission
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
@@ -91,6 +92,7 @@ Current scope:
 - session-wide metadata overrides are now available for a narrow canonical field set before preview/build
 - source-specific metadata overrides are now available for the same narrow canonical field set
 - first-class direct-ingest groups are now available for the draft workflow, including group pathway/count summaries and review flags
+- bulk group actions are now available for renaming a detected group and moving selected sources into a named group
 - draft assembly state now persists so `New Session` can reopen in-progress work
 - explicit saved-project identity now persists through reopened draft state as well
 
@@ -151,6 +153,6 @@ The current Qt layer is intentionally thin:
 
 ## Immediate follow-on work
 
-1. Expand direct session assembly from the current heuristic grouping, first-class group summaries, per-source regrouping, simple sidecar association, saved-project baseline, and current session/source override model into richer dataset confirmation and field-by-field disagreement resolution workflows.
+1. Expand direct session assembly from the current heuristic grouping, first-class group summaries, current group-action baseline, simple sidecar association, saved-project baseline, and current session/source override model into richer dataset confirmation and field-by-field disagreement resolution workflows.
 2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
 3. Strengthen multi-source presentation and source-specific disagreement workflows once direct session assembly fully replaces JSON-first startup as the primary UX.

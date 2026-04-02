@@ -39,6 +39,7 @@ Responsibilities:
 - show the suggested session id, title, pathway, source preview, and assembly issues
 - show saved-project path and clean/dirty status
 - show detected dataset-group summaries with pathway and role composition
+- support lightweight dataset-level grouping actions for selected groups and selected sources
 - remove selected inputs from the draft
 - edit source-specific metadata overrides for the selected source
 - create a real `ConversionSession` through `SessionAssemblyScreenModel`
@@ -64,6 +65,7 @@ Responsibilities:
 - delegate artifact-open and reveal behavior to shell-provided callbacks so missing files and failed shell launches can use the standard desktop error path
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 - render pending mixed-source metadata conflicts as explicit canonical-key comparisons with source-value context and normalization notes
+- let users promote a selected source value into a session-wide override directly from the metadata-review workspace
 
 ### `PackageInstallerDialog`
 
@@ -131,9 +133,11 @@ Responsibilities:
   - conversion-session preview/execution bindings
   - conversion-session section layout for summary, execution, review, and artifacts
   - direct-ingest detected-group summaries in the `New Session` dialog
+  - direct-ingest group rename and selected-source create/move actions in the `New Session` dialog
   - conversion-session source-detail presentation for pathway, source count, and selected-source metadata
   - conversion-session run-overview and review-guidance summaries
   - conversion-session workspace-tab structure and state-driven tab selection, including metadata-review focus for pending mixed-source conflicts
+  - conversion-session metadata-resolution actions that clear stale preview/execution state and require rebuild
   - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
@@ -163,6 +167,6 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Expand the new-session assembly dialog from the current role-assignment, group-summary, per-source regrouping, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset confirmation and field-by-field disagreement-resolution workflows.
+1. Expand the new-session assembly dialog from the current role-assignment, group-summary, group-action baseline, simple sidecar association, explicit saved-project workflow, and narrow metadata-override baseline into richer dataset confirmation and field-by-field disagreement-resolution workflows.
 2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.
