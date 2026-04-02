@@ -44,11 +44,13 @@ class DesktopShellModel:
 
     def invoke_file_menu_action(self, action: FileMenuAction) -> DesktopShellState:
         if action in {
-            FileMenuAction.NEW_SESSION,
             FileMenuAction.OPEN_SESSION,
             FileMenuAction.REOPEN_LAST_SESSION,
         }:
             return self._state
+
+        if action is FileMenuAction.NEW_SESSION:
+            return self._set_state(replace(self._state, active_dialog="new_session"))
 
         if action is FileMenuAction.TOGGLE_LOG_VIEWER:
             return self._set_state(

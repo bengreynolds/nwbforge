@@ -685,11 +685,54 @@ def test_main_window_new_and_reopen_session_actions(qapp, tmp_path: Path, monkey
     assert "desktop-" in window.conversion_widget._session_label.text()
     window._new_session_action.trigger()
     qapp.processEvents()
-    assert window.conversion_widget._session_label.text() == "No session loaded."
+    assert window.session_assembly_dialog.isVisible() is True
+    assert "desktop-" in window.conversion_widget._session_label.text()
+    window.session_assembly_dialog.reject()
+    qapp.processEvents()
 
     window._reopen_last_session_action.trigger()
     qapp.processEvents()
     assert "desktop-" in window.conversion_widget._session_label.text()
+    window.close()
+
+
+def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    assert window.session_assembly_dialog.isVisible() is True
+
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    assert dialog._input_list.count() == 1
+    assert dialog._pathway_label.text() == "supported"
+    assert dialog._create_button.isEnabled() is True
+
+    dialog._create_button.click()
+    qapp.processEvents()
+
+    assert window.session_assembly_dialog.isVisible() is False
+    assert "session-" in window.conversion_widget._session_label.text()
+    assert window.conversion_widget._pathway_label.text() == "supported"
+    assert window.conversion_widget._source_count_label.text() == "1"
     window.close()
 
 

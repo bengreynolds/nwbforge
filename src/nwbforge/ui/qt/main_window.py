@@ -25,11 +25,13 @@ from nwbforge.ui import (
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.models import ConversionSessionScreenState, PackageInstallerState, SettingsScreenState, StatusBarState
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
+from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 from nwbforge.ui.settings import SettingsScreenModel
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.qt.conversion_session_widget import ConversionSessionWidget
 from nwbforge.ui.qt.log_viewer import LogViewerDockWidget
 from nwbforge.ui.qt.package_dialog import PackageInstallerDialog
+from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.ui.qt.settings_dialog import SettingsDialog
 
 
@@ -42,6 +44,7 @@ class MainWindow(QMainWindow):
         settings_screen_model: SettingsScreenModel,
         package_screen_model: PackageInstallerScreenModel,
         conversion_screen_model: ConversionSessionScreenModel,
+        session_assembly_screen_model: SessionAssemblyScreenModel | None = None,
         *,
         log_sink: UiLogSubscriptionSink | None = None,
         log_file_path: Path | None = None,
@@ -55,6 +58,12 @@ class MainWindow(QMainWindow):
         self._shell_model = shell_model
         self._settings_screen_model = settings_screen_model
         self._package_screen_model = package_screen_model
+        if session_assembly_screen_model is None:
+            from nwbforge.app.desktop import build_adapter_registry
+            from nwbforge.app.services import SessionAssemblyService
+
+            session_assembly_screen_model = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+        self._session_assembly_screen_model = session_assembly_screen_model
         self._conversion_screen_model = conversion_screen_model
         self._session_loader = session_loader or self._default_session_loader
         self._recent_session_actions: list[QAction] = []
@@ -85,6 +94,13 @@ class MainWindow(QMainWindow):
         self._package_dialog = PackageInstallerDialog(self._package_screen_model, self)
         self._package_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
 
+        self._session_assembly_dialog = SessionAssemblyDialog(
+            self._session_assembly_screen_model,
+            self,
+            session_created=self._load_built_session,
+        )
+        self._session_assembly_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
+
         self._settings_dialog = SettingsDialog(self._settings_screen_model, self)
         self._settings_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
 
@@ -111,6 +127,10 @@ class MainWindow(QMainWindow):
     @property
     def package_dialog(self) -> PackageInstallerDialog:
         return self._package_dialog
+
+    @property
+    def session_assembly_dialog(self) -> SessionAssemblyDialog:
+        return self._session_assembly_dialog
 
     @property
     def settings_dialog(self) -> SettingsDialog:
@@ -157,7 +177,9 @@ class MainWindow(QMainWindow):
         self._file_menu = self.menuBar().addMenu("&File")
 
         self._new_session_action = QAction("New Session", self)
-        self._new_session_action.triggered.connect(self._new_session)
+        self._new_session_action.triggered.connect(
+            lambda: self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        )
         self._file_menu.addAction(self._new_session_action)
 
         self._open_session_action = QAction("Open Session...", self)
@@ -232,18 +254,6 @@ class MainWindow(QMainWindow):
             return None
         return Path(selected_path)
 
-    def _new_session(self) -> None:
-        self._conversion_screen_model.clear_session()
-        self._shell_model.set_status_bar(
-            StatusBarState(
-                stage_key="session:new",
-                message="Started a new session.",
-                percent_complete=0,
-                is_busy=False,
-                is_error=False,
-            )
-        )
-
     def _reopen_last_session(self) -> None:
         last_path = self._settings_screen_model.state.applied_settings.last_open_session_path
         if last_path is None or not last_path.exists():
@@ -286,10 +296,7 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self._settings_screen_model.record_recent_session(session_path)
-        self._conversion_widget.load_session(session)
-        default_output_path = self._default_output_path_for_session(session)
-        self._conversion_screen_model.set_output_path(default_output_path)
+        self._activate_loaded_session(session, session_path=session_path)
         self._shell_model.set_status_bar(
             StatusBarState(
                 stage_key="session:loaded",
@@ -299,6 +306,25 @@ class MainWindow(QMainWindow):
                 is_error=False,
             )
         )
+
+    def _load_built_session(self, session: ConversionSession) -> None:
+        self._activate_loaded_session(session)
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="session:assembled",
+                message=f"Built session {session.session_id} from selected inputs.",
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+
+    def _activate_loaded_session(self, session: ConversionSession, *, session_path: Path | None = None) -> None:
+        if session_path is not None:
+            self._settings_screen_model.record_recent_session(session_path)
+        self._conversion_widget.load_session(session)
+        default_output_path = self._default_output_path_for_session(session)
+        self._conversion_screen_model.set_output_path(default_output_path)
 
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
         output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
@@ -412,6 +438,14 @@ class MainWindow(QMainWindow):
             self._settings_dialog.activateWindow()
         elif state.active_dialog != "settings" and self._settings_dialog.isVisible():
             self._settings_dialog.hide()
+
+        if state.active_dialog == "new_session" and not self._session_assembly_dialog.isVisible():
+            self._session_assembly_screen_model.reset()
+            self._session_assembly_dialog.show()
+            self._session_assembly_dialog.raise_()
+            self._session_assembly_dialog.activateWindow()
+        elif state.active_dialog != "new_session" and self._session_assembly_dialog.isVisible():
+            self._session_assembly_dialog.hide()
 
         if state.active_dialog == "install_packages" and not self._package_dialog.isVisible():
             self._package_dialog.show()

@@ -49,6 +49,7 @@ def main() -> int:
         services.settings_screen_model,
         services.package_screen_model,
         services.conversion_screen_model,
+        session_assembly_screen_model=services.session_assembly_screen_model,
         log_file_path=build_default_log_file_path(repo_root),
     )
     window.show()

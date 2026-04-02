@@ -19,6 +19,7 @@ from nwbforge.app.services import (
     ExecutionReviewService,
     PackageManagementController,
     RegistrySourceInspectionService,
+    SessionAssemblyService,
     SessionPersistenceService,
     SessionProvenanceService,
     UiSettingsService,
@@ -33,6 +34,7 @@ from nwbforge.ui import (
     ConversionSessionScreenModel,
     DesktopShellModel,
     PackageInstallerScreenModel,
+    SessionAssemblyScreenModel,
     SettingsScreenModel,
 )
 from nwbforge.validation import (
@@ -54,6 +56,7 @@ class DesktopAppServices:
     shell_model: DesktopShellModel
     settings_screen_model: SettingsScreenModel
     package_screen_model: PackageInstallerScreenModel
+    session_assembly_screen_model: SessionAssemblyScreenModel
     conversion_screen_model: ConversionSessionScreenModel
 
 
@@ -137,6 +140,7 @@ def build_desktop_services(
     package_screen_model = PackageInstallerScreenModel(package_controller)
 
     registry = build_adapter_registry()
+    session_assembly_screen_model = SessionAssemblyScreenModel(SessionAssemblyService(registry))
     pipeline_service = build_desktop_pipeline_service(registry)
     conversion_executor = ThreadedConversionExecutor(pipeline_service)
     review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
@@ -154,6 +158,7 @@ def build_desktop_services(
         shell_model=DesktopShellModel(),
         settings_screen_model=settings_screen_model,
         package_screen_model=package_screen_model,
+        session_assembly_screen_model=session_assembly_screen_model,
         conversion_screen_model=conversion_screen_model,
     )
 
