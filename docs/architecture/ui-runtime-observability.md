@@ -67,7 +67,7 @@ Current scope:
 
 Still pending:
 - richer widget behavior beyond the current baseline shell/dialog/panel set
-- broader structured logging coverage across remaining desktop/UI interaction and plugin paths
+- broader structured logging coverage across remaining desktop/UI interaction and plugin paths beyond the current shell file/artifact actions
 - broader dialog/banner presentation beyond the current shell-level warning dialogs
 
 ## Immediate follow-on work

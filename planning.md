@@ -185,7 +185,7 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, heuristic-first parent-folder grouping suggestions, reviewable auto-grouping issues, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, heuristic-first parent-folder grouping suggestions, reviewable auto-grouping issues, per-source grouping correction, simple same-stem sidecar association, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs and override values instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
@@ -210,7 +210,7 @@ Required direction:
 Current status:
 - latest preview, execution, and review state now persist and recover in the real desktop workflow
 - artifact/report visibility is available from the conversion workspace and shell actions
-- structured logging now covers the runtime core, desktop bootstrap, session assembly, settings persistence, review submission, and session persistence paths, though some desktop interaction paths remain lighter than the target end state
+- structured logging now covers the runtime core, desktop bootstrap, session assembly, settings persistence, review submission, session persistence, and core desktop shell file/artifact actions, though some desktop interaction paths remain lighter than the target end state
 
 ### Priority 4: Supported-format growth
 
@@ -1080,7 +1080,8 @@ The repository is now in internal-testing mode. The following deviations between
 - Current implementation:
   - `SessionAssemblyService` now auto-groups selected inputs by simple path heuristics, primarily parent-folder relationships and known session-descriptor locations
   - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group
-  - there is still no sidecar association workflow, no dataset-level grouping confirmation step, and no richer dataset model beyond grouped selected paths
+  - users can now correct grouping per source in the `New Session` workflow, and simple same-stem JSON/YAML/TXT sidecars are associated and defaulted toward metadata role
+  - there is still no dataset-level grouping confirmation step and no richer dataset model beyond grouped selected paths
 - Why this matters:
   - the current ingest path is now proactive enough for testing, but it is still too shallow for heterogeneous lab datasets
 
@@ -1111,7 +1112,7 @@ The repository is now in internal-testing mode. The following deviations between
   - actionable code paths should emit structured logging rather than relying on only UI state or exceptions
 - Current implementation:
   - logging is present in the core runtime path, supported execution, and executor layers
-  - desktop bootstrap, session assembly, direct-ingest workspace persistence, settings persistence, review submission, and session persistence now emit structured logs as well
+  - desktop bootstrap, session assembly, direct-ingest workspace persistence, settings persistence, review submission, session persistence, and core desktop shell file/artifact actions now emit structured logs as well
   - several desktop/UI interaction paths are still lighter than the target end state
 - Why this matters:
   - internal testing will generate harder-to-triage failures if only the conversion runtime is well instrumented
@@ -1143,7 +1144,7 @@ Current status:
 Current status:
 - This phase is now part of the first-pass completion gate and should advance ahead of broad supported-route expansion
 - The current repo now has a representative hybrid desktop workflow through `hybrid_session.json`, but that descriptor should be treated as a temporary composition/bootstrap artifact and possible future saved-project compatibility path rather than the intended long-term primary user input model
-- The direct-ingest session assembly baseline can now classify mixed selected inputs as hybrid drafts, assign source roles, apply shallow heuristic grouping suggestions, and carry session-wide metadata overrides into preview/build, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
+- The direct-ingest session assembly baseline can now classify mixed selected inputs as hybrid drafts, assign source roles, apply shallow heuristic grouping suggestions, support per-source grouping correction and simple sidecar association, and carry session-wide metadata overrides into preview/build, though richer grouping and multi-source review are still needed before descriptor-based bootstrap can be retired
 
 ### Phase 6: Department rollout
 - Add lab profiles

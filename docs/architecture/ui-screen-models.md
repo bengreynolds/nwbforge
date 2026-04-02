@@ -136,6 +136,6 @@ The current Qt layer is intentionally thin:
 
 ## Immediate follow-on work
 
-1. Expand direct session assembly from the current heuristic-grouping, role-assignment, and session-wide override baseline into richer grouping correction, sidecar association, and source-specific metadata workflows.
+1. Expand direct session assembly from the current heuristic-grouping, per-source regrouping, simple sidecar association, role-assignment, and session-wide override baseline into richer dataset grouping and source-specific metadata workflows.
 2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
 3. Strengthen multi-source presentation and source-specific metadata workflows once direct session assembly fully replaces JSON-first startup as the primary UX.

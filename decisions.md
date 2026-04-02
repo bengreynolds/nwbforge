@@ -1140,3 +1140,42 @@ Consequences:
 - review submission and snapshot persistence/loading now emit structured logs with session and decision context
 - the repository should treat logging coverage as improved but still incomplete until broader desktop/UI interaction paths are instrumented
 - future hardening should continue from this boundary instead of treating runtime-core logging as sufficient
+
+### DEC-090: Allow per-source grouping correction on top of direct-ingest heuristics
+Status: Accepted
+
+Reasoning:
+- Heuristic grouping is useful, but it is not honest enough on its own for mixed real-world inputs.
+- The first correction layer should be small and understandable rather than a full dataset editor.
+- Per-source group-label overrides let users fix obvious mistakes without introducing a second assembly model before the broader grouping design is ready.
+
+Consequences:
+- direct-ingest workspace state now persists manual group-label overrides
+- the `New Session` dialog now lets users edit a selected source's group label directly
+- future grouping work should treat these overrides as a bridge to richer dataset-level grouping, not the final grouping model
+
+### DEC-091: Detect simple same-stem metadata sidecars during direct ingest
+Status: Accepted
+
+Reasoning:
+- Some heterogeneous lab sessions already contain obvious metadata sidecars such as `recording.json` beside `recording.tif`.
+- Treating those files as generic supplemental or primary sources is misleading during early review.
+- A conservative same-stem heuristic is narrow enough to avoid pretending the app understands arbitrary sidecars.
+
+Consequences:
+- same-folder JSON, YAML, YML, and TXT files with the same stem as a non-sidecar file are now flagged as likely metadata sidecars
+- those sources default to `metadata` role and surface a reviewable sidecar-association issue in the session-assembly workflow
+- richer sidecar models and broader association heuristics remain follow-on work
+
+### DEC-092: Expand structured logging into desktop shell file and artifact actions
+Status: Accepted
+
+Reasoning:
+- Internal testing still depends heavily on shell-driven actions such as opening sessions, choosing outputs, and opening generated artifacts.
+- Missing logs at that layer would hide failures that never reach the conversion runtime.
+- This is a focused observability gain that improves triage without requiring full widget-level instrumentation.
+
+Consequences:
+- desktop session loading, reopen behavior, output selection, and artifact open/reveal actions now emit structured logs
+- observability coverage is materially better for internal testing, but broader desktop/UI interaction logging is still follow-on work
+- planning/docs should treat shell-action logging as implemented rather than still grouping it under the older review/persistence-only expansion

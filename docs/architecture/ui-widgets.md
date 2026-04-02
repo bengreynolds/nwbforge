@@ -153,6 +153,6 @@ Responsibilities:
 
 ## Immediate follow-on work
 
-1. Expand the new-session assembly dialog from the current role-assignment, narrow metadata-override, and draft-reopen baseline into richer grouping and saved-project workflows.
+1. Expand the new-session assembly dialog from the current role-assignment, per-source regrouping, simple sidecar association, narrow metadata-override, and draft-reopen baseline into richer dataset grouping and saved-project workflows.
 2. Improve multi-source/hybrid provenance presentation and source-specific metadata UX without losing the current source/session clarity.
 3. Add persisted window/layout state once the core desktop information architecture settles.

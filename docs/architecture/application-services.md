@@ -77,6 +77,8 @@ Responsibilities:
 - ask the adapter registry which sources can be handled directly
 - suggest a session pathway (`supported`, `custom`, or `hybrid`) from the selected inputs
 - apply first-pass automatic grouping heuristics to related selected inputs before session creation
+- support explicit per-source grouping correction on top of those heuristics
+- detect simple same-stem metadata sidecars before session creation
 - surface no-match and ambiguous-match conditions as reviewable issues
 - build a real `ConversionSession` once the draft is acceptable
 
@@ -94,6 +96,6 @@ This keeps direct-ingest session assembly in the application layer instead of sc
 
 ## Immediate follow-on work
 
-1. Expand session assembly from current path selection, heuristic grouping, source-role assignment, and session-wide metadata overrides into richer grouping, sidecar association, and source-specific disagreement workflows.
+1. Expand session assembly from current path selection, heuristic grouping, grouping correction, simple sidecar association, source-role assignment, and session-wide metadata overrides into richer dataset grouping and source-specific disagreement workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.
