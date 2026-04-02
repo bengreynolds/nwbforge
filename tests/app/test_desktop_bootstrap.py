@@ -45,7 +45,10 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_video" not in registered
     assert "neuroconv_sleap" not in registered
     assert "neuroconv_hdf5_imaging" not in registered
+    assert "neuroconv_micromanager_tiff" not in registered
+    assert "neuroconv_miniscope" not in registered
     assert "neuroconv_scanimage" not in registered
+    assert "neuroconv_thor" not in registered
 
 
 def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path) -> None:

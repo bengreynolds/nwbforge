@@ -43,4 +43,7 @@ _try_import_optional("nwbforge.adapters.supported.media", "NeuroConvVideoAdapter
 _try_import_optional("nwbforge.adapters.supported.behavior", "NeuroConvLightningPoseAdapter")
 _try_import_optional("nwbforge.adapters.supported.behavior", "NeuroConvSLEAPAdapter")
 _try_import_optional("nwbforge.adapters.supported.imaging", "NeuroConvHdf5ImagingAdapter")
+_try_import_optional("nwbforge.adapters.supported.imaging", "NeuroConvMicroManagerTiffAdapter")
+_try_import_optional("nwbforge.adapters.supported.imaging", "NeuroConvMiniscopeAdapter")
 _try_import_optional("nwbforge.adapters.supported.imaging", "NeuroConvScanImageAdapter")
+_try_import_optional("nwbforge.adapters.supported.imaging", "NeuroConvThorAdapter")

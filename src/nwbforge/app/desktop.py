@@ -94,7 +94,10 @@ def build_adapter_registry() -> AdapterRegistry:
         ("lightningpose", "NeuroConvLightningPoseAdapter"),
         ("sleap", "NeuroConvSLEAPAdapter"),
         ("hdf5", "NeuroConvHdf5ImagingAdapter"),
+        ("micromanager", "NeuroConvMicroManagerTiffAdapter"),
+        ("miniscope", "NeuroConvMiniscopeAdapter"),
         ("scanimage", "NeuroConvScanImageAdapter"),
+        ("thor", "NeuroConvThorAdapter"),
     )
     for route_name, adapter_name in optional_routes:
         if not route_dependencies_available(route_name):

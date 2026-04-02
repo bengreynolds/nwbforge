@@ -40,8 +40,17 @@ hdf5 = [
 image = [
   "pillow>=10,<12",
 ]
+micromanager = [
+  "neuroconv[micromanagertiff]>=0.9,<0.10",
+]
+miniscope = [
+  "neuroconv[miniscope]>=0.9,<0.10",
+]
 sleap = [
   "neuroconv[sleap]>=0.9,<0.10",
+]
+thor = [
+  "neuroconv[thor]>=0.9,<0.10",
 ]
 videos = [
   "opencv-python-headless>=4.10,<5",

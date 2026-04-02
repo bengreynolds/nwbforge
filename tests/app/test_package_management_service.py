@@ -18,7 +18,10 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "sleap" in route_names
     assert "videos" in route_names
     assert "hdf5" in route_names
+    assert "micromanager" in route_names
+    assert "miniscope" in route_names
     assert "scanimage" in route_names
+    assert "thor" in route_names
 
 
 def test_package_management_service_preview_accepts_implemented_optional_route(tmp_path: Path) -> None:

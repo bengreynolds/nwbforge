@@ -10,9 +10,24 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     Hdf5ImagingInterface = None
 
 try:
+    from neuroconv.datainterfaces import MicroManagerTiffImagingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    MicroManagerTiffImagingInterface = None
+
+try:
+    from neuroconv.datainterfaces import MiniscopeImagingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    MiniscopeImagingInterface = None
+
+try:
     from neuroconv.datainterfaces import ScanImageImagingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     ScanImageImagingInterface = None
+
+try:
+    from neuroconv.datainterfaces import ThorImagingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    ThorImagingInterface = None
 
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.neuroconv import (
@@ -162,4 +177,170 @@ if Hdf5ImagingInterface is not None:
                 "Prepared NeuroConv HDF5 imaging conversion into ophys imaging data.",
                 "HDF5 imaging sources may require mov_field and sampling_frequency metadata when not embedded in the file.",
             )
+            return fields, [], notes
+
+
+if MicroManagerTiffImagingInterface is not None:
+
+    class NeuroConvMicroManagerTiffAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert Micro-Manager TIFF directory sources through NeuroConv."""
+
+        adapter_id = "neuroconv_micromanager_tiff"
+        display_name = "NeuroConv Micro-Manager TIFF adapter"
+        version = "0.1.0"
+        interface_cls = MicroManagerTiffImagingInterface
+        record_type = "neuroconv_micromanager_tiff"
+        source_types = (SourceType.DIRECTORY,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return self._looks_like_micromanager_directory(source.location)
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {"folder_path": source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            fields = extracted_fields_from_mapping(
+                prefix="ophys.micromanager",
+                payload={
+                    "source_format": "micromanager_tiff_directory",
+                    "file_count": len(tuple(source.location.glob("*.ome.tif*"))),
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                    "photon_series_type": "TwoPhotonSeries" if metadata.get("Ophys", {}).get("TwoPhotonSeries") else "",
+                },
+                source_id=source.source_id,
+            )
+            notes = ("Prepared NeuroConv Micro-Manager TIFF conversion into ophys imaging data.",)
+            return fields, [], notes
+
+        @staticmethod
+        def _looks_like_micromanager_directory(location: Path) -> bool:
+            if not location.is_dir():
+                return False
+            has_ome_tiff = any(path.is_file() for path in location.glob("*.ome.tif*"))
+            has_settings = any("displaysettings" in path.name.lower() for path in location.glob("*.json"))
+            return has_ome_tiff and has_settings
+
+
+if MiniscopeImagingInterface is not None:
+
+    class NeuroConvMiniscopeAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert Miniscope recording folders through NeuroConv."""
+
+        adapter_id = "neuroconv_miniscope"
+        display_name = "NeuroConv Miniscope adapter"
+        version = "0.1.0"
+        interface_cls = MiniscopeImagingInterface
+        record_type = "neuroconv_miniscope"
+        source_types = (SourceType.DIRECTORY,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return self._looks_like_miniscope_directory(source.location)
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {"folder_path": source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            device_metadata = metadata.get("Ophys", {}).get("Device", [{}])
+            one_photon_series = metadata.get("Ophys", {}).get("OnePhotonSeries", [{}])
+            fields = extracted_fields_from_mapping(
+                prefix="ophys.miniscope",
+                payload={
+                    "source_format": "miniscope_directory",
+                    "device_name": device_metadata[0].get("name", "Miniscope"),
+                    "series_name": one_photon_series[0].get("name", "OnePhotonSeries"),
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                    "is_one_photon": bool(one_photon_series and one_photon_series[0]),
+                },
+                source_id=source.source_id,
+            )
+            notes = ("Prepared NeuroConv Miniscope conversion into one-photon ophys imaging data.",)
+            return fields, [], notes
+
+        @staticmethod
+        def _looks_like_miniscope_directory(location: Path) -> bool:
+            if not location.is_dir():
+                return False
+            return (location / "metaData.json").is_file() and any(location.glob("*.avi"))
+
+
+if ThorImagingInterface is not None:
+
+    class NeuroConvThorAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert ThorImageLS TIFF sources through NeuroConv."""
+
+        adapter_id = "neuroconv_thor"
+        display_name = "NeuroConv Thor adapter"
+        version = "0.1.0"
+        interface_cls = ThorImagingInterface
+        record_type = "neuroconv_thor"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".tif", ".tiff")
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes and (
+                source.location.parent / "Experiment.xml"
+            ).is_file()
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {self.source_path_kwarg: source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            ophys_metadata = metadata.get("Ophys", {})
+            fields = extracted_fields_from_mapping(
+                prefix="ophys.thor",
+                payload={
+                    "source_format": "thor_tiff",
+                    "channel_name": config.interface_kwargs.get("channel_name"),
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                    "device_name": (ophys_metadata.get("Device") or [{}])[0].get("name", "ThorMicroscope"),
+                    "photon_series_type": "TwoPhotonSeries" if ophys_metadata.get("TwoPhotonSeries") else "",
+                },
+                source_id=source.source_id,
+            )
+            notes = ("Prepared NeuroConv Thor conversion into ophys imaging data.",)
             return fields, [], notes
