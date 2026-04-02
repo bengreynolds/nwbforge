@@ -53,6 +53,7 @@ Responsibilities:
 - capture reviewer name, rationale, override, and acknowledgement state for review submission
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
 - persist latest preview, execution, and review state through `SessionPersistenceService` when desktop persistence is configured
+- recover the latest saved snapshot on session load when desktop persistence is configured
 
 Current scope:
 - one loaded session at a time
@@ -62,6 +63,7 @@ Current scope:
 - review controls are intentionally attached to the same session workflow instead of a separate review screen
 - the same screen model now supports demo sessions plus real supported/custom/hybrid desktop sessions loaded through the desktop bootstrap module
 - persistence failures are surfaced as translated user-facing errors rather than being swallowed inside the screen model
+- recovered state currently restores latest artifacts, validation issues, review status, and last known output path without attempting to recreate a full execution object
 
 ### `SettingsScreenModel`
 

@@ -35,6 +35,7 @@ Responsibilities:
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
 - summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
 - expose the right-hand conversion workspace through explicit desktop tabs for run overview, review work, and artifacts
+- surface recovered latest-state session information when a saved snapshot exists for the reopened session
 - open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
 - display current status and final preview/execution result text
@@ -111,6 +112,7 @@ Responsibilities:
   - conversion-session source-detail presentation for pathway, source count, and selected-source metadata
   - conversion-session run-overview and review-guidance summaries
   - conversion-session workspace-tab structure and state-driven tab selection
+  - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
 

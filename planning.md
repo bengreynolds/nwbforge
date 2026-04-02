@@ -136,6 +136,7 @@ Next:
 - The desktop conversion surface now also uses a tabbed workspace for run overview, review work, and artifacts, which makes the right-hand side behave more like a desktop application workspace than a stacked panel.
 - The desktop conversion surface now also exposes pathway, source-count, and selected-source detail fields so supported and custom sessions read more like one intentional desktop workflow rather than a raw source list.
 - The real desktop path now persists latest preview, execution, and review snapshots automatically under the app-state directory, which improves resumability and operational readiness for repeated internal testing without waiting for a fuller history store.
+- The real desktop path now also restores the latest saved snapshot when a session is reopened, surfacing recovered artifacts, validation state, review status, and the last known NWB output path directly in the conversion workspace.
 
 ## First-Pass Product Priorities
 
@@ -239,7 +240,8 @@ Current milestone result:
 
 Operational hardening after the first-pass gate:
 - The current desktop workflow now persists latest preview, execution, and review snapshots automatically.
-- The next persistence milestone is no longer preview-state coverage; it is richer history/recovery behavior on top of the current latest-state store.
+- The current desktop workflow now also restores the latest saved session snapshot on reopen through the real desktop path.
+- The next persistence milestone is richer history and recovery behavior on top of the current latest-state store, not basic reopen support.
 
 Only after this milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
 

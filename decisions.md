@@ -915,6 +915,20 @@ Consequences:
 - the next phase is structured internal testing and issue triage, not additional gate-defining feature work
 - release engineering and broader supported-route growth remain post-first-pass priorities
 
+
+### DEC-074: Auto-recover the latest saved session snapshot when reopening a desktop session
+Status: Accepted
+
+Reasoning:
+- Automatic persistence is only partially useful for internal testing if reopening a session still drops the user back into a blank desktop state.
+- The current latest-snapshot store already contains enough information to restore artifacts, validation issues, review status, and a best-effort output path without reconstructing a full execution object.
+- This gives the desktop workflow a practical recovery baseline while keeping the implementation smaller than a full timeline or snapshot-browser feature.
+
+Consequences:
+- `ConversionSessionScreenModel.load_session(...)` now restores the latest saved snapshot when one exists
+- reopened desktop sessions now surface recovered artifact, validation, review, and output-path state directly in the conversion workspace
+- recovery remains latest-state only; richer history and multi-snapshot navigation are still follow-on work
+
 ### DEC-073: Persist latest preview, execution, and review state automatically in the real desktop workflow
 Status: Accepted
 
