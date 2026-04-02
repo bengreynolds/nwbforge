@@ -119,6 +119,21 @@ class SessionAssemblySourceItem:
 
 
 @dataclass(frozen=True, slots=True)
+class SessionAssemblyGroupItem:
+    """A UI-facing summary of one auto-detected or manually corrected group."""
+
+    group_key: str
+    group_label: str
+    suggested_pathway: str
+    source_ids: tuple[str, ...] = ()
+    source_count: int = 0
+    primary_count: int = 0
+    supplemental_count: int = 0
+    metadata_count: int = 0
+    needs_review: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class SessionAssemblyIssueItem:
     """A UI-facing issue discovered while assembling a draft session."""
 
@@ -139,6 +154,7 @@ class SessionAssemblyState:
     suggested_pathway: str = "custom"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     source_metadata_overrides: dict[str, dict[str, str]] = field(default_factory=dict)
+    groups: tuple[SessionAssemblyGroupItem, ...] = ()
     sources: tuple[SessionAssemblySourceItem, ...] = ()
     issues: tuple[SessionAssemblyIssueItem, ...] = ()
     draft: SessionAssemblyDraft | None = None
@@ -174,6 +190,29 @@ class GeneratedArtifactItem:
 
 
 @dataclass(frozen=True, slots=True)
+class MetadataDisagreementSourceItem:
+    """One source-specific value contributing to a mixed-source disagreement."""
+
+    source_id: str
+    source_label: str
+    role: str
+    extracted_key: str
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
+class MetadataDisagreementItem:
+    """A resolved canonical metadata value that still needs mixed-source review."""
+
+    canonical_key: str
+    resolved_value: str
+    resolved_origin: str
+    source_ids: tuple[str, ...] = ()
+    notes: tuple[str, ...] = ()
+    source_values: tuple[MetadataDisagreementSourceItem, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class ConversionSessionScreenState:
     """State consumable by a conversion-session screen."""
 
@@ -187,6 +226,7 @@ class ConversionSessionScreenState:
     output_path: Path | None = None
     generated_artifacts: tuple[GeneratedArtifactItem, ...] = ()
     validation_issues: tuple[ValidationIssueItem, ...] = ()
+    metadata_disagreements: tuple[MetadataDisagreementItem, ...] = ()
     reviewer_name: str = ""
     review_rationale: str = ""
     override_blocks_completion: bool = False

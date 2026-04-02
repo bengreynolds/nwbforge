@@ -35,6 +35,9 @@ def test_session_assembly_service_builds_hybrid_session_from_supported_and_custo
     session = service.create_session(draft)
 
     assert draft.pathway.value == "hybrid"
+    assert len(draft.groups) == 1
+    assert draft.groups[0].suggested_pathway.value == "hybrid"
+    assert draft.groups[0].source_count == 2
     assert session.pathway.value == "hybrid"
     assert len(session.sources) == 2
     assert {source.adapter_hint for source in session.sources} == {"session_manifest", "custom_json_session"}
@@ -116,6 +119,22 @@ def test_session_assembly_service_emits_auto_grouping_issue_for_shared_folder(tm
 
     assert all(source.group_label == tmp_path.name for source in draft.sources)
     assert any(issue.code == "session-assembly-auto-grouped-inputs" for issue in draft.issues)
+    assert any(issue.code == "session-assembly-mixed-group-pathways" for issue in draft.issues)
+    assert draft.groups[0].needs_review is True
+
+
+def test_session_assembly_service_builds_group_summary_for_same_stem_sidecar_bundle(tmp_path: Path) -> None:
+    recording_path = tmp_path / "recording.tif"
+    recording_path.write_text("binary-placeholder", encoding="utf-8")
+    sidecar_path = tmp_path / "recording.json"
+    sidecar_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    draft = SessionAssemblyService(build_adapter_registry()).assemble_draft((recording_path, sidecar_path))
+
+    assert len(draft.groups) == 1
+    assert draft.groups[0].group_label == "recording"
+    assert draft.groups[0].source_count == 2
+    assert draft.groups[0].metadata_count == 1
 
 
 def test_session_assembly_service_allows_manual_group_override(tmp_path: Path) -> None:

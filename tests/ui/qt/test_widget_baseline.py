@@ -19,13 +19,24 @@ from nwbforge.app.services import (
     SessionPersistenceService,
     UiSettingsService,
 )
-from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus, SourceType, ValidationReviewStatus
+from nwbforge.domain.enums import (
+    ConversionPathway,
+    IssueSeverity,
+    ReviewStatus,
+    SessionStatus,
+    SourceType,
+    ValidationReviewStatus,
+    ValueOrigin,
+)
 from nwbforge.domain.models import (
     ConversionSession,
     ExtractedField,
     ExtractionResult,
     MappingPlan,
+    NormalizedSubject,
+    NormalizedSessionMetadata,
     NormalizedMetadataBundle,
+    NormalizedValue,
     ProvenanceArtifact,
     ProvenanceRecord,
     SourceReference,
@@ -300,10 +311,11 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
         window.conversion_widget._role_policy_label.text()
         == "Conflict precedence: primary sources override metadata sources, which override supplemental sources."
     )
-    assert window.conversion_widget._workspace_tabs.count() == 3
+    assert window.conversion_widget._workspace_tabs.count() == 4
     assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
     assert window.conversion_widget._workspace_tabs.tabText(1) == "Review Workspace"
-    assert window.conversion_widget._workspace_tabs.tabText(2) == "Artifacts"
+    assert window.conversion_widget._workspace_tabs.tabText(2) == "Metadata Review"
+    assert window.conversion_widget._workspace_tabs.tabText(3) == "Artifacts"
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
     window.conversion_widget._preview_button.click()
@@ -876,6 +888,40 @@ def test_session_assembly_dialog_edits_group_label_and_shows_sidecar_association
     window.close()
 
 
+def test_session_assembly_dialog_shows_detected_group_summary(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path), str(custom_path)], "All supported inputs (*.*)"),
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+
+    assert dialog._group_list.count() == 1
+    assert dialog._selected_group_label.text() == tmp_path.name
+    assert dialog._selected_group_pathway_label.text() == "hybrid"
+    assert "review needed" in dialog._selected_group_counts_label.text()
+    window.close()
+
+
 def test_main_window_opens_and_saves_project_from_direct_ingest(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
@@ -1102,7 +1148,7 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
     assert window.conversion_widget._artifact_list.count() == 1
     assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
     assert window.conversion_widget._artifact_count_value_label.text() == "1 artifacts"
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 2
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 3
     window.close()
 
 
@@ -1222,6 +1268,98 @@ def test_conversion_widget_opens_validation_and_review_artifacts(qapp, tmp_path:
 
     assert opened_urls[0] == validation_report.as_posix()
     assert opened_urls[1].endswith("review-decision.json")
+    window.close()
+
+
+def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-review-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview = ConversionPreview(
+        session=session.transition(SessionStatus.READY_TO_WRITE),
+        extraction_results=(
+            ExtractionResult(
+                source_id="manifest",
+                adapter_id="session_manifest",
+                record_type="session_manifest",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="primary-mouse-01",
+                        source_id="manifest",
+                    )
+                },
+            ),
+            ExtractionResult(
+                source_id="custom",
+                adapter_id="custom_json_session",
+                record_type="custom_session",
+                fields={
+                    "subject.subject_id": ExtractedField(
+                        key="subject.subject_id",
+                        value="custom-mouse-01",
+                        source_id="custom",
+                    )
+                },
+            ),
+        ),
+        normalized_metadata=NormalizedMetadataBundle(
+            subject=NormalizedSubject(
+                subject_id=NormalizedValue(
+                    "primary-mouse-01",
+                    origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    source_ids=("manifest", "custom"),
+                    review_status=ReviewStatus.NEEDS_REVIEW,
+                    notes=("Retained value from primary source over supplemental source.",),
+                )
+            ),
+            session=NormalizedSessionMetadata(),
+        ),
+        mapping_plan=MappingPlan(pathway=session.pathway, decisions=(), issues=()),
+        provenance_record=ProvenanceRecord(
+            session_id=session.session_id,
+            pathway=session.pathway,
+            input_artifacts=(),
+            generated_artifacts=(),
+        ),
+    )
+    _, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._disagreement_list.count() == 1
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 2
+    assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert window.conversion_widget._selected_disagreement_source_list.count() == 2
+    assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
     window.close()
 
 

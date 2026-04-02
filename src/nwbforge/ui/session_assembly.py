@@ -16,6 +16,7 @@ from nwbforge.app.services import (
 )
 from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import (
+    SessionAssemblyGroupItem,
     SessionAssemblyIssueItem,
     SessionAssemblySourceItem,
     SessionAssemblyState,
@@ -291,6 +292,20 @@ class SessionAssemblyScreenModel:
                     str(source_id): dict(overrides)
                     for source_id, overrides in draft.source_metadata_overrides.items()
                 },
+                groups=tuple(
+                    SessionAssemblyGroupItem(
+                        group_key=group.group_key,
+                        group_label=group.group_label,
+                        suggested_pathway=group.suggested_pathway.value,
+                        source_ids=group.source_ids,
+                        source_count=group.source_count,
+                        primary_count=group.primary_count,
+                        supplemental_count=group.supplemental_count,
+                        metadata_count=group.metadata_count,
+                        needs_review=group.needs_review,
+                    )
+                    for group in draft.groups
+                ),
                 sources=tuple(
                     SessionAssemblySourceItem(
                         source_id=source.source_id,

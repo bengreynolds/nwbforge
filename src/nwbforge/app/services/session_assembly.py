@@ -45,6 +45,21 @@ class SessionAssemblySource:
 
 
 @dataclass(frozen=True, slots=True)
+class SessionAssemblyGroup:
+    """A reviewable grouping suggestion spanning one or more assembled sources."""
+
+    group_key: str
+    group_label: str
+    suggested_pathway: ConversionPathway
+    source_ids: tuple[str, ...]
+    source_count: int
+    primary_count: int = 0
+    supplemental_count: int = 0
+    metadata_count: int = 0
+    needs_review: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class SessionAssemblyDraft:
     """A suggested conversion-session draft built from selected real inputs."""
 
@@ -52,6 +67,7 @@ class SessionAssemblyDraft:
     title: str | None
     pathway: ConversionPathway
     sources: tuple[SessionAssemblySource, ...]
+    groups: tuple[SessionAssemblyGroup, ...]
     issues: tuple[SessionAssemblyIssue, ...]
     metadata_overrides: dict[str, str]
     source_metadata_overrides: dict[str, dict[str, str]]
@@ -165,7 +181,7 @@ class SessionAssemblyService:
             logging.INFO,
             "Assembling direct-ingest session draft.",
             selected_path_count=len(normalized_paths),
-            group_count=len(self._grouped_paths(normalized_paths)),
+            group_count=len(self._grouped_paths(normalized_paths, sidecar_links)),
             sidecar_link_count=len(sidecar_links),
             requested_session_id=session_id or "",
         )
@@ -201,10 +217,11 @@ class SessionAssemblyService:
             for source_id, overrides in (source_metadata_overrides or {}).items()
             if overrides
         }
+        group_assignments = self._group_assignments(normalized_paths, sidecar_links)
 
         for index, path in enumerate(normalized_paths, start=1):
             source_id = source_ids_by_path[path.resolve()]
-            group_key, group_label = self._group_for_path(path)
+            group_key, group_label = group_assignments[path.resolve()]
             override_group = normalized_group_overrides.get(source_id)
             if override_group:
                 group_key = f"manual:{override_group.lower()}"
@@ -282,26 +299,63 @@ class SessionAssemblyService:
 
         grouped_sources: dict[str, list[SessionAssemblySource]] = {}
         for source in draft_sources:
-            grouped_sources.setdefault(source.group_label, []).append(source)
+            grouped_sources.setdefault(source.group_key, []).append(source)
 
-        for group_label, sources in grouped_sources.items():
-            if len(sources) < 2:
-                continue
-            if any(source.group_key.startswith("manual:") for source in sources):
-                continue
-            issues.append(
-                SessionAssemblyIssue(
-                    code="session-assembly-auto-grouped-inputs",
-                    message=(
-                        f"Auto-grouped {len(sources)} selected inputs under '{group_label}'. "
-                        "Confirm they belong to the same conversion session."
-                    ),
-                    severity=IssueSeverity.INFO,
-                    location=(
-                        sources[0].location.parent
-                        if sources[0].location.is_file()
-                        else sources[0].location
-                    ),
+        group_summaries: list[SessionAssemblyGroup] = []
+
+        for group_key, sources in grouped_sources.items():
+            group_label = sources[0].group_label
+            group_pathways = {source.suggested_pathway for source in sources}
+            group_pathway = (
+                ConversionPathway.HYBRID if len(group_pathways) > 1 else next(iter(group_pathways))
+            )
+            needs_group_review = any(source.needs_review for source in sources) or len(group_pathways) > 1
+
+            if len(sources) > 1 and not any(source.group_key.startswith("manual:") for source in sources):
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-auto-grouped-inputs",
+                        message=(
+                            f"Auto-grouped {len(sources)} selected inputs under '{group_label}'. "
+                            "Confirm they belong to the same conversion session."
+                        ),
+                        severity=IssueSeverity.INFO,
+                        location=(
+                            sources[0].location.parent
+                            if sources[0].location.is_file()
+                            else sources[0].location
+                        ),
+                    )
+                )
+
+            if len(group_pathways) > 1:
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-mixed-group-pathways",
+                        message=(
+                            f"Grouped sources under '{group_label}' span supported and custom-looking inputs. "
+                            "Review the bundle before preview."
+                        ),
+                        severity=IssueSeverity.WARNING,
+                        location=(
+                            sources[0].location.parent
+                            if sources[0].location.is_file()
+                            else sources[0].location
+                        ),
+                    )
+                )
+
+            group_summaries.append(
+                SessionAssemblyGroup(
+                    group_key=group_key,
+                    group_label=group_label,
+                    suggested_pathway=group_pathway,
+                    source_ids=tuple(source.source_id for source in sources),
+                    source_count=len(sources),
+                    primary_count=sum(1 for source in sources if source.role == "primary"),
+                    supplemental_count=sum(1 for source in sources if source.role == "supplemental"),
+                    metadata_count=sum(1 for source in sources if source.role == "metadata"),
+                    needs_review=needs_group_review,
                 )
             )
 
@@ -330,6 +384,7 @@ class SessionAssemblyService:
             title=suggested_title,
             pathway=self._suggest_session_pathway(tuple(draft_sources)),
             sources=tuple(draft_sources),
+            groups=tuple(sorted(group_summaries, key=lambda group: (group.group_label.lower(), group.group_key))),
             issues=tuple(issues),
             metadata_overrides=normalized_metadata_overrides,
             source_metadata_overrides=normalized_source_metadata_overrides,
@@ -429,19 +484,65 @@ class SessionAssemblyService:
             return f"Conversion for {first.name}"
         return f"Conversion for {first.name} and {len(normalized_paths) - 1} more sources"
 
-    def _group_for_path(self, path: Path) -> tuple[str, str]:
+    def _group_assignments(
+        self,
+        normalized_paths: tuple[Path, ...],
+        sidecar_links: dict[Path, Path],
+    ) -> dict[Path, tuple[str, str]]:
+        descriptor_directories = {
+            path.parent.resolve(): path
+            for path in normalized_paths
+            if path.is_file() and path.name.lower() in self._DESKTOP_SESSION_FILENAMES
+        }
+        assignments: dict[Path, tuple[str, str]] = {}
+
+        for path in normalized_paths:
+            resolved = path.resolve()
+            anchor = sidecar_links.get(resolved)
+            if anchor is None:
+                continue
+            anchor_resolved = anchor.resolve()
+            anchor_assignment = assignments.get(anchor_resolved)
+            if anchor_assignment is None:
+                anchor_assignment = (
+                    f"sidecar-bundle:{anchor.parent.resolve().as_posix().lower()}:{anchor.stem.lower()}",
+                    anchor.stem or anchor.parent.name or "Session",
+                )
+                assignments[anchor_resolved] = anchor_assignment
+            assignments[resolved] = anchor_assignment
+
+        for path in normalized_paths:
+            resolved = path.resolve()
+            if resolved in assignments:
+                continue
+            assignments[resolved] = self._base_group_for_path(path, descriptor_directories)
+        return assignments
+
+    def _base_group_for_path(
+        self,
+        path: Path,
+        descriptor_directories: dict[Path, Path],
+    ) -> tuple[str, str]:
         if path.is_dir():
-            return str(path), path.name
+            resolved = path.resolve()
+            return str(resolved), resolved.name or "Session"
         if path.name.lower() in self._DESKTOP_SESSION_FILENAMES:
             parent = path.parent.resolve()
             return str(parent), parent.name or path.stem
         parent = path.parent.resolve()
-        return str(parent), parent.name or path.stem
+        if parent in descriptor_directories:
+            return (f"descriptor-parent:{parent.as_posix().lower()}", parent.name or path.stem)
+        if path.suffix.lower() in self._METADATA_SIDECAR_SUFFIXES:
+            return (f"sidecar-stem:{parent.as_posix().lower()}:{path.stem.lower()}", path.stem or parent.name)
+        return (str(parent), parent.name or path.stem)
 
-    def _grouped_paths(self, normalized_paths: tuple[Path, ...]) -> dict[str, list[Path]]:
+    def _grouped_paths(
+        self,
+        normalized_paths: tuple[Path, ...],
+        sidecar_links: dict[Path, Path],
+    ) -> dict[str, list[Path]]:
         groups: dict[str, list[Path]] = {}
-        for path in normalized_paths:
-            _, group_label = self._group_for_path(path)
+        for path, (_, group_label) in self._group_assignments(normalized_paths, sidecar_links).items():
             groups.setdefault(group_label, []).append(path)
         return groups
 

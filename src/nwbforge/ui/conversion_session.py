@@ -12,12 +12,15 @@ from nwbforge.app.services.persistence import SessionPersistenceService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.app.runtime import ConversionExecutor
 from nwbforge.domain.enums import ReviewStatus
-from nwbforge.domain.models import ConversionSession, SessionSnapshot
+from nwbforge.domain.models import ConversionSession, NormalizedMetadataBundle, SessionSnapshot
+from nwbforge.normalization.rules import DEFAULT_FIELD_ALIASES, NormalizationRuleSet
 from nwbforge.ui.errors import DefaultUiErrorPresenter, UiErrorPresenter
 from nwbforge.ui.models import (
     ConversionSessionScreenState,
     ConversionSessionStateListener,
     GeneratedArtifactItem,
+    MetadataDisagreementItem,
+    MetadataDisagreementSourceItem,
     ValidationIssueItem,
     conversion_source_items,
 )
@@ -244,6 +247,7 @@ class ConversionSessionScreenModel:
                 execution=None,
                 generated_artifacts=(),
                 validation_issues=(),
+                metadata_disagreements=metadata_disagreement_items(preview),
                 last_review_submission=None,
                 review_message=None,
                 recovery_message=None,
@@ -281,6 +285,7 @@ class ConversionSessionScreenModel:
                 preview=execution.preview,
                 generated_artifacts=generated_artifact_items(execution.provenance_record.generated_artifacts),
                 validation_issues=validation_issue_items(execution),
+                metadata_disagreements=metadata_disagreement_items(execution.preview),
                 last_review_submission=None,
                 review_message=None,
                 recovery_message=None,
@@ -385,6 +390,7 @@ class ConversionSessionScreenModel:
                 snapshot.provenance_record.generated_artifacts if snapshot.provenance_record is not None else ()
             ),
             validation_issues=validation_issue_items_from_snapshot(snapshot),
+            metadata_disagreements=(),
             reviewer_name=snapshot.review_record.reviewer if snapshot.review_record is not None else "",
             review_rationale=snapshot.review_record.rationale or "" if snapshot.review_record is not None else "",
             override_blocks_completion=(
@@ -429,6 +435,94 @@ def validation_issue_items_from_snapshot(snapshot: SessionSnapshot) -> tuple[Val
         )
         for issue in summary.issues
     )
+
+
+def metadata_disagreement_items(preview: ConversionPreview) -> tuple[MetadataDisagreementItem, ...]:
+    """Project pending normalized metadata conflicts into a reviewable UI workspace."""
+
+    rules = NormalizationRuleSet(DEFAULT_FIELD_ALIASES)
+    source_index = {source.source_id: source for source in preview.session.sources}
+    extracted_by_canonical: dict[str, list[MetadataDisagreementSourceItem]] = {}
+    for result in preview.extraction_results:
+        source = source_index.get(result.source_id)
+        source_label = source.label if source is not None else result.source_id
+        source_role = source.role if source is not None else "unknown"
+        for field in result.fields.values():
+            canonical_key = rules.canonical_key_for(field.key) or field.key.strip().lower().replace("-", "_")
+            extracted_by_canonical.setdefault(canonical_key, []).append(
+                MetadataDisagreementSourceItem(
+                    source_id=result.source_id,
+                    source_label=source_label,
+                    role=source_role,
+                    extracted_key=field.key,
+                    value=str(field.value),
+                )
+            )
+
+    items: list[MetadataDisagreementItem] = []
+    for canonical_key, normalized_value in _pending_review_entries(preview.normalized_metadata):
+        source_values = tuple(
+            extracted_by_canonical.get(canonical_key, ())
+        )
+        items.append(
+            MetadataDisagreementItem(
+                canonical_key=canonical_key,
+                resolved_value=str(normalized_value.value),
+                resolved_origin=normalized_value.origin.value,
+                source_ids=normalized_value.source_ids,
+                notes=normalized_value.notes,
+                source_values=source_values,
+            )
+        )
+    return tuple(items)
+
+
+def _pending_review_entries(bundle: NormalizedMetadataBundle) -> tuple[tuple[str, object], ...]:
+    entries: list[tuple[str, object]] = []
+
+    def add_entry(key: str, value) -> None:
+        if value is not None and getattr(value, "needs_review", False):
+            entries.append((key, value))
+
+    for field_name in ("subject_id", "species", "sex", "age", "date_of_birth", "description", "genotype", "strain"):
+        add_entry(f"subject.{field_name}", getattr(bundle.subject, field_name))
+    for field_name in (
+        "session_id",
+        "session_description",
+        "experiment_description",
+        "start_time",
+        "experimenter",
+        "institution",
+        "lab",
+    ):
+        add_entry(f"session.{field_name}", getattr(bundle.session, field_name))
+    for index, keyword in enumerate(bundle.session.keywords):
+        add_entry(f"session.keywords.{index}", keyword)
+    for key, value in bundle.additional_metadata.items():
+        add_entry(key, value)
+    for device in bundle.devices:
+        add_entry(f"devices.{device.device_id}.name", device.name)
+        add_entry(f"devices.{device.device_id}.description", device.description)
+        add_entry(f"devices.{device.device_id}.manufacturer", device.manufacturer)
+        for key, value in device.additional_fields.items():
+            add_entry(f"devices.{device.device_id}.{key}", value)
+    for stream in bundle.acquisition_streams:
+        add_entry(f"acquisition_streams.{stream.stream_id}.name", stream.name)
+        add_entry(f"acquisition_streams.{stream.stream_id}.description", stream.description)
+        add_entry(f"acquisition_streams.{stream.stream_id}.start_time", stream.start_time)
+        add_entry(f"acquisition_streams.{stream.stream_id}.end_time", stream.end_time)
+        for key, value in stream.metadata.items():
+            add_entry(f"acquisition_streams.{stream.stream_id}.{key}", value)
+    for table in bundle.time_interval_tables:
+        add_entry(f"time_intervals.{table.table_id}.table_name", table.table_name)
+        add_entry(f"time_intervals.{table.table_id}.table_description", table.table_description)
+        for row in table.rows:
+            add_entry(f"time_intervals.{table.table_id}.rows.{row.row_id}.start_time", row.start_time)
+            add_entry(f"time_intervals.{table.table_id}.rows.{row.row_id}.stop_time", row.stop_time)
+            for key, value in row.metadata.items():
+                add_entry(f"time_intervals.{table.table_id}.rows.{row.row_id}.{key}", value)
+
+    return tuple(entries)
 
 
 def generated_artifact_items(artifacts) -> tuple[GeneratedArtifactItem, ...]:

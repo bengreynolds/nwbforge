@@ -54,8 +54,10 @@ class SessionAssemblyDialog(QDialog):
         self._session_created = session_created
 
         self._input_list = QListWidget(self)
+        self._group_list = QListWidget(self)
         self._source_list = QListWidget(self)
         self._source_list.currentItemChanged.connect(self._sync_selected_source)
+        self._group_list.currentItemChanged.connect(self._sync_selected_group)
         self._issue_list = QListWidget(self)
         self._session_id_edit = QLineEdit(self)
         self._session_id_edit.textChanged.connect(self._screen_model.set_session_id)
@@ -81,6 +83,10 @@ class SessionAssemblyDialog(QDialog):
         self._selected_adapter_label.setWordWrap(True)
         self._selected_sidecar_label = QLabel("None", self)
         self._selected_sidecar_label.setWordWrap(True)
+        self._selected_group_label = QLabel("No group selected.", self)
+        self._selected_group_pathway_label = QLabel("Not available.", self)
+        self._selected_group_counts_label = QLabel("No group selected.", self)
+        self._selected_group_counts_label.setWordWrap(True)
         self._metadata_override_edits: dict[str, QLineEdit] = {}
         self._source_metadata_override_edits: dict[str, QLineEdit] = {}
 
@@ -124,6 +130,15 @@ class SessionAssemblyDialog(QDialog):
         source_details.addRow("Adapter Match", self._selected_adapter_label)
         source_layout.addLayout(source_details)
 
+        group_group = QGroupBox("Detected Dataset Groups", self)
+        group_layout = QVBoxLayout(group_group)
+        group_layout.addWidget(self._group_list)
+        group_details = QFormLayout()
+        group_details.addRow("Group", self._selected_group_label)
+        group_details.addRow("Pathway", self._selected_group_pathway_label)
+        group_details.addRow("Composition", self._selected_group_counts_label)
+        group_layout.addLayout(group_details)
+
         metadata_group = QGroupBox("Metadata Overrides", self)
         metadata_layout = QFormLayout(metadata_group)
         for key, label in self._METADATA_OVERRIDE_FIELDS:
@@ -157,6 +172,7 @@ class SessionAssemblyDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(summary_group)
         layout.addWidget(input_group, stretch=1)
+        layout.addWidget(group_group, stretch=1)
         layout.addWidget(source_group, stretch=1)
         layout.addWidget(metadata_group)
         layout.addWidget(source_metadata_group)
@@ -229,7 +245,7 @@ class SessionAssemblyDialog(QDialog):
         unique_groups = sorted({source.group_label for source in state.sources})
         self._grouping_label.setText(", ".join(unique_groups) if unique_groups else "No grouping suggestions yet.")
         self._summary_label.setText(
-            f"{len(state.sources)} sources in {len(unique_groups)} groups, {len(state.issues)} issues."
+            f"{len(state.sources)} sources in {len(state.groups)} groups, {len(state.issues)} issues."
             if state.selected_paths
             else "Add files or folders to build a conversion session."
         )
@@ -261,6 +277,28 @@ class SessionAssemblyDialog(QDialog):
             self._source_list.setCurrentRow(restored_row)
         else:
             self._sync_selected_source()
+
+        selected_group_key = None
+        selected_group_item = self._group_list.currentItem()
+        if selected_group_item is not None:
+            selected_group_key = selected_group_item.data(Qt.ItemDataRole.UserRole)
+        self._group_list.clear()
+        for group in state.groups:
+            item = QListWidgetItem(
+                f"[{group.suggested_pathway}] {group.group_label} ({group.source_count} sources)"
+            )
+            item.setData(Qt.ItemDataRole.UserRole, group.group_key)
+            self._group_list.addItem(item)
+        if self._group_list.count() > 0:
+            restored_group_row = 0
+            if selected_group_key is not None:
+                for row in range(self._group_list.count()):
+                    if self._group_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_group_key:
+                        restored_group_row = row
+                        break
+            self._group_list.setCurrentRow(restored_group_row)
+        else:
+            self._sync_selected_group()
 
         self._issue_list.clear()
         for issue in state.issues:
@@ -337,6 +375,41 @@ class SessionAssemblyDialog(QDialog):
         self._group_edit.setEnabled(True)
         for edit in self._source_metadata_override_edits.values():
             edit.setEnabled(True)
+        group_row = next(
+            (
+                row
+                for row in range(self._group_list.count())
+                if self._group_list.item(row).data(Qt.ItemDataRole.UserRole) == source.group_key
+            ),
+            None,
+        )
+        if group_row is not None:
+            with QSignalBlocker(self._group_list):
+                self._group_list.setCurrentRow(group_row)
+
+    def _sync_selected_group(self, *_args) -> None:
+        selected_item = self._group_list.currentItem()
+        if selected_item is None:
+            self._selected_group_label.setText("No group selected.")
+            self._selected_group_pathway_label.setText("Not available.")
+            self._selected_group_counts_label.setText("No group selected.")
+            return
+
+        group_key = selected_item.data(Qt.ItemDataRole.UserRole)
+        group = next((item for item in self._screen_model.state.groups if item.group_key == group_key), None)
+        if group is None:
+            self._selected_group_label.setText("No group selected.")
+            self._selected_group_pathway_label.setText("Not available.")
+            self._selected_group_counts_label.setText("No group selected.")
+            return
+
+        self._selected_group_label.setText(group.group_label)
+        self._selected_group_pathway_label.setText(group.suggested_pathway)
+        self._selected_group_counts_label.setText(
+            f"{group.primary_count} primary, {group.supplemental_count} supplemental, "
+            f"{group.metadata_count} metadata"
+            + (" | review needed" if group.needs_review else "")
+        )
 
     def _apply_selected_role(self, role: str) -> None:
         selected_item = self._source_list.currentItem()

@@ -9,14 +9,25 @@ import pytest
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
 from nwbforge.app.services import ExecutionReviewService, SessionPersistenceService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
-from nwbforge.domain.enums import ConversionPathway, IssueSeverity, ReviewStatus, SessionStatus, SourceType, ValidationReviewStatus
+from nwbforge.domain.enums import (
+    ConversionPathway,
+    IssueSeverity,
+    ReviewStatus,
+    SessionStatus,
+    SourceType,
+    ValidationReviewStatus,
+    ValueOrigin,
+)
 from nwbforge.domain.models import (
     ConversionSession,
     ExecutionReviewRecord,
     ExtractedField,
     ExtractionResult,
     MappingPlan,
+    NormalizedSessionMetadata,
     NormalizedMetadataBundle,
+    NormalizedSubject,
+    NormalizedValue,
     ProvenanceArtifact,
     ProvenanceRecord,
     SourceReference,
@@ -93,7 +104,12 @@ def make_session() -> ConversionSession:
     )
 
 
-def make_preview(session: ConversionSession) -> ConversionPreview:
+def make_preview(
+    session: ConversionSession,
+    *,
+    extraction_results: tuple[ExtractionResult, ...] | None = None,
+    normalized_metadata: NormalizedMetadataBundle | None = None,
+) -> ConversionPreview:
     extraction_result = ExtractionResult(
         source_id="manifest",
         adapter_id="session_manifest",
@@ -109,8 +125,8 @@ def make_preview(session: ConversionSession) -> ConversionPreview:
     )
     return ConversionPreview(
         session=session.transition(SessionStatus.READY_TO_WRITE),
-        extraction_results=(extraction_result,),
-        normalized_metadata=NormalizedMetadataBundle(),
+        extraction_results=extraction_results or (extraction_result,),
+        normalized_metadata=normalized_metadata or NormalizedMetadataBundle(),
         mapping_plan=MappingPlan(pathway=session.pathway, decisions=(), issues=()),
         provenance_record=ProvenanceRecord(
             session_id=session.session_id,
@@ -238,6 +254,86 @@ def test_conversion_session_screen_model_projects_generated_artifacts() -> None:
 
     assert len(screen.state.generated_artifacts) == 1
     assert screen.state.generated_artifacts[0].artifact_type == "validation_report"
+
+
+def test_conversion_session_screen_model_projects_metadata_disagreements_from_preview() -> None:
+    session = ConversionSession(
+        session_id="session-ui-02",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=Path("C:/tmp/session_manifest.json"),
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=Path("C:/tmp/custom_session.json"),
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    extraction_results = (
+        ExtractionResult(
+            source_id="manifest",
+            adapter_id="session_manifest",
+            record_type="session_manifest",
+            fields={
+                "subject.subject_id": ExtractedField(
+                    key="subject.subject_id",
+                    value="primary-mouse-01",
+                    source_id="manifest",
+                )
+            },
+        ),
+        ExtractionResult(
+            source_id="custom",
+            adapter_id="custom_json_session",
+            record_type="custom_session",
+            fields={
+                "subject.subject_id": ExtractedField(
+                    key="subject.subject_id",
+                    value="custom-mouse-01",
+                    source_id="custom",
+                )
+            },
+        ),
+    )
+    normalized_metadata = NormalizedMetadataBundle(
+        subject=NormalizedSubject(
+            subject_id=NormalizedValue(
+                "primary-mouse-01",
+                origin=ValueOrigin.ADAPTER_EXTRACTED,
+                source_ids=("manifest", "custom"),
+                review_status=ReviewStatus.NEEDS_REVIEW,
+                notes=(
+                    "Multiple extracted fields mapped to the same canonical value.",
+                    "Retained value from primary source over supplemental source.",
+                ),
+            )
+        ),
+        session=NormalizedSessionMetadata(),
+    )
+    preview = make_preview(
+        session,
+        extraction_results=extraction_results,
+        normalized_metadata=normalized_metadata,
+    )
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    screen.start_preview().result(timeout=5)
+
+    assert len(screen.state.metadata_disagreements) == 1
+    disagreement = screen.state.metadata_disagreements[0]
+    assert disagreement.canonical_key == "subject.subject_id"
+    assert disagreement.resolved_value == "primary-mouse-01"
+    assert [item.source_id for item in disagreement.source_values] == ["manifest", "custom"]
 
 
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:

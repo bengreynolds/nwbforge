@@ -35,6 +35,8 @@ def test_session_assembly_screen_model_builds_hybrid_draft_and_creates_session(t
     session = screen.create_session()
 
     assert state.suggested_pathway == "hybrid"
+    assert len(state.groups) == 1
+    assert state.groups[0].suggested_pathway == "hybrid"
     assert {source.group_label for source in state.sources} == {tmp_path.name}
     assert session.session_id == "hybrid-assembled"
     assert session.pathway.value == "hybrid"
@@ -95,6 +97,7 @@ def test_session_assembly_screen_model_edits_group_labels_and_persists_manual_ov
     )
 
     assert [source.group_label for source in restored_screen.state.sources] == [tmp_path.name, "Manual Custom Group"]
+    assert {group.group_label for group in restored_screen.state.groups} == {tmp_path.name, "Manual Custom Group"}
 
 
 def test_session_assembly_screen_model_surfaces_unmatched_input(tmp_path: Path) -> None:

@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QSignalBlocker, Qt
-from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
@@ -23,7 +22,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import QUrl
 
 from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import ConversionSession
@@ -76,6 +74,7 @@ class ConversionSessionWidget(QWidget):
         self._output_value_label = QLabel("No output selected.", self)
         self._issue_count_value_label = QLabel("0 issues", self)
         self._artifact_count_value_label = QLabel("0 artifacts", self)
+        self._disagreement_count_value_label = QLabel("0 metadata conflicts", self)
         self._issue_list = QListWidget(self)
         self._issue_list.itemChanged.connect(self._on_issue_item_changed)
         self._review_guidance_label = QLabel("Run preview or execution to unlock review guidance.", self)
@@ -101,6 +100,13 @@ class ConversionSessionWidget(QWidget):
         self._result_label = QLabel("No preview or execution yet.", self)
         self._artifact_list = QListWidget(self)
         self._artifact_list.itemSelectionChanged.connect(self._refresh_artifact_actions)
+        self._disagreement_list = QListWidget(self)
+        self._disagreement_list.currentItemChanged.connect(self._sync_selected_disagreement)
+        self._selected_disagreement_value_label = QLabel("No metadata disagreement selected.", self)
+        self._selected_disagreement_value_label.setWordWrap(True)
+        self._selected_disagreement_source_list = QListWidget(self)
+        self._selected_disagreement_notes_label = QLabel("No comparison notes.", self)
+        self._selected_disagreement_notes_label.setWordWrap(True)
         self._open_artifact_button = QPushButton("Open Selected Artifact", self)
         self._open_artifact_button.clicked.connect(self._open_selected_artifact)
         self._reveal_artifact_button = QPushButton("Open Artifact Folder", self)
@@ -158,6 +164,7 @@ class ConversionSessionWidget(QWidget):
         run_overview_layout.addRow("Stage", self._stage_value_label)
         run_overview_layout.addRow("Output target", self._output_value_label)
         run_overview_layout.addRow("Validation", self._issue_count_value_label)
+        run_overview_layout.addRow("Metadata review", self._disagreement_count_value_label)
         run_overview_layout.addRow("Artifacts", self._artifact_count_value_label)
 
         execution_layout = QVBoxLayout()
@@ -187,6 +194,19 @@ class ConversionSessionWidget(QWidget):
         artifact_layout.addLayout(artifact_button_row)
         self._artifact_group.setLayout(artifact_layout)
 
+        metadata_review_page = QWidget(self)
+        metadata_review_layout = QVBoxLayout(metadata_review_page)
+        metadata_review_layout.addWidget(QLabel("Pending mixed-source metadata review", self))
+        metadata_review_layout.addWidget(self._disagreement_list, stretch=1)
+        metadata_detail_group = QGroupBox("Selected Metadata Conflict", self)
+        metadata_detail_layout = QVBoxLayout(metadata_detail_group)
+        metadata_detail_layout.addWidget(self._selected_disagreement_value_label)
+        metadata_detail_layout.addWidget(QLabel("Source comparison", self))
+        metadata_detail_layout.addWidget(self._selected_disagreement_source_list, stretch=1)
+        metadata_detail_layout.addWidget(QLabel("Resolution notes", self))
+        metadata_detail_layout.addWidget(self._selected_disagreement_notes_label)
+        metadata_review_layout.addWidget(metadata_detail_group, stretch=1)
+
         run_overview_page = QWidget(self)
         run_overview_layout = QVBoxLayout(run_overview_page)
         run_overview_layout.addWidget(self._execution_group)
@@ -202,6 +222,7 @@ class ConversionSessionWidget(QWidget):
 
         self._workspace_tabs.addTab(run_overview_page, "Run Overview")
         self._workspace_tabs.addTab(review_page, "Review Workspace")
+        self._workspace_tabs.addTab(metadata_review_page, "Metadata Review")
         self._workspace_tabs.addTab(artifact_page, "Artifacts")
 
         right_column = QWidget(self)
@@ -238,6 +259,7 @@ class ConversionSessionWidget(QWidget):
 
         self._sync_sources(state)
         self._sync_validation_issues(state)
+        self._sync_metadata_disagreements(state)
         self._sync_generated_artifacts(state)
 
         if state.user_error is not None:
@@ -271,6 +293,7 @@ class ConversionSessionWidget(QWidget):
         self._output_value_label.setText(self._output_text(state))
         self._issue_count_value_label.setText(self._issue_count_text(state))
         self._artifact_count_value_label.setText(self._artifact_count_text(state))
+        self._disagreement_count_value_label.setText(self._disagreement_count_text(state))
         self._review_guidance_label.setText(self._review_guidance_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
 
@@ -381,6 +404,66 @@ class ConversionSessionWidget(QWidget):
             self._artifact_list.addItem(item)
         self._refresh_artifact_actions()
 
+    def _sync_metadata_disagreements(self, state: ConversionSessionScreenState) -> None:
+        selected_item = self._disagreement_list.currentItem()
+        selected_key = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
+        self._disagreement_list.clear()
+        for disagreement in state.metadata_disagreements:
+            item = QListWidgetItem(f"{disagreement.canonical_key} -> {disagreement.resolved_value}")
+            item.setData(Qt.ItemDataRole.UserRole, disagreement.canonical_key)
+            item.setToolTip(
+                f"Resolved from {disagreement.resolved_origin} value using source(s): "
+                f"{', '.join(disagreement.source_ids) or 'session merge'}"
+            )
+            self._disagreement_list.addItem(item)
+        if self._disagreement_list.count() == 0:
+            self._sync_selected_disagreement()
+            return
+        restored_row = 0
+        if selected_key is not None:
+            for row in range(self._disagreement_list.count()):
+                if self._disagreement_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_key:
+                    restored_row = row
+                    break
+        self._disagreement_list.setCurrentRow(restored_row)
+
+    def _sync_selected_disagreement(self, *_args) -> None:
+        selected_item = self._disagreement_list.currentItem()
+        if selected_item is None:
+            self._selected_disagreement_value_label.setText("No metadata disagreement selected.")
+            self._selected_disagreement_source_list.clear()
+            self._selected_disagreement_notes_label.setText("No comparison notes.")
+            return
+        canonical_key = selected_item.data(Qt.ItemDataRole.UserRole)
+        disagreement = next(
+            (
+                item
+                for item in self._screen_model.state.metadata_disagreements
+                if item.canonical_key == canonical_key
+            ),
+            None,
+        )
+        if disagreement is None:
+            self._selected_disagreement_value_label.setText("No metadata disagreement selected.")
+            self._selected_disagreement_source_list.clear()
+            self._selected_disagreement_notes_label.setText("No comparison notes.")
+            return
+        self._selected_disagreement_value_label.setText(
+            f"{disagreement.canonical_key}\nResolved value: {disagreement.resolved_value}\n"
+            f"Origin: {disagreement.resolved_origin}"
+        )
+        self._selected_disagreement_source_list.clear()
+        for source_value in disagreement.source_values:
+            item = QListWidgetItem(
+                f"[{source_value.role}] {source_value.source_label}: {source_value.value}"
+            )
+            item.setToolTip(f"{source_value.extracted_key} ({source_value.source_id})")
+            self._selected_disagreement_source_list.addItem(item)
+        if disagreement.notes:
+            self._selected_disagreement_notes_label.setText("\n".join(disagreement.notes))
+        else:
+            self._selected_disagreement_notes_label.setText("No comparison notes.")
+
     @staticmethod
     def _validation_summary_text(state: ConversionSessionScreenState) -> str:
         summary = state.execution.validation_summary if state.execution is not None else state.persisted_validation_summary
@@ -445,6 +528,11 @@ class ConversionSessionWidget(QWidget):
         return f"{count} artifacts"
 
     @staticmethod
+    def _disagreement_count_text(state: ConversionSessionScreenState) -> str:
+        count = len(state.metadata_disagreements)
+        return f"{count} metadata conflicts"
+
+    @staticmethod
     def _review_guidance_text(state: ConversionSessionScreenState) -> str:
         if state.execution is None:
             return "Run preview or execution to unlock review guidance."
@@ -506,13 +594,19 @@ class ConversionSessionWidget(QWidget):
 
     def _sync_workspace_tab(self, state: ConversionSessionScreenState) -> None:
         if state.execution is None:
+            if state.metadata_disagreements:
+                self._workspace_tabs.setCurrentIndex(2)
+                return
             self._workspace_tabs.setCurrentIndex(0)
             return
         if state.validation_issues:
             self._workspace_tabs.setCurrentIndex(1)
             return
-        if state.generated_artifacts:
+        if state.metadata_disagreements:
             self._workspace_tabs.setCurrentIndex(2)
+            return
+        if state.generated_artifacts:
+            self._workspace_tabs.setCurrentIndex(3)
             return
         self._workspace_tabs.setCurrentIndex(0)
 
