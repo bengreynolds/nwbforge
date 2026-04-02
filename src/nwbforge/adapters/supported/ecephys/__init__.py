@@ -18,8 +18,16 @@ def _try_import_optional(export_name: str) -> None:
 
 
 _try_import_optional("NeuroConvIntanAdapter")
+_try_import_optional("NeuroConvAlphaOmegaAdapter")
 _try_import_optional("NeuroConvAxonAdapter")
+_try_import_optional("NeuroConvAxonaAdapter")
+_try_import_optional("NeuroConvBlackrockAdapter")
 _try_import_optional("NeuroConvEdfAdapter")
+_try_import_optional("NeuroConvNeuralynxAdapter")
 _try_import_optional("NeuroConvOpenEphysBinaryAdapter")
+_try_import_optional("NeuroConvOpenEphysLegacyAdapter")
+_try_import_optional("NeuroConvPlexonAdapter")
 _try_import_optional("NeuroConvSpikeGadgetsAdapter")
 _try_import_optional("NeuroConvSpikeGLXAdapter")
+_try_import_optional("NeuroConvTdtAdapter")
+_try_import_optional("NeuroConvWhiteMatterAdapter")

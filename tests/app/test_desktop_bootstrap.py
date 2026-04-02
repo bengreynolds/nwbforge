@@ -37,7 +37,10 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     registry = build_adapter_registry()
     registered = set(registry.registered_ids())
 
+    assert "neuroconv_alphaomega" not in registered
     assert "neuroconv_axon" not in registered
+    assert "neuroconv_axona" not in registered
+    assert "neuroconv_blackrock" not in registered
     assert "neuroconv_excel_time_intervals" in registered
     assert "neuroconv_deeplabcut" not in registered
     assert "neuroconv_edf" not in registered
@@ -48,9 +51,14 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_video" not in registered
     assert "neuroconv_sleap" not in registered
     assert "neuroconv_intan" not in registered
+    assert "neuroconv_neuralynx" not in registered
     assert "neuroconv_openephys_binary" not in registered
+    assert "neuroconv_openephys_legacy" not in registered
+    assert "neuroconv_plexon" not in registered
     assert "neuroconv_spikegadgets" not in registered
     assert "neuroconv_spikeglx" not in registered
+    assert "neuroconv_tdt" not in registered
+    assert "neuroconv_whitematter" not in registered
     assert "neuroconv_hdf5_imaging" not in registered
     assert "neuroconv_micromanager_tiff" not in registered
     assert "neuroconv_miniscope" not in registered

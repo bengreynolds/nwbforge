@@ -86,7 +86,10 @@ def build_adapter_registry() -> AdapterRegistry:
         registry.register(adapter_cls())
 
     optional_routes = (
+        ("alphaomega", "NeuroConvAlphaOmegaAdapter"),
         ("axon", "NeuroConvAxonAdapter"),
+        ("axona", "NeuroConvAxonaAdapter"),
+        ("blackrock", "NeuroConvBlackrockAdapter"),
         ("excel", "NeuroConvExcelTimeIntervalsAdapter"),
         ("edf", "NeuroConvEdfAdapter"),
         ("image", "NeuroConvImageAdapter"),
@@ -97,9 +100,14 @@ def build_adapter_registry() -> AdapterRegistry:
         ("medpc", "NeuroConvMedPCAdapter"),
         ("sleap", "NeuroConvSLEAPAdapter"),
         ("intan", "NeuroConvIntanAdapter"),
+        ("neuralynx", "NeuroConvNeuralynxAdapter"),
         ("openephys_binary", "NeuroConvOpenEphysBinaryAdapter"),
+        ("openephys_legacy", "NeuroConvOpenEphysLegacyAdapter"),
+        ("plexon", "NeuroConvPlexonAdapter"),
         ("spikegadgets", "NeuroConvSpikeGadgetsAdapter"),
         ("spikeglx", "NeuroConvSpikeGLXAdapter"),
+        ("tdt", "NeuroConvTdtAdapter"),
+        ("whitematter", "NeuroConvWhiteMatterAdapter"),
         ("hdf5", "NeuroConvHdf5ImagingAdapter"),
         ("micromanager", "NeuroConvMicroManagerTiffAdapter"),
         ("miniscope", "NeuroConvMiniscopeAdapter"),

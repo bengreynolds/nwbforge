@@ -23,8 +23,17 @@ audio = [
   "ndx-sound>=0.2,<0.3",
   "scipy>=1.13,<2",
 ]
+alphaomega = [
+  "neuroconv[alphaomega]>=0.9,<0.10",
+]
 axon = [
   "spikeinterface>=0.103,<0.104",
+]
+axona = [
+  "neuroconv[axona]>=0.9,<0.10",
+]
+blackrock = [
+  "neuroconv[blackrock]>=0.9,<0.10",
 ]
 deeplabcut = [
   "ndx-pose>=0.2,<0.3",
@@ -35,6 +44,9 @@ edf = [
 ]
 intan = [
   "neuroconv[intan]>=0.9,<0.10",
+]
+neuralynx = [
+  "neuroconv[neuralynx]>=0.9,<0.10",
 ]
 lightningpose = [
   "ndx-pose>=0.2,<0.3",
@@ -68,11 +80,20 @@ thor = [
 openephys_binary = [
   "spikeinterface>=0.103,<0.104",
 ]
+openephys_legacy = [
+  "neuroconv[openephys]>=0.9,<0.10",
+]
+plexon = [
+  "neuroconv[plexon]>=0.9,<0.10",
+]
 spikegadgets = [
   "spikeinterface>=0.103,<0.104",
 ]
 spikeglx = [
   "spikeinterface>=0.103,<0.104",
+]
+tdt = [
+  "neuroconv[tdt]>=0.9,<0.10",
 ]
 videos = [
   "opencv-python-headless>=4.10,<5",
@@ -80,6 +101,9 @@ videos = [
 viewer_rich = [
   "nwbwidgets>=0.11,<0.12",
   "panel>=1.8,<2",
+]
+whitematter = [
+  "neuroconv[whitematter]>=0.9,<0.10",
 ]
 scanimage = [
   "neuroconv[scanimage]>=0.9,<0.10",
