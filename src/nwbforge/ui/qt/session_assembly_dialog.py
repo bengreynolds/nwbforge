@@ -87,6 +87,9 @@ class SessionAssemblyDialog(QDialog):
         self._selected_sidecar_label.setWordWrap(True)
         self._selected_group_label = QLabel("No group selected.", self)
         self._selected_group_pathway_label = QLabel("Not available.", self)
+        self._selected_group_kind_label = QLabel("Not available.", self)
+        self._selected_group_anchor_label = QLabel("Not available.", self)
+        self._selected_group_anchor_label.setWordWrap(True)
         self._selected_group_counts_label = QLabel("No group selected.", self)
         self._selected_group_counts_label.setWordWrap(True)
         self._selected_group_edit = QLineEdit(self)
@@ -158,6 +161,8 @@ class SessionAssemblyDialog(QDialog):
         group_details = QFormLayout()
         group_details.addRow("Group", self._selected_group_label)
         group_details.addRow("Pathway", self._selected_group_pathway_label)
+        group_details.addRow("Kind", self._selected_group_kind_label)
+        group_details.addRow("Anchor", self._selected_group_anchor_label)
         group_details.addRow("Composition", self._selected_group_counts_label)
         group_details.addRow("Group Label", self._selected_group_edit)
         group_layout.addLayout(group_details)
@@ -440,6 +445,8 @@ class SessionAssemblyDialog(QDialog):
         if selected_item is None:
             self._selected_group_label.setText("No group selected.")
             self._selected_group_pathway_label.setText("Not available.")
+            self._selected_group_kind_label.setText("Not available.")
+            self._selected_group_anchor_label.setText("Not available.")
             self._selected_group_counts_label.setText("No group selected.")
             with QSignalBlocker(self._selected_group_edit):
                 self._selected_group_edit.setText("")
@@ -456,6 +463,8 @@ class SessionAssemblyDialog(QDialog):
         if group is None:
             self._selected_group_label.setText("No group selected.")
             self._selected_group_pathway_label.setText("Not available.")
+            self._selected_group_kind_label.setText("Not available.")
+            self._selected_group_anchor_label.setText("Not available.")
             self._selected_group_counts_label.setText("No group selected.")
             with QSignalBlocker(self._selected_group_edit):
                 self._selected_group_edit.setText("")
@@ -469,9 +478,12 @@ class SessionAssemblyDialog(QDialog):
 
         self._selected_group_label.setText(group.group_label)
         self._selected_group_pathway_label.setText(group.suggested_pathway)
+        self._selected_group_kind_label.setText(group.group_kind.replace("_", " "))
+        self._selected_group_anchor_label.setText(str(group.anchor_path) if group.anchor_path is not None else "Not available.")
         self._selected_group_counts_label.setText(
             f"{group.primary_count} primary, {group.supplemental_count} supplemental, "
             f"{group.metadata_count} metadata"
+            + (" | confirmation required" if group.requires_confirmation else "")
             + (" | review needed" if group.needs_review else "")
             + (" | confirmed" if group.is_confirmed else "")
         )

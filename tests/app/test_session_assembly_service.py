@@ -31,13 +31,20 @@ def test_session_assembly_service_builds_hybrid_session_from_supported_and_custo
     custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
 
     service = SessionAssemblyService(build_adapter_registry())
-    draft = service.assemble_draft((manifest_path, custom_path), session_id="hybrid-test")
+    unconfirmed_draft = service.assemble_draft((manifest_path, custom_path), session_id="hybrid-test")
+    draft = service.assemble_draft(
+        (manifest_path, custom_path),
+        session_id="hybrid-test",
+        confirmed_group_keys=(unconfirmed_draft.groups[0].group_key,),
+    )
     session = service.create_session(draft)
 
+    assert unconfirmed_draft.can_create_session is False
     assert draft.pathway.value == "hybrid"
     assert len(draft.groups) == 1
     assert draft.groups[0].suggested_pathway.value == "hybrid"
     assert draft.groups[0].source_count == 2
+    assert draft.groups[0].requires_confirmation is True
     assert session.pathway.value == "hybrid"
     assert len(session.sources) == 2
     assert {source.adapter_hint for source in session.sources} == {"session_manifest", "custom_json_session"}
@@ -51,6 +58,17 @@ def test_session_assembly_service_preserves_roles_and_metadata_overrides(tmp_pat
     custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
 
     service = SessionAssemblyService(build_adapter_registry())
+    initial_draft = service.assemble_draft(
+        (manifest_path, custom_path),
+        source_roles={
+            "session-manifest": "metadata",
+            "custom-session": "primary",
+        },
+        metadata_overrides={
+            "subject.subject_id": "override-mouse-01",
+            "subject.species": "Mus musculus",
+        },
+    )
     draft = service.assemble_draft(
         (manifest_path, custom_path),
         source_roles={
@@ -61,6 +79,7 @@ def test_session_assembly_service_preserves_roles_and_metadata_overrides(tmp_pat
             "subject.subject_id": "override-mouse-01",
             "subject.species": "Mus musculus",
         },
+        confirmed_group_keys=(initial_draft.groups[0].group_key,),
     )
     session = service.create_session(draft)
 
@@ -79,12 +98,20 @@ def test_session_assembly_service_preserves_source_metadata_overrides(tmp_path: 
     custom_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
 
     service = SessionAssemblyService(build_adapter_registry())
+    initial_draft = service.assemble_draft(
+        (manifest_path, custom_path),
+        source_metadata_overrides={
+            "session-manifest": {"subject.subject_id": "manifest-mouse-01"},
+            "custom-session": {"subject.subject_id": "custom-mouse-01"},
+        },
+    )
     draft = service.assemble_draft(
         (manifest_path, custom_path),
         source_metadata_overrides={
             "session-manifest": {"subject.subject_id": "manifest-mouse-01"},
             "custom-session": {"subject.subject_id": "custom-mouse-01"},
         },
+        confirmed_group_keys=(initial_draft.groups[0].group_key,),
     )
     session = service.create_session(draft)
 
@@ -120,7 +147,9 @@ def test_session_assembly_service_emits_auto_grouping_issue_for_shared_folder(tm
     assert all(source.group_label == tmp_path.name for source in draft.sources)
     assert any(issue.code == "session-assembly-auto-grouped-inputs" for issue in draft.issues)
     assert any(issue.code == "session-assembly-mixed-group-pathways" for issue in draft.issues)
+    assert any(issue.code == "session-assembly-unconfirmed-group" for issue in draft.issues)
     assert draft.groups[0].needs_review is True
+    assert draft.groups[0].requires_confirmation is True
 
 
 def test_session_assembly_service_builds_group_summary_for_same_stem_sidecar_bundle(tmp_path: Path) -> None:

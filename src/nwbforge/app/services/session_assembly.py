@@ -53,9 +53,12 @@ class SessionAssemblyGroup:
     suggested_pathway: ConversionPathway
     source_ids: tuple[str, ...]
     source_count: int
+    group_kind: str = "folder"
+    anchor_path: Path | None = None
     primary_count: int = 0
     supplemental_count: int = 0
     metadata_count: int = 0
+    requires_confirmation: bool = False
     needs_review: bool = False
     is_confirmed: bool = False
 
@@ -321,9 +324,14 @@ class SessionAssemblyService:
             )
             is_confirmed = group_key in normalized_confirmed_group_keys
             auto_grouped = len(sources) > 1 and not any(source.group_key.startswith("manual:") for source in sources)
+            requires_confirmation = auto_grouped or len(group_pathways) > 1
             needs_group_review = any(source.needs_review for source in sources) or (
-                not is_confirmed and (auto_grouped or len(group_pathways) > 1)
+                not is_confirmed and requires_confirmation
             )
+            anchor_path = (
+                sources[0].location.parent if sources[0].location.is_file() else sources[0].location
+            )
+            group_kind = self._group_kind_for_key(group_key, sources)
 
             if auto_grouped and not is_confirmed:
                 issues.append(
@@ -359,6 +367,18 @@ class SessionAssemblyService:
                     )
                 )
 
+            if requires_confirmation and not is_confirmed:
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-unconfirmed-group",
+                        message=(
+                            f"Confirm grouped dataset '{group_label}' before creating a conversion session."
+                        ),
+                        severity=IssueSeverity.ERROR,
+                        location=anchor_path,
+                    )
+                )
+
             group_summaries.append(
                 SessionAssemblyGroup(
                     group_key=group_key,
@@ -366,9 +386,12 @@ class SessionAssemblyService:
                     suggested_pathway=group_pathway,
                     source_ids=tuple(source.source_id for source in sources),
                     source_count=len(sources),
+                    group_kind=group_kind,
+                    anchor_path=anchor_path,
                     primary_count=sum(1 for source in sources if source.role == "primary"),
                     supplemental_count=sum(1 for source in sources if source.role == "supplemental"),
                     metadata_count=sum(1 for source in sources if source.role == "metadata"),
+                    requires_confirmation=requires_confirmation,
                     needs_review=needs_group_review,
                     is_confirmed=is_confirmed,
                 )
@@ -570,6 +593,18 @@ class SessionAssemblyService:
         for path, (_, group_label) in self._group_assignments(normalized_paths, sidecar_links).items():
             groups.setdefault(group_label, []).append(path)
         return groups
+
+    @staticmethod
+    def _group_kind_for_key(group_key: str, sources: list[SessionAssemblySource]) -> str:
+        if group_key.startswith("manual:"):
+            return "manual"
+        if group_key.startswith("sidecar-bundle:"):
+            return "sidecar_bundle"
+        if group_key.startswith("descriptor-parent:"):
+            return "descriptor_parent"
+        if len(sources) == 1 and sources[0].location.is_dir():
+            return "directory"
+        return "folder"
 
     def _detect_sidecar_links(self, normalized_paths: tuple[Path, ...]) -> dict[Path, Path]:
         primary_candidates = {

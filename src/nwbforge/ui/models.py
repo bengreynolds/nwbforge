@@ -125,11 +125,14 @@ class SessionAssemblyGroupItem:
     group_key: str
     group_label: str
     suggested_pathway: str
+    group_kind: str = "folder"
+    anchor_path: Path | None = None
     source_ids: tuple[str, ...] = ()
     source_count: int = 0
     primary_count: int = 0
     supplemental_count: int = 0
     metadata_count: int = 0
+    requires_confirmation: bool = False
     needs_review: bool = False
     is_confirmed: bool = False
 
@@ -214,6 +217,7 @@ class MetadataDisagreementItem:
     source_values: tuple[MetadataDisagreementSourceItem, ...] = ()
     session_override_value: str | None = None
     resolution_notes: tuple[str, ...] = ()
+    pending_resolution: bool = True
 
 
 @dataclass(frozen=True, slots=True)

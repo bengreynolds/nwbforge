@@ -112,15 +112,24 @@ class ConversionSessionWidget(QWidget):
         self._selected_disagreement_notes_label.setWordWrap(True)
         self._selected_override_status_label = QLabel("No session override applied.", self)
         self._selected_override_status_label.setWordWrap(True)
+        self._metadata_resolution_summary_label = QLabel("No metadata conflicts loaded.", self)
+        self._metadata_resolution_summary_label.setWordWrap(True)
+        self._manual_session_override_edit = QLineEdit(self)
+        self._manual_session_override_edit.setPlaceholderText("Manual session override value for selected field")
+        self._manual_session_override_edit.textChanged.connect(self._refresh_metadata_resolution_actions)
         self._selected_source_override_edit = QLineEdit(self)
         self._selected_source_override_edit.setPlaceholderText("Override value for selected source")
         self._selected_source_override_edit.textChanged.connect(self._refresh_metadata_resolution_actions)
         self._use_source_value_button = QPushButton("Use Selected Source Value As Session Override", self)
         self._use_source_value_button.clicked.connect(self._apply_selected_source_as_session_override)
+        self._apply_manual_session_override_button = QPushButton("Apply Manual Session Override", self)
+        self._apply_manual_session_override_button.clicked.connect(self._apply_manual_session_override)
         self._clear_override_button = QPushButton("Clear Session Override", self)
         self._clear_override_button.clicked.connect(self._clear_selected_override)
         self._apply_source_override_button = QPushButton("Apply Source Override", self)
         self._apply_source_override_button.clicked.connect(self._apply_selected_source_override)
+        self._use_source_value_as_source_override_button = QPushButton("Use Selected Source Value As Source Override", self)
+        self._use_source_value_as_source_override_button.clicked.connect(self._apply_selected_source_as_source_override)
         self._clear_source_override_button = QPushButton("Clear Source Override", self)
         self._clear_source_override_button.clicked.connect(self._clear_selected_source_override)
         self._open_artifact_button = QPushButton("Open Selected Artifact", self)
@@ -213,6 +222,7 @@ class ConversionSessionWidget(QWidget):
         metadata_review_page = QWidget(self)
         metadata_review_layout = QVBoxLayout(metadata_review_page)
         metadata_review_layout.addWidget(QLabel("Pending mixed-source metadata review", self))
+        metadata_review_layout.addWidget(self._metadata_resolution_summary_label)
         metadata_review_layout.addWidget(self._disagreement_list, stretch=1)
         metadata_detail_group = QGroupBox("Selected Metadata Conflict", self)
         metadata_detail_layout = QVBoxLayout(metadata_detail_group)
@@ -220,15 +230,19 @@ class ConversionSessionWidget(QWidget):
         metadata_detail_layout.addWidget(self._selected_override_status_label)
         metadata_detail_layout.addWidget(QLabel("Source comparison", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_source_list, stretch=1)
+        metadata_detail_layout.addWidget(QLabel("Manual session override", self))
+        metadata_detail_layout.addWidget(self._manual_session_override_edit)
         metadata_detail_layout.addWidget(QLabel("Selected source override", self))
         metadata_detail_layout.addWidget(self._selected_source_override_edit)
         metadata_detail_layout.addWidget(QLabel("Resolution notes", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_notes_label)
         metadata_resolution_row = QHBoxLayout()
         metadata_resolution_row.addWidget(self._use_source_value_button)
+        metadata_resolution_row.addWidget(self._apply_manual_session_override_button)
         metadata_resolution_row.addWidget(self._clear_override_button)
         metadata_detail_layout.addLayout(metadata_resolution_row)
         metadata_source_resolution_row = QHBoxLayout()
+        metadata_source_resolution_row.addWidget(self._use_source_value_as_source_override_button)
         metadata_source_resolution_row.addWidget(self._apply_source_override_button)
         metadata_source_resolution_row.addWidget(self._clear_source_override_button)
         metadata_detail_layout.addLayout(metadata_source_resolution_row)
@@ -325,6 +339,7 @@ class ConversionSessionWidget(QWidget):
         self._disagreement_count_value_label.setText(self._disagreement_count_text(state))
         self._review_guidance_label.setText(self._review_guidance_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
+        self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
 
         if state.output_path is not None and self._output_path_edit.text() != str(state.output_path):
             self._output_path_edit.setText(str(state.output_path))
@@ -464,6 +479,8 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_source_list.clear()
             self._selected_disagreement_notes_label.setText("No comparison notes.")
             self._selected_override_status_label.setText("No session override applied.")
+            with QSignalBlocker(self._manual_session_override_edit):
+                self._manual_session_override_edit.setText("")
             with QSignalBlocker(self._selected_source_override_edit):
                 self._selected_source_override_edit.setText("")
             self._refresh_metadata_resolution_actions()
@@ -482,6 +499,8 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_source_list.clear()
             self._selected_disagreement_notes_label.setText("No comparison notes.")
             self._selected_override_status_label.setText("No session override applied.")
+            with QSignalBlocker(self._manual_session_override_edit):
+                self._manual_session_override_edit.setText("")
             with QSignalBlocker(self._selected_source_override_edit):
                 self._selected_source_override_edit.setText("")
             self._refresh_metadata_resolution_actions()
@@ -525,6 +544,8 @@ class ConversionSessionWidget(QWidget):
         self._selected_override_status_label.setText(
             "\n".join(override_lines) if override_lines else "No session or source overrides applied."
         )
+        with QSignalBlocker(self._manual_session_override_edit):
+            self._manual_session_override_edit.setText(disagreement.session_override_value or "")
         self._sync_selected_disagreement_source()
         self._refresh_metadata_resolution_actions()
 
@@ -635,10 +656,17 @@ class ConversionSessionWidget(QWidget):
         selected_source_item = self._selected_disagreement_source_list.currentItem()
         selected_source = self._selected_disagreement_source()
         self._use_source_value_button.setEnabled(disagreement is not None and selected_source_item is not None)
+        self._manual_session_override_edit.setEnabled(disagreement is not None)
+        self._apply_manual_session_override_button.setEnabled(
+            disagreement is not None and bool(self._manual_session_override_edit.text().strip())
+        )
         self._clear_override_button.setEnabled(
             disagreement is not None and disagreement.session_override_value is not None
         )
         self._selected_source_override_edit.setEnabled(disagreement is not None and selected_source_item is not None)
+        self._use_source_value_as_source_override_button.setEnabled(
+            disagreement is not None and selected_source_item is not None
+        )
         self._apply_source_override_button.setEnabled(
             disagreement is not None
             and selected_source_item is not None
@@ -681,6 +709,24 @@ class ConversionSessionWidget(QWidget):
             return
         self._screen_model.apply_session_override(disagreement.canonical_key, str(selected_value))
 
+    def _apply_manual_session_override(self) -> None:
+        disagreement = self._selected_disagreement()
+        value = self._manual_session_override_edit.text().strip()
+        if disagreement is None or not value:
+            return
+        self._screen_model.apply_session_override(disagreement.canonical_key, value)
+
+    def _apply_selected_source_as_source_override(self) -> None:
+        disagreement = self._selected_disagreement()
+        selected_source = self._selected_disagreement_source()
+        if disagreement is None or selected_source is None:
+            return
+        self._screen_model.apply_source_override(
+            selected_source.source_id,
+            disagreement.canonical_key,
+            selected_source.value,
+        )
+
     def _apply_selected_source_override(self) -> None:
         disagreement = self._selected_disagreement()
         selected_source = self._selected_disagreement_source()
@@ -701,6 +747,30 @@ class ConversionSessionWidget(QWidget):
         if disagreement is None:
             return
         self._screen_model.clear_session_override(disagreement.canonical_key)
+
+    @staticmethod
+    def _metadata_resolution_summary_text(state: ConversionSessionScreenState) -> str:
+        conflict_count = len(state.metadata_disagreements)
+        session_override_count = len(
+            [item for item in state.metadata_disagreements if item.session_override_value is not None]
+        )
+        source_override_count = sum(
+            1
+            for item in state.metadata_disagreements
+            for source_value in item.source_values
+            if source_value.override_value is not None
+        )
+        unresolved_count = len(
+            [item for item in state.metadata_disagreements if item.pending_resolution]
+        )
+        if conflict_count == 0:
+            return "No metadata conflicts loaded."
+        return (
+            f"{conflict_count} conflicts | "
+            f"{unresolved_count} pending review | "
+            f"{session_override_count} session overrides | "
+            f"{source_override_count} source overrides"
+        )
 
     def _on_execute_clicked(self) -> None:
         output_text = self._output_path_edit.text().strip()

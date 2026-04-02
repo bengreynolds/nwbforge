@@ -614,6 +614,7 @@ def metadata_disagreement_items(preview: ConversionPreview) -> tuple[MetadataDis
                     source_values=source_values,
                     session_override_value=preview.session.metadata_overrides.get(canonical_key),
                 ),
+                pending_resolution=normalized_value.review_status is ReviewStatus.NEEDS_REVIEW,
             )
         )
     return tuple(items)

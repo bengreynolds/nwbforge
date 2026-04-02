@@ -21,6 +21,7 @@ def test_session_assembly_screen_model_builds_supported_draft(tmp_path: Path) ->
     assert state.suggested_pathway == "supported"
     assert state.session_id.startswith("session-")
     assert state.sources[0].suggested_adapter_id == "session_manifest"
+    assert state.groups[0].requires_confirmation is False
 
 
 def test_session_assembly_screen_model_builds_hybrid_draft_and_creates_session(tmp_path: Path) -> None:
@@ -31,6 +32,8 @@ def test_session_assembly_screen_model_builds_hybrid_draft_and_creates_session(t
     screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
 
     state = screen.add_paths((manifest_path, custom_path))
+    assert state.can_create_session is False
+    state = screen.confirm_all_groups()
     state = screen.set_session_id("hybrid-assembled")
     session = screen.create_session()
 
@@ -53,6 +56,7 @@ def test_session_assembly_screen_model_edits_roles_and_metadata_overrides(tmp_pa
     screen.set_source_role("session-manifest", "metadata")
     screen.set_source_role("custom-session", "primary")
     state = screen.set_metadata_override("subject.subject_id", "mouse-override-01")
+    state = screen.confirm_all_groups()
     session = screen.create_session()
 
     assert state.metadata_overrides["subject.subject_id"] == "mouse-override-01"
@@ -70,6 +74,7 @@ def test_session_assembly_screen_model_edits_source_metadata_overrides(tmp_path:
 
     screen.add_paths((manifest_path, custom_path))
     state = screen.set_source_metadata_override("custom-session", "subject.subject_id", "source-custom-01")
+    state = screen.confirm_all_groups()
     session = screen.create_session()
 
     assert state.source_metadata_overrides["custom-session"]["subject.subject_id"] == "source-custom-01"
@@ -137,6 +142,8 @@ def test_session_assembly_screen_model_can_confirm_group_and_restore_it(tmp_path
     )
 
     assert confirmed_state.groups[0].is_confirmed is True
+    assert confirmed_state.can_create_session is True
+    assert confirmed_state.groups[0].requires_confirmation is True
     assert restored_screen.state.groups[0].is_confirmed is True
     assert not any(issue.code == "session-assembly-auto-grouped-inputs" for issue in restored_screen.state.issues)
 
