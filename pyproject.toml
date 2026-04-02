@@ -26,14 +26,25 @@ audio = [
 deeplabcut = [
   "ndx-pose>=0.2,<0.3",
 ]
+lightningpose = [
+  "ndx-pose>=0.2,<0.3",
+  "opencv-python-headless>=4.10,<5",
+]
 excel = [
   "openpyxl>=3.1,<4",
+]
+hdf5 = [
+  "h5py>=3.10,<4",
+  "roiextractors>=0.6,<0.8",
 ]
 image = [
   "pillow>=10,<12",
 ]
 sleap = [
   "neuroconv[sleap]>=0.9,<0.10",
+]
+videos = [
+  "opencv-python-headless>=4.10,<5",
 ]
 viewer_rich = [
   "nwbwidgets>=0.11,<0.12",

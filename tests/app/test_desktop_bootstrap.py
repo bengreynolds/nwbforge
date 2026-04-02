@@ -39,9 +39,12 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
 
     assert "neuroconv_excel_time_intervals" in registered
     assert "neuroconv_deeplabcut" not in registered
+    assert "neuroconv_lightningpose" not in registered
     assert "neuroconv_audio" not in registered
     assert "neuroconv_image" not in registered
+    assert "neuroconv_video" not in registered
     assert "neuroconv_sleap" not in registered
+    assert "neuroconv_hdf5_imaging" not in registered
     assert "neuroconv_scanimage" not in registered
 
 

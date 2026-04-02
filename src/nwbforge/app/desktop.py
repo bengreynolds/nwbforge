@@ -89,8 +89,11 @@ def build_adapter_registry() -> AdapterRegistry:
         ("excel", "NeuroConvExcelTimeIntervalsAdapter"),
         ("image", "NeuroConvImageAdapter"),
         ("audio", "NeuroConvAudioAdapter"),
+        ("videos", "NeuroConvVideoAdapter"),
         ("deeplabcut", "NeuroConvDeepLabCutAdapter"),
+        ("lightningpose", "NeuroConvLightningPoseAdapter"),
         ("sleap", "NeuroConvSLEAPAdapter"),
+        ("hdf5", "NeuroConvHdf5ImagingAdapter"),
         ("scanimage", "NeuroConvScanImageAdapter"),
     )
     for route_name, adapter_name in optional_routes:

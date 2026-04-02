@@ -18,3 +18,4 @@ def _try_import_optional(export_name: str) -> None:
 
 
 _try_import_optional("NeuroConvScanImageAdapter")
+_try_import_optional("NeuroConvHdf5ImagingAdapter")

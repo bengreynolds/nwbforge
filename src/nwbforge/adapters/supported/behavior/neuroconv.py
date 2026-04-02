@@ -8,6 +8,11 @@ import pandas as pd
 from neuroconv.datainterfaces import DeepLabCutInterface, FicTracDataInterface
 
 try:
+    from neuroconv.datainterfaces import LightningPoseDataInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    LightningPoseDataInterface = None
+
+try:
     from neuroconv.datainterfaces import SLEAPInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     SLEAPInterface = None
@@ -135,6 +140,106 @@ class NeuroConvDeepLabCutAdapter(NeuroConvDirectConversionAdapter):
         else:
             subject_count = 1
         return len(bodyparts), subject_count
+
+
+if LightningPoseDataInterface is not None:
+
+    class NeuroConvLightningPoseAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert LightningPose output files through NeuroConv."""
+
+        adapter_id = "neuroconv_lightningpose"
+        display_name = "NeuroConv LightningPose adapter"
+        version = "0.1.0"
+        interface_cls = LightningPoseDataInterface
+        record_type = "neuroconv_lightningpose"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".csv",)
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            return source.location.suffix.lower() in self.supported_suffixes and self._resolve_original_video_path(
+                source, config
+            ) is not None
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {self.source_path_kwarg: source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            original_video_file_path = self._resolve_original_video_path(source, config)
+            if original_video_file_path is None:
+                raise ValueError(
+                    "LightningPose conversion requires original_video_file_path or a same-stem .mp4 sidecar."
+                )
+            interface_kwargs["original_video_file_path"] = original_video_file_path
+            if "labeled_video_file_path" not in interface_kwargs:
+                labeled_candidate = source.location.with_name(f"{source.location.stem}.labeled.mp4")
+                if labeled_candidate.is_file():
+                    interface_kwargs["labeled_video_file_path"] = labeled_candidate
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            pose_metadata = metadata.get("Behavior", {}).get("PoseEstimation", {})
+            keypoint_count = self._keypoint_count_from_source(source.location)
+            original_video_file_path = self._resolve_original_video_path(source, config)
+            labeled_video_file_path = self._resolve_labeled_video_path(source, config)
+            fields = extracted_fields_from_mapping(
+                prefix="behavior.lightningpose",
+                payload={
+                    "source_format": "csv",
+                    "keypoint_count": keypoint_count,
+                    "pose_container_name": pose_metadata.get("name", "PoseEstimation"),
+                    "camera_name": pose_metadata.get("camera_name", "CameraPoseEstimation"),
+                    "has_original_video": original_video_file_path is not None,
+                    "has_labeled_video": labeled_video_file_path is not None,
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv LightningPose conversion into pose-estimation processing data.",
+                "LightningPose requires an original video sidecar or explicit original_video_file_path.",
+            )
+            return fields, [], notes
+
+        @staticmethod
+        def _keypoint_count_from_source(location: Path) -> int:
+            dataframe = pd.read_csv(location, header=[0, 1, 2])
+            scorer_name = next(
+                name
+                for name in dataframe.columns.get_level_values(0).unique()
+                if not str(name).startswith("Unnamed")
+            )
+            keypoints = dataframe[scorer_name].columns.get_level_values(0).unique()
+            return len(keypoints)
+
+        @staticmethod
+        def _resolve_original_video_path(source: SourceReference, config: NeuroConvSourceConfig) -> Path | None:
+            configured_path = config.interface_kwargs.get("original_video_file_path")
+            if configured_path:
+                return Path(configured_path)
+            candidate = source.location.with_suffix(".mp4")
+            if candidate.is_file():
+                return candidate
+            return None
+
+        @staticmethod
+        def _resolve_labeled_video_path(source: SourceReference, config: NeuroConvSourceConfig) -> Path | None:
+            configured_path = config.interface_kwargs.get("labeled_video_file_path")
+            if configured_path:
+                return Path(configured_path)
+            candidate = source.location.with_name(f"{source.location.stem}.labeled.mp4")
+            if candidate.is_file():
+                return candidate
+            return None
 
 
 if SLEAPInterface is not None:

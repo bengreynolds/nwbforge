@@ -25,6 +25,14 @@ ROUTE_PACKAGE_CATALOG: tuple[RoutePackageSpec, ...] = (
         implemented_in_code=True,
     ),
     RoutePackageSpec(
+        route_name="lightningpose",
+        display_name="LightningPose",
+        extra_name="lightningpose",
+        description="LightningPose pose-estimation support with required video and ndx-pose dependencies.",
+        required_modules=("cv2", "ndx_pose"),
+        implemented_in_code=True,
+    ),
+    RoutePackageSpec(
         route_name="excel",
         display_name="Excel",
         extra_name="excel",
@@ -41,11 +49,27 @@ ROUTE_PACKAGE_CATALOG: tuple[RoutePackageSpec, ...] = (
         implemented_in_code=True,
     ),
     RoutePackageSpec(
+        route_name="videos",
+        display_name="Videos",
+        extra_name="videos",
+        description="External video support through NeuroConv's video interfaces and OpenCV-backed metadata readers.",
+        required_modules=("cv2",),
+        implemented_in_code=True,
+    ),
+    RoutePackageSpec(
         route_name="sleap",
         display_name="SLEAP",
         extra_name="sleap",
         description="SLEAP pose-estimation support through NeuroConv's sleap extra and ndx-pose.",
         required_modules=("sleap_io", "ndx_pose"),
+        implemented_in_code=True,
+    ),
+    RoutePackageSpec(
+        route_name="hdf5",
+        display_name="HDF5 Imaging",
+        extra_name="hdf5",
+        description="Extractor-backed HDF5 imaging support through NeuroConv and roiextractors.",
+        required_modules=("h5py", "roiextractors"),
         implemented_in_code=True,
     ),
     RoutePackageSpec(

@@ -5,6 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 try:
+    from neuroconv.datainterfaces import Hdf5ImagingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    Hdf5ImagingInterface = None
+
+try:
     from neuroconv.datainterfaces import ScanImageImagingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     ScanImageImagingInterface = None
@@ -103,3 +108,58 @@ if ScanImageImagingInterface is not None:
                 for path in location.iterdir()
                 if path.is_file() and path.suffix.lower() in self.supported_suffixes
             )
+
+
+if Hdf5ImagingInterface is not None:
+
+    class NeuroConvHdf5ImagingAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert extractor-backed HDF5 imaging sources through NeuroConv."""
+
+        adapter_id = "neuroconv_hdf5_imaging"
+        display_name = "NeuroConv HDF5 imaging adapter"
+        version = "0.1.0"
+        interface_cls = Hdf5ImagingInterface
+        record_type = "neuroconv_hdf5_imaging"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".h5", ".hdf5")
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = {self.source_path_kwarg: source.location}
+            interface_kwargs.update(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            ophys_metadata = metadata.get("Ophys", {})
+            fields = extracted_fields_from_mapping(
+                prefix="ophys.hdf5",
+                payload={
+                    "source_format": source.location.suffix.lower().lstrip("."),
+                    "mov_field": config.interface_kwargs.get("mov_field", "mov"),
+                    "sampling_frequency": config.interface_kwargs.get("sampling_frequency"),
+                    "channel_names": tuple(config.interface_kwargs.get("channel_names", ())),
+                    "photon_series_type": config.interface_kwargs.get("photon_series_type", "TwoPhotonSeries"),
+                    "has_imaging_plane_metadata": "ImagingPlane" in ophys_metadata,
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv HDF5 imaging conversion into ophys imaging data.",
+                "HDF5 imaging sources may require mov_field and sampling_frequency metadata when not embedded in the file.",
+            )
+            return fields, [], notes

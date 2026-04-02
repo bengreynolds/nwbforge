@@ -65,10 +65,10 @@ def test_package_installer_screen_model_updates_custom_routes(tmp_path: Path) ->
     screen = make_screen_model(tmp_path)
     screen.load()
 
-    state = screen.set_custom_routes(("image", "scanimage", "image", "missing"))
+    state = screen.set_custom_routes(("image", "scanimage", "lightningpose", "image", "missing"))
 
     assert state.install_preset is InstallPreset.CUSTOM
-    assert state.selected_routes == ("image", "scanimage")
+    assert state.selected_routes == ("image", "scanimage", "lightningpose")
     assert state.preview is not None
     assert not any(issue.route_names == ("scanimage",) for issue in state.issues)
     screen.shutdown()

@@ -14,7 +14,10 @@ def test_package_management_service_lists_available_routes() -> None:
     route_names = {route.route_name for route in service.list_available_routes()}
 
     assert "deeplabcut" in route_names
+    assert "lightningpose" in route_names
     assert "sleap" in route_names
+    assert "videos" in route_names
+    assert "hdf5" in route_names
     assert "scanimage" in route_names
 
 

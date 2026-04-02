@@ -25,4 +25,5 @@ def _try_import_optional(export_name: str) -> None:
     __all__.append(export_name)
 
 
+_try_import_optional("NeuroConvLightningPoseAdapter")
 _try_import_optional("NeuroConvSLEAPAdapter")
