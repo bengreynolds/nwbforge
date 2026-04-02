@@ -1444,3 +1444,16 @@ Consequences:
 - the next imaging-family scaling slice prioritizes `Micro-Manager TIFF`, `Miniscope`, and `Thor`
 - route matching should use the strongest available path/layout hints rather than only suffix matching when overlapping formats exist
 - future generic TIFF-family routes should be evaluated against direct-ingest ambiguity and may need stronger user-review affordances before being exposed
+
+### DEC-113: Add configuration-gated task routes and distinctive acquisition-file routes before broader ambiguous behavior/ecephys backbones
+Status: Accepted
+
+Reasoning:
+- The optional route catalog now needs to grow beyond imaging, but behavior/task and ecephys routes should still be chosen to minimize direct-ingest ambiguity.
+- MedPC is a good task-route proof case because it should not match arbitrary text files; it can be exposed honestly only when explicit NeuroConv interface configuration is provided.
+- Intan is a good acquisition-route proof case because `.rhd` and `.rhs` files are distinctive enough to gate cleanly without inventing a broader ecephys catch-all.
+
+Consequences:
+- the `behavior` family now includes `MedPC` as a configuration-gated task/events route
+- the new `ecephys` family now starts with `Intan` as a distinctive acquisition-file route
+- optional route scaling should continue to prefer strong path/config signatures before exposing broader ambiguous behavior or ecephys backbones

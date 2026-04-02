@@ -32,12 +32,14 @@ Implemented adapters now include:
 - `NeuroConvDeepLabCutAdapter` for real NeuroConv-backed DeepLabCut pose-estimation sources
 - `NeuroConvSLEAPAdapter` for real NeuroConv-backed SLEAP pose-estimation sources
 - `NeuroConvLightningPoseAdapter` for real NeuroConv-backed LightningPose pose-estimation sources
+- `NeuroConvMedPCAdapter` for real NeuroConv-backed MedPC task/event sources
 - `NeuroConvVideoAdapter` for real NeuroConv-backed external video sources
 - `NeuroConvHdf5ImagingAdapter` for real NeuroConv-backed HDF5 imaging sources
 - `NeuroConvMicroManagerTiffAdapter` for real NeuroConv-backed Micro-Manager TIFF imaging sources
 - `NeuroConvMiniscopeAdapter` for real NeuroConv-backed Miniscope imaging sources
 - `NeuroConvScanImageAdapter` for real NeuroConv-backed ScanImage imaging sources
 - `NeuroConvThorAdapter` for real NeuroConv-backed Thor imaging sources
+- `NeuroConvIntanAdapter` for real NeuroConv-backed Intan ecephys sources
 
 Current package direction:
 - category-first supported packages should hold family modules and route declarations
@@ -61,7 +63,7 @@ Implemented framework pieces:
 - shared extraction helpers for flattened mapping and dataframe-backed field emission
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
-- the SLEAP, LightningPose, Video, HDF5 imaging, Micro-Manager TIFF, Miniscope, ScanImage, and Thor adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
+- the SLEAP, LightningPose, MedPC, Video, HDF5 imaging, Micro-Manager TIFF, Miniscope, ScanImage, Thor, and Intan adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
 - the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:

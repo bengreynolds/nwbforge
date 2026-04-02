@@ -10,6 +10,7 @@ This note captures the current route-based dependency-management direction for d
 
 Package installation is framed around supported route names rather than raw dependency names. Examples:
 - `DeepLabCut`
+- `MedPC`
 - `ScanImage`
 - `Audio`
 - `Excel`
@@ -32,6 +33,7 @@ Current route package catalog examples:
 - `audio`
 - `deeplabcut`
 - `lightningpose`
+- `medpc`
 - `excel`
 - `hdf5`
 - `image`
@@ -41,6 +43,7 @@ Current route package catalog examples:
 - `thor`
 - `videos`
 - `scanimage`
+- `intan`
 
 ## Setup modes
 
@@ -107,9 +110,11 @@ Examples:
 - `deeplabcut` depends on `ndx_pose`
 - `lightningpose` depends on `cv2` and `ndx_pose`
 - `sleap` depends on `sleap_io` and `ndx_pose`
+- `medpc` depends on `ndx_events`
 - `videos` depends on `cv2`
 - `hdf5` depends on `h5py` and `roiextractors`
 - `scanimage` depends on `roiextractors` and `tifffile`
+- `intan` depends on `spikeinterface`
 
 This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.
 
