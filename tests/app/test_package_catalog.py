@@ -10,8 +10,10 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
             "h5py",
             "isx",
             "lxml",
+            "MEArec",
             "natsort",
             "sleap_io",
+            "sonpy",
             "ndx_pose",
             "cv2",
             "roiextractors",
@@ -36,6 +38,8 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
     assert route_dependencies_available("femtonics") is True
     assert route_dependencies_available("inscopix") is True
     assert route_dependencies_available("mcsraw") is True
+    assert route_dependencies_available("maxone") is True
+    assert route_dependencies_available("mearec") is True
     assert route_dependencies_available("micromanager") is True
     assert route_dependencies_available("neuralynx") is True
     assert route_dependencies_available("neuroscope") is True
@@ -44,11 +48,15 @@ def test_route_dependencies_available_checks_curated_modules(monkeypatch) -> Non
     assert route_dependencies_available("openephys_binary") is True
     assert route_dependencies_available("openephys_legacy") is True
     assert route_dependencies_available("plexon") is True
+    assert route_dependencies_available("plexon2") is True
+    assert route_dependencies_available("scanbox") is True
     assert route_dependencies_available("scanimage") is True
     assert route_dependencies_available("scanimage_legacy") is True
+    assert route_dependencies_available("spike2") is True
     assert route_dependencies_available("spikegadgets") is True
     assert route_dependencies_available("spikeglx") is True
     assert route_dependencies_available("tdt") is True
+    assert route_dependencies_available("tiff") is True
     assert route_dependencies_available("whitematter") is True
     assert route_dependencies_available("hdf5") is True
     assert route_dependencies_available("image") is False

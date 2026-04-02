@@ -67,8 +67,14 @@ lightningpose = [
 mcsraw = [
   "neuroconv[mcsraw]>=0.9,<0.10",
 ]
+maxone = [
+  "neuroconv[maxwell]>=0.9,<0.10",
+]
 medpc = [
   "neuroconv[medpc]>=0.9,<0.10",
+]
+mearec = [
+  "neuroconv[mearec]>=0.9,<0.10",
 ]
 excel = [
   "openpyxl>=3.1,<4",
@@ -104,11 +110,23 @@ openephys_legacy = [
 plexon = [
   "neuroconv[plexon]>=0.9,<0.10",
 ]
+plexon2 = [
+  "neuroconv[plexon2]>=0.9,<0.10",
+]
+scanbox = [
+  "neuroconv[ophys]>=0.9,<0.10",
+]
+spike2 = [
+  "neuroconv[spike2]>=0.9,<0.10",
+]
 spikegadgets = [
   "spikeinterface>=0.103,<0.104",
 ]
 spikeglx = [
   "spikeinterface>=0.103,<0.104",
+]
+tiff = [
+  "neuroconv[ophys]>=0.9,<0.10",
 ]
 tdt = [
   "neuroconv[tdt]>=0.9,<0.10",

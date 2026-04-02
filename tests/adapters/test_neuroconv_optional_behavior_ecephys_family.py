@@ -10,6 +10,8 @@ from nwbforge.adapters import (
     NeuroConvEdfAdapter,
     NeuroConvIntanAdapter,
     NeuroConvMCSRawAdapter,
+    NeuroConvMaxOneAdapter,
+    NeuroConvMEArecAdapter,
     NeuroConvMedPCAdapter,
     NeuroConvNeuralynxAdapter,
     NeuroConvNeuralynxNvtAdapter,
@@ -18,6 +20,8 @@ from nwbforge.adapters import (
     NeuroConvOpenEphysBinaryAdapter,
     NeuroConvOpenEphysLegacyAdapter,
     NeuroConvPlexonAdapter,
+    NeuroConvPlexon2Adapter,
+    NeuroConvSpike2Adapter,
     NeuroConvSpikeGadgetsAdapter,
     NeuroConvSpikeGLXAdapter,
     NeuroConvTdtAdapter,
@@ -259,6 +263,52 @@ def test_mcsraw_adapter_matches_raw_and_extracts_fields(tmp_path: Path, monkeypa
 
     assert adapter.can_handle(source) is True
     assert result.fields["ecephys.mcsraw.device_name"].value == "MCSRaw"
+
+
+def test_maxone_adapter_prefers_raw_h5_and_extracts_plugin_summary(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.raw.h5"
+    source_path.write_bytes(b"fake-maxone")
+    source = SourceReference(
+        source_id="maxone-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="MaxOne recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "MaxOne"}], "ElectrodeGroup": [{"name": "MEA"}]}}
+
+    adapter = NeuroConvMaxOneAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ecephys.maxone.downloads_plugin"].value is True
+
+
+def test_mearec_adapter_prefers_explicit_mearec_naming_and_extracts_fields(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "session_mearec.h5"
+    source_path.write_bytes(b"fake-mearec")
+    source = SourceReference(
+        source_id="mearec-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="MEArec recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "MEArec probe"}], "ElectrodeGroup": [{"name": "MEA"}]}}
+
+    adapter = NeuroConvMEArecAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ecephys.mearec.device_name"].value == "MEArec probe"
 
 
 def test_neuralynx_adapter_requires_unambiguous_or_configured_stream(tmp_path: Path, monkeypatch) -> None:
@@ -514,6 +564,52 @@ def test_plexon_adapter_matches_plx_and_extracts_stream_name(tmp_path: Path, mon
 
     assert adapter.can_handle(source) is True
     assert result.fields["ecephys.plexon.stream_name"].value == "WB-Wideband"
+
+
+def test_plexon2_adapter_matches_pl2_and_extracts_fields(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.pl2"
+    source_path.write_bytes(b"fake-pl2")
+    source = SourceReference(
+        source_id="plexon2-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Plexon2 recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "Plexon2"}], "ElectrodeGroup": [{"name": "A"}]}}
+
+    adapter = NeuroConvPlexon2Adapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ecephys.plexon2.stream_id"].value == "WB"
+
+
+def test_spike2_adapter_matches_smrx_and_extracts_source_format(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.smrx"
+    source_path.write_bytes(b"fake-smrx")
+    source = SourceReference(
+        source_id="spike2-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Spike2 recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"Ecephys": {"Device": [{"name": "Spike2"}], "ElectrodeGroup": [{"name": "A"}]}}
+
+    adapter = NeuroConvSpike2Adapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ecephys.spike2.source_format"].value == "smrx"
 
 
 def test_spikeglx_adapter_auto_resolves_single_stream_folder(tmp_path: Path, monkeypatch) -> None:

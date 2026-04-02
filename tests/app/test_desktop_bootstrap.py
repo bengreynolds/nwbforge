@@ -51,6 +51,8 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_lightningpose" not in registered
     assert "neuroconv_inscopix" not in registered
     assert "neuroconv_mcsraw" not in registered
+    assert "neuroconv_maxone" not in registered
+    assert "neuroconv_mearec" not in registered
     assert "neuroconv_medpc" not in registered
     assert "neuroconv_audio" not in registered
     assert "neuroconv_image" not in registered
@@ -64,6 +66,8 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_openephys_binary" not in registered
     assert "neuroconv_openephys_legacy" not in registered
     assert "neuroconv_plexon" not in registered
+    assert "neuroconv_plexon2" not in registered
+    assert "neuroconv_spike2" not in registered
     assert "neuroconv_spikegadgets" not in registered
     assert "neuroconv_spikeglx" not in registered
     assert "neuroconv_tdt" not in registered
@@ -71,8 +75,10 @@ def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> N
     assert "neuroconv_hdf5_imaging" not in registered
     assert "neuroconv_micromanager_tiff" not in registered
     assert "neuroconv_miniscope" not in registered
+    assert "neuroconv_scanbox" not in registered
     assert "neuroconv_scanimage" not in registered
     assert "neuroconv_scanimage_legacy" not in registered
+    assert "neuroconv_tiff_imaging" not in registered
     assert "neuroconv_thor" not in registered
 
 

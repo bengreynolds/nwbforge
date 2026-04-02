@@ -41,9 +41,19 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     IntanRecordingInterface = None
 
 try:
+    from neuroconv.datainterfaces import MaxOneRecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    MaxOneRecordingInterface = None
+
+try:
     from neuroconv.datainterfaces import MCSRawRecordingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     MCSRawRecordingInterface = None
+
+try:
+    from neuroconv.datainterfaces import MEArecRecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    MEArecRecordingInterface = None
 
 try:
     from neuroconv.datainterfaces import NeuralynxRecordingInterface
@@ -74,6 +84,16 @@ try:
     from neuroconv.datainterfaces import PlexonRecordingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     PlexonRecordingInterface = None
+
+try:
+    from neuroconv.datainterfaces import Plexon2RecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    Plexon2RecordingInterface = None
+
+try:
+    from neuroconv.datainterfaces import Spike2RecordingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    Spike2RecordingInterface = None
 
 try:
     from neuroconv.datainterfaces import SpikeGadgetsRecordingInterface
@@ -473,6 +493,96 @@ if MCSRawRecordingInterface is not None:
             return (
                 "Prepared NeuroConv MCSRaw conversion into ecephys acquisition data.",
                 "MCSRaw route matching prefers distinctive .raw MEA recordings.",
+            )
+
+
+if MaxOneRecordingInterface is not None:
+
+    class NeuroConvMaxOneAdapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert MaxOne `.raw.h5` recordings through NeuroConv."""
+
+        adapter_id = "neuroconv_maxone"
+        display_name = "NeuroConv MaxOne adapter"
+        version = "0.1.0"
+        interface_cls = MaxOneRecordingInterface
+        record_type = "neuroconv_maxone"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".h5",)
+        extraction_prefix = "ecephys.maxone"
+        default_device_name = "MaxOne"
+        source_format = "maxone_raw_h5"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            if source.adapter_hint == self.adapter_id:
+                return True
+            del config
+            suffixes = tuple(suffix.lower() for suffix in source.location.suffixes)
+            return suffixes[-2:] == (".raw", ".h5")
+
+        def additional_payload(
+            self,
+            *,
+            source: SourceReference,
+            metadata: dict[str, object],
+            config: NeuroConvSourceConfig,
+        ) -> dict[str, object]:
+            del source, metadata
+            return {
+                "downloads_plugin": bool(config.interface_kwargs.get("download_plugin", True)),
+                "has_hdf5_plugin_path": "hdf5_plugin_path" in config.interface_kwargs,
+            }
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv MaxOne conversion into ecephys acquisition data.",
+                "MaxOne route matching stays conservative and prefers explicit .raw.h5 acquisition files.",
+            )
+
+
+if MEArecRecordingInterface is not None:
+
+    class NeuroConvMEArecAdapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert MEArec recordings through NeuroConv."""
+
+        adapter_id = "neuroconv_mearec"
+        display_name = "NeuroConv MEArec adapter"
+        version = "0.1.0"
+        interface_cls = MEArecRecordingInterface
+        record_type = "neuroconv_mearec"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".h5",)
+        extraction_prefix = "ecephys.mearec"
+        default_device_name = "MEArec"
+        source_format = "mearec_h5"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            if source.adapter_hint == self.adapter_id:
+                return True
+            return "mearec" in source.location.name.lower()
+
+        def additional_payload(
+            self,
+            *,
+            source: SourceReference,
+            metadata: dict[str, object],
+            config: NeuroConvSourceConfig,
+        ) -> dict[str, object]:
+            del source, metadata
+            return {"es_key": config.interface_kwargs.get("es_key", "ElectricalSeries")}
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv MEArec conversion into ecephys acquisition data.",
+                "MEArec route matching stays conservative and prefers explicit MEArec naming or adapter hints over generic .h5 claims.",
             )
 
 
@@ -923,6 +1033,88 @@ if PlexonRecordingInterface is not None:
             return (
                 "Prepared NeuroConv Plexon conversion into ecephys acquisition data.",
                 "Plexon route matching prefers distinctive .plx files.",
+            )
+
+
+if Plexon2RecordingInterface is not None:
+
+    class NeuroConvPlexon2Adapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert Plexon2 `.pl2` recordings through NeuroConv."""
+
+        adapter_id = "neuroconv_plexon2"
+        display_name = "NeuroConv Plexon2 adapter"
+        version = "0.1.0"
+        interface_cls = Plexon2RecordingInterface
+        record_type = "neuroconv_plexon2"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".pl2",)
+        extraction_prefix = "ecephys.plexon2"
+        default_device_name = "Plexon2"
+        source_format = "plexon2_pl2"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def additional_payload(
+            self,
+            *,
+            source: SourceReference,
+            metadata: dict[str, object],
+            config: NeuroConvSourceConfig,
+        ) -> dict[str, object]:
+            del source, metadata, config
+            return {"stream_id": "WB"}
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv Plexon2 conversion into ecephys acquisition data.",
+                "Plexon2 route matching prefers distinctive .pl2 files rather than the older Plexon .plx path.",
+            )
+
+
+if Spike2RecordingInterface is not None:
+
+    class NeuroConvSpike2Adapter(_NeuroConvEcephysRecordingAdapter):
+        """Inspect and convert Spike2 `.smr` and `.smrx` recordings through NeuroConv."""
+
+        adapter_id = "neuroconv_spike2"
+        display_name = "NeuroConv Spike2 adapter"
+        version = "0.1.0"
+        interface_cls = Spike2RecordingInterface
+        record_type = "neuroconv_spike2"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".smr", ".smrx")
+        extraction_prefix = "ecephys.spike2"
+        default_device_name = "Spike2"
+        source_format = "spike2"
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def additional_payload(
+            self,
+            *,
+            source: SourceReference,
+            metadata: dict[str, object],
+            config: NeuroConvSourceConfig,
+        ) -> dict[str, object]:
+            del metadata, config
+            return {"source_format": source.location.suffix.lower().lstrip(".")}
+
+        def extraction_notes(self) -> tuple[str, ...]:
+            return (
+                "Prepared NeuroConv Spike2 conversion into ecephys acquisition data.",
+                "Spike2 route matching prefers distinctive .smr and .smrx files but availability still depends on the external sonpy stack.",
             )
 
 

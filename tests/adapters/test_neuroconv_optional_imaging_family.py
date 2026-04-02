@@ -7,8 +7,10 @@ from nwbforge.adapters import (
     NeuroConvInscopixAdapter,
     NeuroConvMicroManagerTiffAdapter,
     NeuroConvMiniscopeAdapter,
+    NeuroConvScanboxAdapter,
     NeuroConvScanImageAdapter,
     NeuroConvScanImageLegacyAdapter,
+    NeuroConvTiffImagingAdapter,
     NeuroConvThorAdapter,
 )
 from nwbforge.domain.enums import SourceType
@@ -211,6 +213,32 @@ def test_miniscope_adapter_inspects_directory_metadata(tmp_path: Path, monkeypat
     assert result.fields["ophys.miniscope.is_one_photon"].value is True
 
 
+def test_scanbox_adapter_matches_sbx_and_extracts_summary(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "recording.sbx"
+    source_path.write_bytes(b"fake-sbx")
+    source = SourceReference(
+        source_id="scanbox-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Scanbox recording",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {
+                "NWBFile": {"session_start_time": "2026-04-02T09:00:00-06:00"},
+                "Ophys": {"Device": [{"name": "Scanbox"}], "TwoPhotonSeries": [{"name": "TwoPhotonSeries"}]},
+            }
+
+    adapter = NeuroConvScanboxAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert adapter.can_handle(source) is True
+    assert result.fields["ophys.scanbox.device_name"].value == "Scanbox"
+
+
 def test_thor_adapter_matches_tiff_with_experiment_xml_and_extracts_fields(
     tmp_path: Path,
     monkeypatch,
@@ -244,3 +272,36 @@ def test_thor_adapter_matches_tiff_with_experiment_xml_and_extracts_fields(
     assert result.record_type == "neuroconv_thor"
     assert result.fields["ophys.thor.device_name"].value == "ThorMicroscope"
     assert result.fields["ophys.thor.photon_series_type"].value == "TwoPhotonSeries"
+
+
+def test_generic_tiff_adapter_requires_config_and_avoids_distinctive_tiff_routes(tmp_path: Path, monkeypatch) -> None:
+    source_path = tmp_path / "generic.tif"
+    source_path.write_bytes(b"fake-tiff")
+    source_without_config = SourceReference(
+        source_id="tiff-1",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Generic TIFF",
+    )
+    source_with_config = SourceReference(
+        source_id="tiff-2",
+        location=source_path,
+        source_type=SourceType.FILE,
+        label="Generic TIFF",
+        metadata={"neuroconv.interface_kwargs_json": '{"sampling_frequency": 10.0, "num_channels": 1}'},
+    )
+
+    monkeypatch.setattr("nwbforge.adapters.supported.imaging.neuroconv._scanimage_matches_current", lambda location: False)
+    monkeypatch.setattr("nwbforge.adapters.supported.imaging.neuroconv._scanimage_matches_legacy", lambda location: False)
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {"NWBFile": {"session_start_time": "2026-04-02T09:00:00-06:00"}, "Ophys": {}}
+
+    adapter = NeuroConvTiffImagingAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    assert adapter.can_handle(source_without_config) is False
+    result = adapter.inspect(source_with_config)
+    assert result.fields["ophys.tiff.sampling_frequency"].value == 10.0
+    assert result.fields["ophys.tiff.file_count"].value == 1

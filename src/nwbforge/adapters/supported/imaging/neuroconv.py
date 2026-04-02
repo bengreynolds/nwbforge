@@ -40,6 +40,11 @@ except ImportError:  # pragma: no cover - optional route dependency gate
     MiniscopeImagingInterface = None
 
 try:
+    from neuroconv.datainterfaces import SbxImagingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    SbxImagingInterface = None
+
+try:
     from neuroconv.datainterfaces import ScanImageImagingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     ScanImageImagingInterface = None
@@ -53,6 +58,11 @@ try:
     from neuroconv.datainterfaces import ThorImagingInterface
 except ImportError:  # pragma: no cover - optional route dependency gate
     ThorImagingInterface = None
+
+try:
+    from neuroconv.datainterfaces import TiffImagingInterface
+except ImportError:  # pragma: no cover - optional route dependency gate
+    TiffImagingInterface = None
 
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.neuroconv import (
@@ -107,6 +117,14 @@ def _looks_like_bruker_directory(location: Path) -> bool:
     return has_ome_tiff and has_descriptor
 
 
+def _looks_like_micromanager_directory(location: Path) -> bool:
+    if not location.is_dir():
+        return False
+    has_ome_tiff = any(path.is_file() for path in location.glob("*.ome.tif*"))
+    has_settings = any("displaysettings" in path.name.lower() for path in location.glob("*.json"))
+    return has_ome_tiff and has_settings
+
+
 def _bruker_streams(location: Path) -> dict[str, object]:
     if BrukerTiffMultiPlaneImagingInterface is None:
         return {}
@@ -134,6 +152,10 @@ def _ophys_series_type(metadata: dict[str, object], default_value: str = "") -> 
     if ophys_metadata.get("OnePhotonSeries"):
         return "OnePhotonSeries"
     return default_value
+
+
+def _generic_tiff_configured(config: NeuroConvSourceConfig) -> bool:
+    return "sampling_frequency" in config.interface_kwargs or "file_paths" in config.interface_kwargs
 
 
 if ScanImageImagingInterface is not None:
@@ -546,7 +568,7 @@ if MicroManagerTiffImagingInterface is not None:
 
         def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
             del config
-            return self._looks_like_micromanager_directory(source.location)
+            return _looks_like_micromanager_directory(source.location)
 
         def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
             interface_kwargs = {"folder_path": source.location}
@@ -574,15 +596,6 @@ if MicroManagerTiffImagingInterface is not None:
             )
             notes = ("Prepared NeuroConv Micro-Manager TIFF conversion into ophys imaging data.",)
             return fields, [], notes
-
-        @staticmethod
-        def _looks_like_micromanager_directory(location: Path) -> bool:
-            if not location.is_dir():
-                return False
-            has_ome_tiff = any(path.is_file() for path in location.glob("*.ome.tif*"))
-            has_settings = any("displaysettings" in path.name.lower() for path in location.glob("*.json"))
-            return has_ome_tiff and has_settings
-
 
 if MiniscopeImagingInterface is not None:
 
@@ -641,6 +654,53 @@ if MiniscopeImagingInterface is not None:
             return (location / "metaData.json").is_file() and any(location.glob("*.avi"))
 
 
+if SbxImagingInterface is not None:
+
+    class NeuroConvScanboxAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert Scanbox `.sbx` sources through NeuroConv."""
+
+        adapter_id = "neuroconv_scanbox"
+        display_name = "NeuroConv Scanbox adapter"
+        version = "0.1.0"
+        interface_cls = SbxImagingInterface
+        record_type = "neuroconv_scanbox"
+        source_types = (SourceType.FILE,)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".sbx",)
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            del config
+            return source.location.suffix.lower() in self.supported_suffixes
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            fields = extracted_fields_from_mapping(
+                prefix="ophys.scanbox",
+                payload={
+                    "source_format": "scanbox_sbx",
+                    "sampling_frequency": config.interface_kwargs.get("sampling_frequency"),
+                    "device_name": _ophys_device_name(metadata, "Scanbox"),
+                    "photon_series_type": _ophys_series_type(metadata, default_value="TwoPhotonSeries"),
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv Scanbox conversion into ophys imaging data.",
+                "Scanbox route matching prefers distinctive .sbx imaging files rather than broader TIFF or HDF5 readers.",
+            )
+            return fields, [], notes
+
+
 if ThorImagingInterface is not None:
 
     class NeuroConvThorAdapter(NeuroConvDirectConversionAdapter):
@@ -691,4 +751,97 @@ if ThorImagingInterface is not None:
                 source_id=source.source_id,
             )
             notes = ("Prepared NeuroConv Thor conversion into ophys imaging data.",)
+            return fields, [], notes
+
+
+if TiffImagingInterface is not None:
+
+    class NeuroConvTiffImagingAdapter(NeuroConvDirectConversionAdapter):
+        """Inspect and convert generic TIFF imaging sources through NeuroConv."""
+
+        adapter_id = "neuroconv_tiff_imaging"
+        display_name = "NeuroConv TIFF imaging adapter"
+        version = "0.1.0"
+        interface_cls = TiffImagingInterface
+        record_type = "neuroconv_tiff_imaging"
+        source_types = (SourceType.FILE, SourceType.DIRECTORY)
+        capabilities = AdapterCapabilities(
+            supported_pathways=(ConversionPathway.SUPPORTED,),
+            supports_multi_source_sessions=True,
+        )
+        supported_suffixes = (".tif", ".tiff")
+
+        def can_handle(self, source: SourceReference) -> bool:
+            if source.source_type not in self.source_types:
+                return False
+            try:
+                config = self.build_source_config(source)
+            except ValueError:
+                return False
+            return self.matches_source(source, config)
+
+        def matches_source(self, source: SourceReference, config: NeuroConvSourceConfig) -> bool:
+            if source.adapter_hint == self.adapter_id:
+                return True
+            if not _generic_tiff_configured(config):
+                return False
+            if source.source_type == SourceType.FILE:
+                if source.location.suffix.lower() not in self.supported_suffixes:
+                    return False
+                if _scanimage_matches_current(source.location) or _scanimage_matches_legacy(source.location):
+                    return False
+                return not (source.location.parent / "Experiment.xml").is_file()
+
+            if not source.location.is_dir():
+                return False
+            file_paths = _tiff_files(source.location)
+            if not file_paths:
+                return False
+            if _looks_like_micromanager_directory(source.location) or _looks_like_bruker_directory(source.location):
+                return False
+            return not (_scanimage_matches_current(source.location) or _scanimage_matches_legacy(source.location))
+
+        def build_interface(self, source: SourceReference, config: NeuroConvSourceConfig):
+            interface_kwargs = dict(config.interface_kwargs)
+            interface_kwargs.setdefault("verbose", False)
+            if source.source_type == SourceType.FILE:
+                interface_kwargs.setdefault("file_path", source.location)
+            else:
+                file_paths = _tiff_files(source.location)
+                if not file_paths:
+                    raise ValueError(f"No TIFF imaging files found in {source.location}.")
+                interface_kwargs.setdefault("file_paths", file_paths)
+            return self.interface_cls(**interface_kwargs)
+
+        def extract(
+            self,
+            *,
+            source: SourceReference,
+            interface,
+            config: NeuroConvSourceConfig,
+        ) -> tuple[dict[str, ExtractedField], list[ReviewIssue], tuple[str, ...]]:
+            metadata = interface.get_metadata()
+            file_count = 1 if source.source_type == SourceType.FILE else len(_tiff_files(source.location))
+            fields = extracted_fields_from_mapping(
+                prefix="ophys.tiff",
+                payload={
+                    "source_format": "tiff",
+                    "file_count": file_count,
+                    "sampling_frequency": config.interface_kwargs.get("sampling_frequency"),
+                    "dimension_order": config.interface_kwargs.get("dimension_order", "ZCT"),
+                    "num_channels": config.interface_kwargs.get("num_channels", 1),
+                    "channel_name": config.interface_kwargs.get("channel_name"),
+                    "num_planes": config.interface_kwargs.get("num_planes", 1),
+                    "photon_series_type": _ophys_series_type(
+                        metadata,
+                        default_value=config.interface_kwargs.get("photon_series_type", "TwoPhotonSeries"),
+                    ),
+                    "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
+                },
+                source_id=source.source_id,
+            )
+            notes = (
+                "Prepared NeuroConv generic TIFF conversion into ophys imaging data.",
+                "Generic TIFF routing requires explicit imaging configuration and declines sources that already match more distinctive TIFF-based readers.",
+            )
             return fields, [], notes

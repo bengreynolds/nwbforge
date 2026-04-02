@@ -103,6 +103,8 @@ def build_adapter_registry() -> AdapterRegistry:
         ("inscopix", "NeuroConvInscopixAdapter"),
         ("lightningpose", "NeuroConvLightningPoseAdapter"),
         ("mcsraw", "NeuroConvMCSRawAdapter"),
+        ("maxone", "NeuroConvMaxOneAdapter"),
+        ("mearec", "NeuroConvMEArecAdapter"),
         ("medpc", "NeuroConvMedPCAdapter"),
         ("neuralynx", "NeuroConvNeuralynxNvtAdapter"),
         ("sleap", "NeuroConvSLEAPAdapter"),
@@ -113,6 +115,8 @@ def build_adapter_registry() -> AdapterRegistry:
         ("openephys_binary", "NeuroConvOpenEphysBinaryAdapter"),
         ("openephys_legacy", "NeuroConvOpenEphysLegacyAdapter"),
         ("plexon", "NeuroConvPlexonAdapter"),
+        ("plexon2", "NeuroConvPlexon2Adapter"),
+        ("spike2", "NeuroConvSpike2Adapter"),
         ("spikegadgets", "NeuroConvSpikeGadgetsAdapter"),
         ("spikeglx", "NeuroConvSpikeGLXAdapter"),
         ("tdt", "NeuroConvTdtAdapter"),
@@ -120,8 +124,10 @@ def build_adapter_registry() -> AdapterRegistry:
         ("hdf5", "NeuroConvHdf5ImagingAdapter"),
         ("micromanager", "NeuroConvMicroManagerTiffAdapter"),
         ("miniscope", "NeuroConvMiniscopeAdapter"),
+        ("scanbox", "NeuroConvScanboxAdapter"),
         ("scanimage", "NeuroConvScanImageAdapter"),
         ("scanimage_legacy", "NeuroConvScanImageLegacyAdapter"),
+        ("tiff", "NeuroConvTiffImagingAdapter"),
         ("thor", "NeuroConvThorAdapter"),
     )
     for route_name, adapter_name in optional_routes:
