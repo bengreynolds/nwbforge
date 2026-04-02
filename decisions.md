@@ -993,7 +993,7 @@ Reasoning:
 
 Consequences:
 - the direct-ingest workflow now supports source-role assignment for `primary`, `supplemental`, and `metadata` contributions
-- assembled `ConversionSession` objects now carry session-wide metadata overrides into preview/build, where they are applied through the inspection pipeline
+- assembled `ConversionSession` objects now carry session-wide metadata overrides into preview/build, where they are applied through a session-level normalization merge
 - direct-ingest draft state now persists under app state and reopens when `New Session` is shown again
 - source-specific metadata disagreement handling and explicit saved-project semantics remain follow-on work
 
@@ -1023,3 +1023,81 @@ Consequences:
 - the real desktop composition now provisions a snapshot store under `.nwbforge/session-state/`
 - `ConversionSessionScreenModel` now persists successful preview, execution, and review outcomes automatically and surfaces persistence failures as user-facing errors
 - the next persistence milestone is richer history/recovery semantics, not basic preview-state coverage
+
+### DEC-081: Start the manual desktop launcher in direct-ingest `New Session` mode by default
+Status: Accepted
+
+Reasoning:
+- The intended product entry flow is direct file and folder ingestion, not automatic reopening of a JSON-backed bootstrap session.
+- Continuing to auto-load a session in the default launcher path made the internal-testing application feel session-file-driven even after `New Session` became the preferred workflow.
+- Explicit `--session` loading is still useful for fixtures, compatibility testing, and reopen behavior.
+
+Consequences:
+- `scripts/run_app.py` now opens the real desktop shell in `New Session` mode when no explicit session path is provided
+- supported/custom/hybrid JSON sessions remain loadable through `--session` and `File -> Open Session...`
+- startup behavior now better matches the direct-ingest-first product direction documented in `planning.md`
+
+### DEC-082: Apply session-wide metadata overrides at a true session-level merge point
+Status: Accepted
+
+Reasoning:
+- Injecting session-wide overrides through the first inspected source was an architectural shortcut that became misleading for hybrid sessions.
+- Session-wide override semantics are still acceptable for the current product milestone, but they need a merge point that does not depend on source ordering.
+- The normalization layer is the right boundary because it already owns canonical-field reconciliation across sources.
+
+Consequences:
+- `RegistrySourceInspectionService` no longer injects session-wide overrides into the first source extraction result
+- `RuleBasedNormalizationService` now applies session-wide overrides after extracted metadata has been normalized into canonical models
+- override values are recorded as `USER_SUPPLIED` canonical values rather than being disguised as source-extracted fields
+
+### DEC-083: Use first-pass source-role precedence for canonical conflict handling
+Status: Accepted
+
+Reasoning:
+- Source roles were visible in the UI but too close to decorative unless they affected at least one real downstream behavior.
+- Full role-aware grouping, provenance weighting, and mapping policy remain larger follow-on work, but conflict resolution needed an honest first-pass rule now.
+- A simple precedence rule gives mixed-source sessions deterministic behavior while still surfacing conflicts for review.
+
+Consequences:
+- normalization conflicts now retain `primary` values over `metadata`, and `metadata` over `supplemental`
+- equal-rank conflicts remain deterministic by current merge order and are still marked `needs_review`
+- the review workspace now describes that precedence explicitly so users can understand why a value was retained
+
+### DEC-084: Complete category-first cleanup for the supported media family
+Status: Accepted
+
+Reasoning:
+- Leaving image and audio adapters at the top level while behavior and tabular routes were already grouped by family was unnecessary drift.
+- Image and audio are both media-oriented supported routes even though their optional dependencies differ.
+- Category-first packaging is more important than minimizing file count when route dependencies and semantics differ materially.
+
+Consequences:
+- supported image and audio adapters now live under `src/nwbforge/adapters/supported/media/`
+- public adapter exports remain stable through the existing package-level exports
+- future media routes should extend the same family-first layout instead of adding more top-level supported modules
+
+### DEC-085: Expand structured logging into direct-ingest and desktop state-management paths during internal testing
+Status: Accepted
+
+Reasoning:
+- Internal testing needs actionable logs outside the core conversion runtime or triage becomes too dependent on UI state and manual reproduction.
+- Session assembly, draft persistence, settings persistence, and desktop bootstrap are all user-facing behaviors that can fail before preview/build starts.
+- A focused logging hardening pass is enough for this phase without pretending every UI interaction is fully instrumented.
+
+Consequences:
+- desktop bootstrap, session assembly, direct-ingest workspace persistence, and settings persistence now emit structured logs
+- broader persistence, review, and UI-interaction logging remains follow-on hardening work
+- `planning.md` should continue to treat logging coverage as improved but not complete until those remaining paths are addressed
+
+### DEC-086: Prefer automatic grouping heuristics first in the direct-ingest workflow
+Status: Accepted
+
+Reasoning:
+- The intended product should help users load heterogeneous inputs without forcing them to manually assemble every candidate grouping from scratch.
+- Fully automatic grouping would overclaim scientific understanding too early, but fully manual grouping would be too slow and brittle for the current desktop direction.
+- A heuristic-first approach keeps the app proactive while leaving room for richer confirmation and correction workflows later.
+
+Consequences:
+- direct-ingest planning should treat automatic grouping heuristics as the default first-pass grouping strategy
+- current flat selected-path assembly remains only a narrow first implementation of that direction
+- future grouping work should add confirmation and correction workflows on top of heuristic grouping rather than replacing heuristics with purely manual assembly

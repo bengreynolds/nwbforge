@@ -78,6 +78,12 @@ Completed:
 - Added a backend `SessionAssemblyService` for direct file/folder ingest, pathway suggestion, and draft session creation
 - Added a toolkit-agnostic `SessionAssemblyScreenModel` for the `New Session` workflow
 - Added a PySide6 `SessionAssemblyDialog` so `New Session` now builds draft sessions from selected inputs instead of acting as a simple reset
+- Switched the temporary desktop launcher to open in direct-ingest `New Session` mode by default unless an explicit session path is provided
+- Moved session-wide metadata overrides to a true session-level normalization merge point instead of injecting them through first-source inspection
+- Added first-pass source-role semantics in normalization conflict resolution, with `primary > metadata > supplemental` precedence while keeping conflicts reviewable
+- Added explicit review-workspace guidance describing source-role conflict precedence
+- Applied category-first packaging to the supported media family under `src/nwbforge/adapters/supported/media/`
+- Expanded structured logging into desktop bootstrap, session assembly, direct-ingest workspace persistence, and settings persistence
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -88,7 +94,7 @@ In progress:
 - Route-based dependency management and package-install workflow for setup and future UI package management
 - Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
 - Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Transition from the temporary manual-test launcher to a more realistic app startup path for internal testing
+- Richer direct-ingest grouping, sidecar association, and dataset-level confirmation beyond the current flat path-to-source assembly
 
 Next:
 - Begin formal first-pass internal testing in the dedicated Conda environment
@@ -109,10 +115,11 @@ Next:
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
+- Supported NeuroConv routes now use category-first package layout for the `behavior`, `tabular`, and `media` families, while keeping stable public adapter exports.
 - Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real direct-NeuroConv workflow route is implemented yet.
 - The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for combined manifest-plus-image, manifest-plus-audio, manifest-plus-FicTrac, and manifest-plus-DeepLabCut supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
-- Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, and threaded executor.
+- Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, threaded executor, desktop bootstrap, session assembly, and settings persistence.
 - The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
 - Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
 - The first concrete category-first package refactors are now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/` and the text/tabular family under `src/nwbforge/adapters/supported/tabular/`.
@@ -132,7 +139,7 @@ Next:
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
 - The repository now also includes a real desktop bootstrap/composition module under `src/nwbforge/app/desktop.py` that assembles the current supported/custom pipeline, package-management services, review service, threaded executors, and UI models into one manual-testable application stack.
-- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition plus a real supported, custom, or hybrid conversion session rather than a fake conversion executor.
+- A temporary Python launcher now exists at `scripts/run_app.py`, and it now boots the real desktop service composition in direct-ingest `New Session` mode by default while still supporting explicit supported/custom/hybrid session loading through `--session`.
 - The desktop shell can now load supported, custom, and hybrid sessions from disk through `File -> Open Session...` rather than relying only on launcher-provided startup state.
 - The conversion-session UI now also surfaces generated artifacts from execution and review provenance so users can see the NWB output, validation-report artifacts, and later review artifacts directly in the desktop panel.
 - The desktop settings path now also persists `last_open_session_path` and a bounded recent-session list, and the shell uses that state to populate `Open Recent` and to prefer the last-opened manifest on startup when no explicit path is supplied.
@@ -173,11 +180,12 @@ Required direction:
 - major conversion workspaces should use intentional desktop navigation patterns such as tabs or dedicated panes when that improves readability and task focus
 - the primary start flow should become `New Conversion Session`, not “prepare an app-specific JSON file by hand”
 - users should be able to add real files and folders incrementally, combine supported and custom inputs in one session, and review the resulting source grouping before preview/build
+- direct-ingest grouping should start with automatic heuristics first, then grow toward richer confirmation and correction workflows rather than starting fully manual
 - metadata such as subject identifiers, species, session timing, and related canonical fields must be overridable from the UI rather than assumed to be fixed in a prepared session descriptor
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, heuristic-first grouping at the selected-path level, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs and override values instead of resetting on every dialog open
 
 ### Priority 2: Custom and hybrid workflows
@@ -1052,23 +1060,15 @@ Current status:
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
 - This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
 - The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
-- The first supported-path direct-ingest slice can now assemble manifest-backed sessions from file/folder selection through `New Session`, with initial session-wide metadata overrides and persisted draft reopen behavior in place
+- The first supported-path direct-ingest slice can now assemble manifest-backed sessions from file/folder selection through `New Session`, with initial session-wide metadata overrides, role assignment, and persisted draft reopen behavior in place
+- Session-wide metadata overrides now merge at the normalization/session layer rather than being attached artificially to the first inspected source
+- First-pass source-role precedence is now implemented for normalized conflict handling: `primary` beats `metadata`, which beats `supplemental`, and conflicts remain reviewable in the desktop workflow
 
 ## Critical Review: Current Plan-Code Deviations
 
 The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
 
-### 1. Startup path still defaults to a loaded session, not a true direct-ingest-first shell
-- Target direction:
-  - the primary user flow should start from `New Conversion Session`
-  - users should add files/folders directly and build a session from there
-- Current implementation:
-  - `scripts/run_app.py` still resolves a startup session path and loads a session immediately
-  - this keeps JSON/bootstrap fixtures and last-session reopen behavior more central than the target product UX intends
-- Why this matters:
-  - the current launcher still makes the app feel session-file-driven at startup even though the long-term UX is direct ingest
-
-### 2. Direct ingest is still flat path-to-source assembly, not real dataset grouping
+### 1. Direct ingest is still flat path-to-source assembly, not real dataset grouping
 - Target direction:
   - the app should help users load combinations of files/folders and organize them into one session intentionally
   - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
@@ -1078,45 +1078,38 @@ The repository is now in internal-testing mode. The following deviations between
 - Why this matters:
   - the current ingest path is a good first pass for testing, but it is still too shallow for heterogeneous lab datasets
 
-### 3. Source-role assignment is mostly descriptive today
+### 2. Source-role semantics are now partial rather than purely descriptive
 - Target direction:
   - source roles should eventually help drive grouping, provenance interpretation, and mixed-source workflow behavior
 - Current implementation:
   - source roles are persisted and surfaced in the UI
-  - the only enforced semantic today is that at least one source must be `primary`
-  - inspection, normalization, mapping, and execution do not yet branch materially on `primary` vs `supplemental` vs `metadata`
+  - normalization conflicts now use `primary > metadata > supplemental` precedence
+  - review UI now explains that precedence explicitly
+  - provenance weighting, grouping behavior, and deeper mapping policy are still mostly role-agnostic
 - Why this matters:
-  - the UI now exposes a meaningful-looking control whose downstream behavioral impact is still limited
+  - the role control is now honest enough for first-pass review, but it is not yet a full mixed-source policy model
 
-### 4. Metadata overrides are session-wide and currently injected through the first source inspection result
+### 3. Direct ingest still uses session-wide overrides only
 - Target direction:
   - users should be able to review and override metadata before preview/build in a way that remains correct for supported, custom, and hybrid sessions
   - mixed-source disagreement handling should be explicit rather than accidental
 - Current implementation:
-  - `ConversionSession.metadata_overrides` is session-wide only
-  - `RegistrySourceInspectionService` applies those overrides only when inspecting the first session source
+  - `ConversionSession.metadata_overrides` is still session-wide only
+  - overrides now merge correctly at the normalization/session layer instead of being injected through first-source inspection
 - Why this matters:
-  - this is acceptable for the current first pass, but it is an architectural shortcut for hybrid sessions and not the final semantics
+  - the architectural shortcut is gone, but the model is still narrower than future source-specific override behavior
 
-### 5. Category-first adapter cleanup is still incomplete
-- Target direction:
-  - supported routes should prefer category-first family packaging when semantics are shared
-- Current implementation:
-  - `supported/behavior/` and `supported/tabular/` follow the intended pattern
-  - image and audio routes still live in top-level `supported/neuroconv_images.py` and `supported/neuroconv_audio.py`
-- Why this matters:
-  - the package layout is drifting toward two patterns at once, which will get harder to clean up as more supported routes land
-
-### 6. Structured logging is still concentrated in the runtime core, not all actionable paths
+### 4. Structured logging is improved but still incomplete outside the runtime core
 - Target direction:
   - actionable code paths should emit structured logging rather than relying on only UI state or exceptions
 - Current implementation:
   - logging is present in the core runtime path, supported execution, and executor layers
-  - session assembly, persistence, settings, and several desktop/UI flows are still lightly logged or unlogged
+  - desktop bootstrap, session assembly, direct-ingest workspace persistence, and settings persistence now emit structured logs as well
+  - persistence, review submission, and several desktop/UI interaction paths are still lighter than the target end state
 - Why this matters:
   - internal testing will generate harder-to-triage failures if only the conversion runtime is well instrumented
 
-### 7. `Open Session...` is still a JSON/bootstrap compatibility path, not a general project model
+### 5. `Open Session...` is still a JSON/bootstrap compatibility path, not a general project model
 - Target direction:
   - app-owned project/session files may exist later for reopen and saved work, but they should not define the primary ingest story
 - Current implementation:
@@ -1164,11 +1157,8 @@ Current status:
 - How should lab vocabularies be versioned and reviewed?
 - Which validation findings should block export by default for each lab profile or deployment mode?
 - Should app-owned saved state remain internal-only at first, or become an explicit `Save Project` / `Open Project` workflow after direct file/folder ingest lands?
-- Should the desktop app start on an empty shell / `New Session` workflow by default, or continue to reopen/load a session automatically at startup during internal testing?
-- How much of source grouping should be automatic versus explicitly confirmed by the user before preview/build?
-- When should source-role assignment become semantically meaningful beyond validation that at least one source is `primary`?
+- When should source-role semantics expand beyond review guidance and normalization precedence into provenance weighting, grouping, and deeper mapping policy?
 - Which metadata overrides should remain session-wide versus becoming source-specific when mixed inputs disagree?
-- Should image and audio routes be moved into category-first family packages now, or only when a broader `media/` or `imaging/` family lands?
 - How broad does structured logging need to be before internal testing is considered adequately instrumented?
 
 ## Decisions Log

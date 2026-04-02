@@ -71,7 +71,11 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Treat supported, custom, and hybrid pathways as different workflows over shared contracts, not as unrelated codepaths
 - Do not design the primary user workflow around hand-authored app-specific session JSON files
 - Prefer real file and folder ingestion, followed by inspection, grouping, classification, and explicit metadata override/review
+- For first-pass direct ingest, prefer automatic grouping heuristics first and add richer confirmation/correction workflows incrementally
+- For current desktop-facing startup behavior, prefer a direct-ingest `New Session` flow by default and keep JSON session loading as a compatibility, testing, or reopen path
 - App-owned session or project files may exist for internal persistence, reopen behavior, or future `Save Project` flows, but they should not be the required initial user input format
+- Session-wide metadata overrides must merge at the session/normalization layer rather than being injected through one source inspection result
+- For first-pass mixed-source conflict handling, treat source-role precedence as `primary > metadata > supplemental` and keep conflicting values reviewable
 - For supported-path conversions, check NeuroConv support before designing a custom parser or direct PyNWB converter
 - For supported proprietary or acquisition-system routes that NeuroConv documents, use direct NeuroConv conversion APIs as the primary execution path
 - Use UI/orchestration code to collect metadata and user selections, then feed those into NeuroConv rather than rebuilding supported conversion logic in custom PyNWB code
@@ -79,6 +83,7 @@ Note: if no remote repository is configured yet, prepare the branch and commit h
 - Prefer the simplest correct documented PyNWB container and method rather than wrapping built-in APIs without need
 - When `pynwb.file` or another standard PyNWB module solves the problem directly, use it instead of inventing a parallel abstraction
 - For software and workflows listed in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md), assume NeuroConv should be investigated first and used whenever feasible
+- Prefer category-first supported-adapter packaging when semantics are shared, including `behavior/`, `tabular/`, and `media/` families
 - Treat logging, progress reporting, and user-facing runtime status as explicit cross-layer contracts, not incidental UI behavior
 - Keep long-running conversions off the UI thread and route them through background workers, threads, or async-safe runtime services
 
