@@ -535,6 +535,33 @@ def test_conversion_widget_chooses_output_path(qapp, tmp_path: Path, monkeypatch
     window.close()
 
 
+def test_conversion_widget_preserves_selected_source_across_state_updates(qapp, tmp_path: Path) -> None:
+    session = make_hybrid_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    qapp.processEvents()
+    window.conversion_widget._source_list.setCurrentRow(1)
+    qapp.processEvents()
+    assert window.conversion_widget._source_role_label.text() == "supplemental"
+
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._source_list.currentItem() is not None
+    assert window.conversion_widget._source_list.currentItem().data(Qt.ItemDataRole.UserRole) == "custom"
+    assert window.conversion_widget._source_role_label.text() == "supplemental"
+    window.close()
+
+
 def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) -> None:
     session = make_session(tmp_path)
     validation_summary = ValidationSummary(

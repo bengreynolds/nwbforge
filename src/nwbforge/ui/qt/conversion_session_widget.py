@@ -466,6 +466,8 @@ class ConversionSessionWidget(QWidget):
         self._refresh_snapshot_actions()
 
     def _sync_sources(self, state: ConversionSessionScreenState) -> None:
+        selected_item = self._source_list.currentItem()
+        selected_source_id = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
         self._source_list.clear()
         for source in state.sources:
             item = QListWidgetItem(f"{source.label} [{source.source_type}]")
@@ -473,7 +475,13 @@ class ConversionSessionWidget(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, source.source_id)
             self._source_list.addItem(item)
         if self._source_list.count() > 0:
-            self._source_list.setCurrentRow(0)
+            restored_row = 0
+            if selected_source_id is not None:
+                for row in range(self._source_list.count()):
+                    if self._source_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_source_id:
+                        restored_row = row
+                        break
+            self._source_list.setCurrentRow(restored_row)
         else:
             self._sync_selected_source_details()
 
@@ -652,6 +660,10 @@ class ConversionSessionWidget(QWidget):
         self._selected_resolution_status_label.setText(
             "Resolution status: " + disagreement.resolution_status.replace("_", " ")
         )
+        selected_source_item = self._selected_disagreement_source_list.currentItem()
+        selected_source_id = (
+            selected_source_item.data(Qt.ItemDataRole.UserRole) if selected_source_item is not None else None
+        )
         self._selected_disagreement_source_list.clear()
         for source_value in disagreement.source_values:
             item = QListWidgetItem(
@@ -667,7 +679,13 @@ class ConversionSessionWidget(QWidget):
             item.setData(Qt.ItemDataRole.UserRole + 1, source_value.value)
             self._selected_disagreement_source_list.addItem(item)
         if self._selected_disagreement_source_list.count() > 0:
-            self._selected_disagreement_source_list.setCurrentRow(0)
+            restored_row = 0
+            if selected_source_id is not None:
+                for row in range(self._selected_disagreement_source_list.count()):
+                    if self._selected_disagreement_source_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_source_id:
+                        restored_row = row
+                        break
+            self._selected_disagreement_source_list.setCurrentRow(restored_row)
         note_lines = list(disagreement.notes)
         note_lines.extend(disagreement.resolution_notes)
         note_lines.extend(disagreement.resolution_history)
