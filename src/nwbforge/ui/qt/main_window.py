@@ -252,6 +252,10 @@ class MainWindow(QMainWindow):
         )
         self._file_menu.addAction(self._new_session_action)
 
+        self._new_project_action = QAction("New Project", self)
+        self._new_project_action.triggered.connect(self._new_project)
+        self._file_menu.addAction(self._new_project_action)
+
         self._open_project_action = QAction("Open Project...", self)
         self._open_project_action.triggered.connect(self._open_project_from_dialog)
         self._file_menu.addAction(self._open_project_action)
@@ -263,6 +267,10 @@ class MainWindow(QMainWindow):
         self._save_project_as_action = QAction("Save Project As...", self)
         self._save_project_as_action.triggered.connect(self._save_project_as)
         self._file_menu.addAction(self._save_project_as_action)
+
+        self._delete_project_action = QAction("Delete Project...", self)
+        self._delete_project_action.triggered.connect(self._delete_project)
+        self._file_menu.addAction(self._delete_project_action)
 
         self._open_session_action = QAction("Open Session...", self)
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
@@ -349,6 +357,67 @@ class MainWindow(QMainWindow):
             return
 
         self._load_project(Path(selected_path))
+
+    def _new_project(self) -> None:
+        self._session_assembly_screen_model.reset()
+        self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="project:new",
+                message="Started a new direct-ingest project draft.",
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+
+    def _delete_project(self) -> None:
+        state = self._session_assembly_screen_model.state
+        project_path = state.project_path
+        has_workspace_content = bool(state.selected_paths or state.metadata_overrides or state.source_metadata_overrides)
+        if project_path is None and not has_workspace_content:
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="project:delete:noop",
+                    message="No direct-ingest project is currently loaded.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=False,
+                )
+            )
+            return
+
+        if project_path is not None:
+            prompt_text = f"Delete the current project file?\n{project_path}"
+        else:
+            prompt_text = "Delete the current unsaved direct-ingest project draft?"
+        response = QMessageBox.question(
+            self,
+            "Delete Project",
+            prompt_text,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if response is not QMessageBox.StandardButton.Yes:
+            return
+
+        if project_path is not None and project_path.exists():
+            project_path.unlink()
+        self._session_assembly_screen_model.reset()
+        self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="project:deleted",
+                message=(
+                    f"Deleted project {project_path.name}."
+                    if project_path is not None
+                    else "Deleted the current unsaved project draft."
+                ),
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
 
     def _save_project(self) -> None:
         project_path = self._session_assembly_screen_model.state.project_path
@@ -896,6 +965,9 @@ class MainWindow(QMainWindow):
     def _apply_session_assembly_state(self, state: SessionAssemblyState) -> None:
         self._save_project_action.setEnabled(bool(state.selected_paths))
         self._save_project_as_action.setEnabled(bool(state.selected_paths))
+        self._delete_project_action.setEnabled(
+            bool(state.project_path or state.selected_paths or state.metadata_overrides or state.source_metadata_overrides)
+        )
         if self._workspace_tabs.currentWidget() is self._session_assembly_dialog:
             self._sync_tab_header(self._workspace_tabs.currentIndex())
 

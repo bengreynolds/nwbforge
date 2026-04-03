@@ -1336,6 +1336,63 @@ def test_main_window_opens_and_saves_project_from_direct_ingest(qapp, tmp_path: 
     window.close()
 
 
+def test_main_window_can_start_and_delete_direct_ingest_projects(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    project_path = tmp_path / "projects" / "delete-me.nwbforge-project.json"
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path)], "All supported inputs (*.*)"),
+    )
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (str(project_path), "NWB Forge projects (*.nwbforge-project.json)"),
+    )
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "question",
+        lambda *args, **kwargs: main_window_module.QMessageBox.StandardButton.Yes,
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    window._save_project_as_action.trigger()
+    qapp.processEvents()
+
+    assert project_path.exists() is True
+
+    window._delete_project_action.trigger()
+    qapp.processEvents()
+    assert project_path.exists() is False
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
+    assert dialog._input_list.count() == 0
+    assert dialog._project_label.text() == "Unsaved project"
+
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    assert dialog._input_list.count() == 1
+
+    window._new_project_action.trigger()
+    qapp.processEvents()
+    assert dialog._input_list.count() == 0
+    assert dialog._project_label.text() == "Unsaved project"
+    window.close()
+
+
 def test_main_window_restores_new_session_draft(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
