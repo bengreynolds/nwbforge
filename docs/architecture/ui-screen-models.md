@@ -1,6 +1,6 @@
 # UI Screen Model Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-03
 
 ## Purpose
 
@@ -53,25 +53,36 @@ Responsibilities:
 - submit preview work through `ConversionExecutor`
 - submit write/validation work through `ConversionExecutor`
 - consume `PipelineProgressEvent` updates directly
+- retain a bounded progress-history timeline for manual-testing diagnostics
 - surface `PipelineRuntimeError` user messages into screen state
 - project validation issues into UI-facing acknowledgement items
 - project pending mixed-source normalized conflicts into a dedicated metadata-review workspace
 - apply and clear session-wide metadata overrides directly from that metadata-review workspace
+- apply manual typed session-wide metadata overrides directly from that metadata-review workspace
+- apply and clear source-specific metadata overrides directly from that metadata-review workspace
+- project override-resolution summaries so widgets can distinguish pending conflicts from already-resolved ones
+- project resolution status/history so widgets can explain why a field is still pending or already resolved
 - project generated provenance artifacts into UI-facing artifact items
 - capture reviewer name, rationale, override, and acknowledgement state for review submission
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
 - persist latest preview, execution, and review state through `SessionPersistenceService` when desktop persistence is configured
 - recover the latest saved snapshot on session load when desktop persistence is configured
+- list persisted snapshot history for the currently loaded session
+- restore one selected saved snapshot version from the conversion workspace
+- honor settings-driven auto-recovery and snapshot-history retention behavior
 
 Current scope:
 - one loaded session at a time
-- in-memory interaction state backed by latest-state snapshot persistence in the real desktop path
+- in-memory interaction state backed by latest-state and bounded-history snapshot persistence in the real desktop path
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
 - review controls are intentionally attached to the same session workflow instead of a separate review screen
 - the same screen model now supports demo sessions plus real supported/custom/hybrid desktop sessions loaded through the desktop bootstrap module
 - persistence failures are surfaced as translated user-facing errors rather than being swallowed inside the screen model
 - recovered state currently restores latest artifacts, validation issues, review status, and last known output path without attempting to recreate a full execution object
+- explicit snapshot restore now exists, but it still restores saved state rather than reconstructing a live execution object
+- metadata review now supports both session-wide and source-specific override actions, but it is still not a full field-history or conflict-policy engine
+- runtime diagnostics now include a UI-facing progress-history timeline, but the screen model still does not export fuller diagnostic bundles or log attachments automatically
 
 ### `SessionAssemblyScreenModel`
 
@@ -82,6 +93,9 @@ Responsibilities:
 - call `SessionAssemblyService` whenever selected inputs, draft session id, draft title, source roles, or session-wide metadata overrides change
 - persist and restore explicit direct-ingest project files
 - carry source-specific metadata overrides for selected sources
+- carry explicit group-confirmation state for detected dataset groups
+- carry dataset-kind and anchor-path context for detected groups
+- carry grouping-reason text and member summaries for detected groups
 - expose suggested pathway, source summaries, and reviewable assembly issues to widgets
 - create a real `ConversionSession` once the assembled draft is acceptable
 
@@ -91,8 +105,9 @@ Current scope:
 - source-role assignment is now available for `primary`, `supplemental`, and `metadata` inputs
 - session-wide metadata overrides are now available for a narrow canonical field set before preview/build
 - source-specific metadata overrides are now available for the same narrow canonical field set
-- first-class direct-ingest groups are now available for the draft workflow, including group pathway/count summaries and review flags
-- bulk group actions are now available for renaming a detected group and moving selected sources into a named group
+- first-class direct-ingest groups are now available for the draft workflow, including group pathway/count summaries, grouping reasons, member summaries, and review flags
+- bulk group actions are now available for renaming a detected group, confirming it, splitting selected sources or a selected group into individual groups, and moving selected sources into a named group
+- reviewable grouped bundles now block draft session creation until confirmed
 - draft assembly state now persists so `New Session` can reopen in-progress work
 - explicit saved-project identity now persists through reopened draft state as well
 
@@ -102,7 +117,7 @@ Location: `src/nwbforge/ui/settings.py`
 
 Responsibilities:
 - load persisted desktop settings through `UiSettingsService`
-- manage draft settings for verbose logging and file-log configuration
+- manage draft settings for verbose logging, file-log configuration, latest-snapshot auto-recovery, recent-item retention, and snapshot-history retention
 - validate required settings such as the log-file path when file logging is enabled
 - save settings back through the service without exposing persistence details to widgets
 - expose applied settings separately from unsaved draft changes so the shell can reconfigure runtime behavior only after save
@@ -153,6 +168,6 @@ The current Qt layer is intentionally thin:
 
 ## Immediate follow-on work
 
-1. Expand direct session assembly from the current heuristic grouping, first-class group summaries, current group-action baseline, simple sidecar association, saved-project baseline, and current session/source override model into richer dataset confirmation and field-by-field disagreement resolution workflows.
+1. Expand direct session assembly from the current heuristic grouping, first-class group summaries, current group-confirmation/group-action baseline, simple sidecar association, saved-project baseline, and current session/source override model into richer dataset/session modeling and field-by-field disagreement resolution workflows.
 2. Expand the Qt layer with additional screens and persisted view state on top of the current review-capable conversion workflow.
 3. Strengthen multi-source presentation and source-specific disagreement workflows once direct session assembly fully replaces JSON-first startup as the primary UX.

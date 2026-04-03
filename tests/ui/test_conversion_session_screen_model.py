@@ -194,6 +194,8 @@ def test_conversion_session_screen_model_loads_and_runs_preview() -> None:
     assert screen.state.session == preview.session
     assert screen.state.progress_event is not None
     assert screen.state.progress_event.stage is PipelineStage.INSPECTING
+    assert len(screen.state.progress_history) >= 1
+    assert screen.state.progress_history[-1].stage == PipelineStage.INSPECTING.value
     assert screen.state.is_preview_running is False
     assert screen.state.can_run_execution is True
 
@@ -228,6 +230,8 @@ def test_conversion_session_screen_model_runs_execution_after_preview() -> None:
     assert screen.state.output_path == Path("C:/tmp/output.nwb")
     assert screen.state.progress_event is not None
     assert screen.state.progress_event.stage is PipelineStage.WRITING
+    assert len(screen.state.progress_history) >= 2
+    assert screen.state.progress_history[-1].stage == PipelineStage.WRITING.value
     assert screen.state.is_execution_running is False
     assert screen.state.validation_issues == ()
 
@@ -334,6 +338,8 @@ def test_conversion_session_screen_model_projects_metadata_disagreements_from_pr
     assert disagreement.canonical_key == "subject.subject_id"
     assert disagreement.resolved_value == "primary-mouse-01"
     assert [item.source_id for item in disagreement.source_values] == ["manifest", "custom"]
+    assert disagreement.resolution_status == "pending"
+    assert disagreement.resolution_history == ("No override history recorded for this field yet.",)
 
 
 def test_conversion_session_screen_model_applies_session_override_from_metadata_disagreement() -> None:
@@ -430,6 +436,76 @@ def test_conversion_session_screen_model_can_clear_session_override() -> None:
     assert state.session is not None
     assert state.session.metadata_overrides == {}
     assert "Cleared session override" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_can_apply_source_override() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.apply_source_override("manifest", "subject.subject_id", "source-specific-mouse-01")
+
+    assert state.session is not None
+    assert state.session.source_metadata_overrides["manifest"]["subject.subject_id"] == "source-specific-mouse-01"
+    assert state.preview is None
+    assert "Applied source override" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_can_clear_source_override() -> None:
+    session = make_session()
+    session = ConversionSession(
+        session_id=session.session_id,
+        pathway=session.pathway,
+        status=session.status,
+        sources=session.sources,
+        source_metadata_overrides={"manifest": {"subject.subject_id": "source-specific-mouse-01"}},
+    )
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.clear_source_override("manifest", "subject.subject_id")
+
+    assert state.session is not None
+    assert state.session.source_metadata_overrides == {}
+    assert "Cleared source override" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_can_clear_all_field_overrides() -> None:
+    session = ConversionSession(
+        session_id="session-ui-04",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=Path("C:/tmp/session_manifest.json"),
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=Path("C:/tmp/custom_session.json"),
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+        metadata_overrides={"subject.subject_id": "session-value"},
+        source_metadata_overrides={"custom": {"subject.subject_id": "source-value"}},
+    )
+    preview = make_preview(session)
+    screen = ConversionSessionScreenModel(FakeConversionExecutor(preview_result=preview))
+
+    screen.load_session(session)
+    state = screen.clear_all_field_overrides("subject.subject_id")
+
+    assert state.session is not None
+    assert state.session.metadata_overrides == {}
+    assert state.session.source_metadata_overrides == {}
+    assert "Cleared all overrides" in (state.review_message or "")
 
 
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:
@@ -617,3 +693,51 @@ def test_conversion_session_screen_model_recovers_latest_snapshot_on_load() -> N
         assert state.validation_issues[0].is_acknowledged is True
         assert state.reviewer_name == "alice"
         assert "Recovered review approved by alice." == state.review_message
+        assert len(state.snapshot_history) >= 2
+
+
+def test_conversion_session_screen_model_can_restore_selected_snapshot() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    execution = make_execution(preview)
+
+    with TemporaryDirectory() as temp_dir:
+        persistence_service = SessionPersistenceService(
+            JsonSessionSnapshotStore(Path(temp_dir) / "session-state", history_limit=5)
+        )
+        persistence_service.persist_preview(preview)
+        persistence_service.persist_execution(execution)
+        screen = ConversionSessionScreenModel(
+            FakeConversionExecutor(preview_result=preview, execution_result=execution),
+            persistence_service=persistence_service,
+        )
+
+        state = screen.load_session(session)
+        preview_snapshot_id = state.snapshot_history[-1].snapshot_id
+        restored = screen.restore_snapshot(preview_snapshot_id)
+
+        assert restored.execution is None
+        assert restored.persisted_validation_summary is None
+        assert "Restored snapshot" in (restored.recovery_message or "")
+
+
+def test_conversion_session_screen_model_can_disable_snapshot_recovery_on_load() -> None:
+    session = make_session()
+    preview = make_preview(session)
+
+    with TemporaryDirectory() as temp_dir:
+        persistence_service = SessionPersistenceService(
+            JsonSessionSnapshotStore(Path(temp_dir) / "session-state")
+        )
+        persistence_service.persist_preview(preview)
+        screen = ConversionSessionScreenModel(
+            FakeConversionExecutor(preview_result=preview),
+            persistence_service=persistence_service,
+            restore_latest_snapshot_on_load=False,
+        )
+
+        state = screen.load_session(session)
+
+        assert state.preview is None
+        assert state.generated_artifacts == ()
+        assert state.recovery_message == "Saved snapshot recovery is disabled in settings."

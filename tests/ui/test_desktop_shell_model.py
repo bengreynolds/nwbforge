@@ -91,3 +91,27 @@ def test_desktop_shell_model_tracks_log_sink_entries() -> None:
     assert len(shell.state.log_entries) == 1
     assert shell.state.log_entries[0].message == "Test log entry"
     assert shell.state.log_entries[0].context["session_id"] == "sess-1"
+
+
+def test_desktop_shell_model_notifies_new_listeners_on_next_update_only() -> None:
+    shell = DesktopShellModel()
+    notifications: list[str] = []
+    subscribed_second_listener = False
+
+    def second_listener(state) -> None:
+        notifications.append(f"second:{state.active_dialog}")
+
+    def first_listener(state) -> None:
+        nonlocal subscribed_second_listener
+        notifications.append(f"first:{state.active_dialog}")
+        if not subscribed_second_listener:
+            subscribed_second_listener = True
+            shell.subscribe(second_listener, emit_initial=False)
+
+    shell.subscribe(first_listener, emit_initial=False)
+
+    shell.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+    assert notifications.count("second:new_session") == 0
+
+    shell.close_active_dialog()
+    assert notifications.count("second:None") == 1

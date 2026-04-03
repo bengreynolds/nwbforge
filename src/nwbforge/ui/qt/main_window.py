@@ -9,7 +9,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QDesktopServices
 from PySide6.QtCore import QUrl
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar, QTabWidget, QVBoxLayout, QWidget
 
 from nwbforge.app.logging import get_logger, log_event
 from nwbforge.domain.models import ConversionSession
@@ -37,10 +37,11 @@ from nwbforge.ui.settings import SettingsScreenModel
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.qt.conversion_session_widget import ConversionSessionWidget
 from nwbforge.ui.qt.log_viewer import LogViewerDockWidget
-from nwbforge.ui.qt.nwb_viewer_window import NwbViewerWindow
+from nwbforge.ui.qt.nwb_viewer_widget import NwbViewerWidget
 from nwbforge.ui.qt.package_dialog import PackageInstallerDialog
 from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.ui.qt.settings_dialog import SettingsDialog
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
 class MainWindow(QMainWindow):
@@ -63,7 +64,8 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("NWB Forge")
-        self.resize(1120, 760)
+        self.resize(1220, 820)
+        apply_window_chrome(self)
 
         self._shell_model = shell_model
         self._settings_screen_model = settings_screen_model
@@ -78,7 +80,6 @@ class MainWindow(QMainWindow):
         self._session_loader = session_loader or self._default_session_loader
         self._recent_session_actions: list[QAction] = []
         self._recent_project_actions: list[QAction] = []
-        self._viewer_windows: list[NwbViewerWindow] = []
         self._last_recorded_output_directory: Path | None = None
         self._last_error_signature: tuple[str, str, str | None, str] | None = None
         self._viewer_log_sink = log_sink or InMemoryUiLogSink()
@@ -97,24 +98,51 @@ class MainWindow(QMainWindow):
             artifact_opener=self._open_artifact_path,
             artifact_revealer=self._reveal_artifact_path,
         )
-        self.setCentralWidget(self._conversion_widget)
-
-        self._log_dock = LogViewerDockWidget(self)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self._log_dock)
-        self._log_dock.hide()
-
-        self._package_dialog = PackageInstallerDialog(self._package_screen_model, self)
-        self._package_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
-
         self._session_assembly_dialog = SessionAssemblyDialog(
             self._session_assembly_screen_model,
             self,
             session_created=self._load_built_session,
         )
-        self._session_assembly_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
-
+        self._session_assembly_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._package_dialog = PackageInstallerDialog(self._package_screen_model, self)
+        self._package_dialog.dismissed.connect(self._shell_model.close_active_dialog)
         self._settings_dialog = SettingsDialog(self._settings_screen_model, self)
-        self._settings_dialog.finished.connect(lambda _: self._shell_model.close_active_dialog())
+        self._settings_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._nwb_viewer_widget = NwbViewerWidget(parent=self)
+        self._nwb_viewer_widget.status_message_changed.connect(self.statusBar().showMessage)
+
+        (
+            self._workspace_header,
+            self._workspace_title_label,
+            self._workspace_subtitle_label,
+            self._workspace_badge_label,
+        ) = build_page_header(
+            "Conversion Workspace",
+            "Create sessions, review metadata, run conversions, and inspect generated artifacts in one desktop workflow.",
+            badge_text="Direct Ingest Ready",
+            parent=self,
+        )
+
+        self._workspace_tabs = QTabWidget(self)
+        self._workspace_tabs.setDocumentMode(True)
+        self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
+        self._workspace_tabs.addTab(self._session_assembly_dialog, "New Session")
+        self._workspace_tabs.addTab(self._package_dialog, "Packages")
+        self._workspace_tabs.addTab(self._settings_dialog, "Settings")
+        self._workspace_tabs.addTab(self._nwb_viewer_widget, "NWB Viewer")
+        self._workspace_tabs.currentChanged.connect(self._sync_tab_header)
+
+        central = QWidget(self)
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(18, 18, 18, 18)
+        central_layout.setSpacing(14)
+        central_layout.addWidget(self._workspace_header)
+        central_layout.addWidget(self._workspace_tabs, 1)
+        self.setCentralWidget(central)
+
+        self._log_dock = LogViewerDockWidget(self)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self._log_dock)
+        self._log_dock.hide()
 
         self._shell_bridge = StateBridge(self)
         self._shell_bridge.state_changed.connect(self._apply_shell_state)
@@ -135,6 +163,7 @@ class MainWindow(QMainWindow):
         self._conversion_bridge = StateBridge(self)
         self._conversion_bridge.state_changed.connect(self._apply_conversion_state)
         self._conversion_screen_model.subscribe(self._conversion_bridge.publish)
+        self._sync_tab_header(self._workspace_tabs.currentIndex())
 
     @property
     def conversion_widget(self) -> ConversionSessionWidget:
@@ -153,12 +182,20 @@ class MainWindow(QMainWindow):
         return self._settings_dialog
 
     @property
+    def nwb_viewer_widget(self) -> NwbViewerWidget:
+        return self._nwb_viewer_widget
+
+    @property
     def log_dock(self) -> LogViewerDockWidget:
         return self._log_dock
 
     @property
     def file_menu(self):
         return self._file_menu
+
+    @property
+    def workspace_tabs(self) -> QTabWidget:
+        return self._workspace_tabs
 
     @property
     def log_sink(self) -> UiLogSubscriptionSink:
@@ -214,7 +251,7 @@ class MainWindow(QMainWindow):
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
         self._file_menu.addAction(self._open_session_action)
 
-        self._open_nwb_viewer_action = QAction("Open NWB Viewer...", self)
+        self._open_nwb_viewer_action = QAction("Open NWB...", self)
         self._open_nwb_viewer_action.triggered.connect(self._open_nwb_viewer_from_dialog)
         self._file_menu.addAction(self._open_nwb_viewer_action)
 
@@ -274,12 +311,12 @@ class MainWindow(QMainWindow):
     def _open_nwb_viewer_from_dialog(self) -> None:
         selected_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open NWB Viewer",
+            "Open NWB File",
             str(Path.cwd()),
             "NWB files (*.nwb);;All files (*)",
         )
         if not selected_path:
-            log_event(self._logger, logging.DEBUG, "Open NWB Viewer dialog canceled.")
+            log_event(self._logger, logging.DEBUG, "Open NWB dialog canceled.")
             return
         self.open_nwb_viewer(Path(selected_path))
 
@@ -532,6 +569,7 @@ class MainWindow(QMainWindow):
             default_output_path=str(default_output_path),
         )
         self._conversion_screen_model.set_output_path(default_output_path)
+        self._workspace_tabs.setCurrentWidget(self._conversion_widget)
 
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
         output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
@@ -664,18 +702,15 @@ class MainWindow(QMainWindow):
         )
         return False
 
-    def open_nwb_viewer(self, file_path: Path | None = None) -> NwbViewerWindow:
-        viewer = NwbViewerWindow(file_path=file_path, parent=None)
-        viewer.destroyed.connect(lambda _: self._viewer_windows.remove(viewer) if viewer in self._viewer_windows else None)
-        self._viewer_windows.append(viewer)
-        viewer.show()
-        viewer.raise_()
-        viewer.activateWindow()
+    def open_nwb_viewer(self, file_path: Path | None = None) -> NwbViewerWidget:
         if file_path is not None:
-            log_event(self._logger, logging.INFO, "Opened standalone NWB viewer window.", nwb_path=str(file_path))
+            self._nwb_viewer_widget.open_file(file_path)
+        self._workspace_tabs.setCurrentWidget(self._nwb_viewer_widget)
+        if file_path is not None:
+            log_event(self._logger, logging.INFO, "Opened NWB file in integrated viewer.", nwb_path=str(file_path))
         else:
-            log_event(self._logger, logging.INFO, "Opened standalone NWB viewer window.")
-        return viewer
+            log_event(self._logger, logging.INFO, "Focused integrated NWB viewer tab.")
+        return self._nwb_viewer_widget
 
     @staticmethod
     def _default_session_loader(session_path: Path) -> ConversionSession:
@@ -689,27 +724,18 @@ class MainWindow(QMainWindow):
         self._log_dock.setVisible(state.is_log_viewer_visible)
         self._log_dock.set_entries(state.log_entries)
         self._show_user_error_if_needed(state.last_user_error)
-
-        if state.active_dialog == "settings" and not self._settings_dialog.isVisible():
-            self._settings_dialog.show()
-            self._settings_dialog.raise_()
-            self._settings_dialog.activateWindow()
-        elif state.active_dialog != "settings" and self._settings_dialog.isVisible():
-            self._settings_dialog.hide()
-
-        if state.active_dialog == "new_session" and not self._session_assembly_dialog.isVisible():
-            self._session_assembly_dialog.show()
-            self._session_assembly_dialog.raise_()
-            self._session_assembly_dialog.activateWindow()
-        elif state.active_dialog != "new_session" and self._session_assembly_dialog.isVisible():
-            self._session_assembly_dialog.hide()
-
-        if state.active_dialog == "install_packages" and not self._package_dialog.isVisible():
-            self._package_dialog.show()
-            self._package_dialog.raise_()
-            self._package_dialog.activateWindow()
-        elif state.active_dialog != "install_packages" and self._package_dialog.isVisible():
-            self._package_dialog.hide()
+        if state.active_dialog == "settings":
+            self._workspace_tabs.setCurrentWidget(self._settings_dialog)
+        elif state.active_dialog == "new_session":
+            self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
+        elif state.active_dialog == "install_packages":
+            self._workspace_tabs.setCurrentWidget(self._package_dialog)
+        elif state.active_dialog is None and self._workspace_tabs.currentWidget() in {
+            self._settings_dialog,
+            self._session_assembly_dialog,
+            self._package_dialog,
+        }:
+            self._workspace_tabs.setCurrentWidget(self._conversion_widget)
 
     def _show_user_error_if_needed(self, error: UserFacingError | None) -> None:
         if error is None:
@@ -736,6 +762,12 @@ class MainWindow(QMainWindow):
         if state.applied_settings != self._applied_settings:
             self._applied_settings = state.applied_settings
             self._configure_logging(state.applied_settings)
+            self._conversion_screen_model.set_restore_latest_snapshot_on_load(
+                state.applied_settings.restore_latest_snapshot_on_load
+            )
+            self._conversion_screen_model.set_snapshot_history_limit(
+                state.applied_settings.snapshot_history_limit
+            )
 
         if state.user_error is not None:
             self._shell_model.set_status_bar(
@@ -786,6 +818,7 @@ class MainWindow(QMainWindow):
             )
 
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
+        self._sync_workspace_header(state)
         if state.output_path is not None:
             candidate_directory = state.output_path.parent.resolve()
             if candidate_directory != self._last_recorded_output_directory:
@@ -832,3 +865,67 @@ class MainWindow(QMainWindow):
     def _apply_session_assembly_state(self, state: SessionAssemblyState) -> None:
         self._save_project_action.setEnabled(bool(state.selected_paths))
         self._save_project_as_action.setEnabled(bool(state.selected_paths))
+        if self._workspace_tabs.currentWidget() is self._session_assembly_dialog:
+            self._sync_tab_header(self._workspace_tabs.currentIndex())
+
+    def _sync_tab_header(self, index: int) -> None:
+        widget = self._workspace_tabs.widget(index)
+        if widget is self._conversion_widget:
+            self._sync_workspace_header(self._conversion_screen_model.state)
+            return
+        if widget is self._session_assembly_dialog:
+            self._workspace_title_label.setText("New Conversion Session")
+            self._workspace_subtitle_label.setText(
+                "Add files or folders, review grouped bundles, and assemble a draft session inside the main workspace."
+            )
+            if self._workspace_badge_label is not None:
+                self._workspace_badge_label.setText("Direct Ingest")
+            return
+        if widget is self._package_dialog:
+            self._workspace_title_label.setText("Extensions / Packages")
+            self._workspace_subtitle_label.setText(
+                "Manage route-based optional dependencies in the current development environment without leaving the main window."
+            )
+            if self._workspace_badge_label is not None:
+                self._workspace_badge_label.setText("Environment")
+            return
+        if widget is self._settings_dialog:
+            self._workspace_title_label.setText("Settings")
+            self._workspace_subtitle_label.setText(
+                "Review desktop preferences, verbose logging, and file-log behavior in the same workspace."
+            )
+            if self._workspace_badge_label is not None:
+                self._workspace_badge_label.setText("Preferences")
+            return
+        if widget is self._nwb_viewer_widget:
+            self._workspace_title_label.setText("NWB Viewer")
+            self._workspace_subtitle_label.setText(
+                "Inspect any NWB file in read-only mode without opening a separate application window."
+            )
+            if self._workspace_badge_label is not None:
+                self._workspace_badge_label.setText("Read Only")
+            return
+
+    def _sync_workspace_header(self, state: ConversionSessionScreenState) -> None:
+        if self._workspace_tabs.currentWidget() is not self._conversion_widget:
+            return
+        if state.session is None:
+            self._workspace_title_label.setText("Conversion Workspace")
+            self._workspace_subtitle_label.setText(
+                "Start a new conversion session, review grouped inputs, and run preview or write workflows."
+            )
+            if self._workspace_badge_label is not None:
+                self._workspace_badge_label.setText("Awaiting Session")
+            return
+
+        source_count = len(state.session.sources)
+        project_text = f"{state.session.pathway.value.title()} pathway | {source_count} source"
+        if source_count != 1:
+            project_text += "s"
+        if state.output_path is not None:
+            project_text += f" | Output: {state.output_path.name}"
+        self._workspace_title_label.setText(state.session.session_id)
+        self._workspace_subtitle_label.setText(project_text)
+        if self._workspace_badge_label is not None:
+            badge_text = state.progress_event.stage.value if state.progress_event is not None else state.session.status.value
+            self._workspace_badge_label.setText(badge_text.replace("_", " ").title())

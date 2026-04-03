@@ -75,6 +75,37 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
                     "rate": NormalizedValue(20.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
                 },
             ),
+            AcquisitionStream(
+                stream_id="camera-frames",
+                name=NormalizedValue("Camera Frames", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="imaging",
+                source_ids=("source-3",),
+                description=NormalizedValue("Inline imaging frames", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                metadata={
+                    "data": NormalizedValue(
+                        [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    ),
+                    "unit": NormalizedValue("n/a", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "rate": NormalizedValue(5.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
+            AcquisitionStream(
+                stream_id="probe-voltage",
+                name=NormalizedValue("Probe Voltage", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="ecephys",
+                source_ids=("source-4",),
+                description=NormalizedValue("Inline electrical recording", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                metadata={
+                    "data": NormalizedValue(
+                        [[0.1, 0.2], [0.3, 0.4]],
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                    ),
+                    "unit": NormalizedValue("volts", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "rate": NormalizedValue(30000.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "electrode_location": NormalizedValue("CA1", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
         ),
         time_interval_tables=(
             NormalizedTimeIntervalTable(
@@ -162,6 +193,13 @@ def test_pynwb_assembly_service_writes_minimal_nwb_file(tmp_path: Path) -> None:
             [1.5, 2.5],
             [3.0, 4.0],
         ]
+        assert "Camera Frames" in nwbfile.acquisition
+        assert nwbfile.acquisition["Camera Frames"].data[:].tolist() == [
+            [[1, 2], [3, 4]],
+            [[5, 6], [7, 8]],
+        ]
+        assert "Probe Voltage" in nwbfile.acquisition
+        assert nwbfile.acquisition["Probe Voltage"].data[:].tolist() == [[0.1, 0.2], [0.3, 0.4]]
         assert nwbfile.trials is not None
         assert nwbfile.trials["start_time"][:].tolist() == [0.5, 1.2]
         stop_times = nwbfile.trials["stop_time"][:].tolist()

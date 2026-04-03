@@ -6,3 +6,5 @@ dependencies:
   - python=3.11
   - pip
   - pytest=7.4
+  - pip:
+      - -e .[audio,alphaomega,axon,axona,biocam,blackrock,brukertiff,caiman,cellexplorer,cnmfe,deeplabcut,edf,excel,extract,femtonics,hdf5,image,inscopix,intan,kilosort,lightningpose,mcsraw,maxone,mearec,medpc,micromanager,miniscope,neuralynx,neuroscope,openephys_binary,openephys_legacy,phy,plexon,plexon2,scanbox,scanimage,scanimage_legacy,sleap,spikegadgets,spikeglx,suite2p,tdt,tdt_fiber_photometry,thor,tiff,videos,whitematter]

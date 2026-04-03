@@ -12,7 +12,7 @@ from nwbforge.domain.models.normalization import (
     NormalizedTimeIntervalTable,
     TimeIntervalRow,
 )
-from nwbforge.domain.models.persistence import SessionSnapshot
+from nwbforge.domain.models.persistence import SessionSnapshot, SessionSnapshotHistoryEntry
 from nwbforge.domain.models.provenance import ProvenanceArtifact, ProvenanceRecord
 from nwbforge.domain.models.review import ExecutionReviewRecord
 from nwbforge.domain.models.session import ConversionSession, SourceReference
@@ -36,6 +36,7 @@ __all__ = [
     "ProvenanceRecord",
     "ReviewIssue",
     "SessionSnapshot",
+    "SessionSnapshotHistoryEntry",
     "SourceReference",
     "TimeIntervalRow",
     "ValidationIssue",

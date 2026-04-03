@@ -73,7 +73,8 @@ class PackageInstallerScreenModel:
         self._set_state(next_state)
         return self.preview_install()
 
-    def set_install_mode(self, install_mode: InstallMode) -> PackageInstallerState:
+    def set_install_mode(self, install_mode: InstallMode | str) -> PackageInstallerState:
+        install_mode = InstallMode(install_mode)
         if install_mode is InstallMode.MINIMAL:
             next_state = replace(
                 self._state,
@@ -113,7 +114,8 @@ class PackageInstallerScreenModel:
         self._set_state(next_state)
         return self.preview_install()
 
-    def select_preset(self, preset: InstallPreset) -> PackageInstallerState:
+    def select_preset(self, preset: InstallPreset | str) -> PackageInstallerState:
+        preset = InstallPreset(preset)
         install_mode = InstallMode.SELECTED
         selected_routes = self._state.selected_routes
         if preset is not InstallPreset.CUSTOM:

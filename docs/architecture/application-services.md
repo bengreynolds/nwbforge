@@ -80,6 +80,10 @@ Responsibilities:
 - promote detected groups into first-class draft state with pathway and composition summaries
 - support explicit per-source grouping correction on top of those heuristics
 - support lightweight dataset-level grouping actions over selected sources on top of those heuristics
+- persist explicit group-confirmation state for draft groups and project files
+- expose dataset-kind and anchor-path context for direct-ingest groups
+- expose grouping-reason text and group-member summaries for direct-ingest bundles
+- require confirmation for reviewable grouped bundles before draft session creation can complete
 - detect simple same-stem metadata sidecars before session creation
 - carry both session-wide and source-specific metadata overrides into the assembled session model
 - surface no-match and ambiguous-match conditions as reviewable issues
@@ -112,6 +116,16 @@ Responsibilities:
 
 This keeps standalone NWB viewing backend-first and widget-thin instead of embedding PyNWB traversal rules directly inside the Qt layer.
 
+### `NwbWidgetsPanelRenderer`
+
+Location: `src/nwbforge/app/services/nwb_viewer_rich.py`
+
+Responsibilities:
+- detect whether optional `nwbwidgets` and `panel` dependencies are available
+- expose a small availability/support contract for selected viewer nodes
+- launch a richer browser-backed preview session for the selected node when available
+- keep richer rendering optional and separate from the base `NwbFileController` path
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
@@ -122,10 +136,11 @@ This keeps standalone NWB viewing backend-first and widget-thin instead of embed
 - future UI setup and package-management screens should use thin controller bindings over backend services instead of embedding planning or runtime wiring in widgets
 - direct file/folder ingestion should go through `SessionAssemblyService` instead of pushing adapter-discovery logic into the Qt layer
 - standalone NWB viewing should go through `NwbFileController` instead of embedding PyNWB file traversal directly in the Qt widgets
+- optional rich NWB rendering should stay behind a distinct renderer service so the base viewer remains usable without web/notebook tooling
 
 ## Immediate follow-on work
 
-1. Expand session assembly from current path selection, heuristic grouping, first-class group summaries, group actions, simple sidecar association, explicit project files, and current session/source override support into richer dataset confirmation and post-preview conflict-resolution workflows.
+1. Expand session assembly from current path selection, heuristic grouping, first-class group summaries, group confirmation, current group actions, simple sidecar association, explicit project files, and current session/source override support into richer dataset/session modeling and post-preview conflict-resolution workflows.
 2. Keep broadening the desktop UI while preserving small controller/service boundaries.
 3. Continue operational hardening for internal testing and saved-state recovery.
 4. Expand standalone NWB viewing beyond the current generic lazy tree/detail baseline only when a specific richer renderer is justified.

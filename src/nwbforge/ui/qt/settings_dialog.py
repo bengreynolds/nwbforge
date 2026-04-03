@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSignalBlocker
+from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
-    QDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -18,15 +19,18 @@ from PySide6.QtWidgets import (
 from nwbforge.ui.models import SettingsScreenState
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.settings import SettingsScreenModel
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
-class SettingsDialog(QDialog):
-    """Dialog bound to `SettingsScreenModel`."""
+class SettingsDialog(QWidget):
+    """Embedded panel bound to `SettingsScreenModel`."""
+
+    dismissed = Signal()
 
     def __init__(self, screen_model: SettingsScreenModel, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Settings")
-        self.resize(560, 260)
+        self.resize(640, 360)
+        apply_window_chrome(self)
         self._screen_model = screen_model
 
         self._verbose_checkbox = QCheckBox("Enable verbose logging", self)
@@ -38,6 +42,17 @@ class SettingsDialog(QDialog):
         self._log_path_edit = QLineEdit(self)
         self._log_path_edit.textChanged.connect(self._screen_model.set_log_file_path)
 
+        self._restore_snapshot_checkbox = QCheckBox("Restore latest snapshot when loading a session", self)
+        self._restore_snapshot_checkbox.toggled.connect(self._screen_model.set_restore_latest_snapshot_on_load)
+
+        self._recent_item_limit_spin = QSpinBox(self)
+        self._recent_item_limit_spin.setRange(1, 25)
+        self._recent_item_limit_spin.valueChanged.connect(self._screen_model.set_recent_item_limit)
+
+        self._snapshot_history_limit_spin = QSpinBox(self)
+        self._snapshot_history_limit_spin.setRange(1, 50)
+        self._snapshot_history_limit_spin.valueChanged.connect(self._screen_model.set_snapshot_history_limit)
+
         self._status_label = QLabel("Loading settings...", self)
         self._status_label.setWordWrap(True)
 
@@ -46,12 +61,37 @@ class SettingsDialog(QDialog):
         form_layout.addRow(self._file_logging_checkbox)
         form_layout.addRow("Log file path", self._log_path_edit)
 
+        recovery_layout = QFormLayout()
+        recovery_layout.addRow(self._restore_snapshot_checkbox)
+        recovery_layout.addRow("Recent history size", self._recent_item_limit_spin)
+        recovery_layout.addRow("Snapshot history size", self._snapshot_history_limit_spin)
+
         self._save_button = QPushButton("Save", self)
         self._save_button.clicked.connect(self._screen_model.save)
         self._discard_button = QPushButton("Discard", self)
         self._discard_button.clicked.connect(self._screen_model.discard_changes)
         self._close_button = QPushButton("Close", self)
         self._close_button.clicked.connect(self.reject)
+        self._discard_button.setProperty("secondary", True)
+        self._close_button.setProperty("secondary", True)
+
+        (
+            self._header_frame,
+            self._header_title_label,
+            self._header_subtitle_label,
+            self._header_badge_label,
+        ) = build_page_header(
+            "Settings",
+            "Control desktop logging behavior, file-log mirroring, and other persisted local preferences.",
+            badge_text="Desktop Preferences",
+            parent=self,
+        )
+
+        logging_group = QGroupBox("Logging", self)
+        logging_group.setLayout(form_layout)
+
+        recovery_group = QGroupBox("Recovery and History", self)
+        recovery_group.setLayout(recovery_layout)
 
         button_row = QHBoxLayout()
         button_row.addWidget(self._save_button)
@@ -63,7 +103,11 @@ class SettingsDialog(QDialog):
         button_widget.setLayout(button_row)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form_layout)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+        layout.addWidget(self._header_frame)
+        layout.addWidget(logging_group)
+        layout.addWidget(recovery_group)
         layout.addWidget(self._status_label)
         layout.addWidget(button_widget)
 
@@ -71,6 +115,9 @@ class SettingsDialog(QDialog):
         self._bridge.state_changed.connect(self._apply_state)
         self._screen_model.subscribe(self._bridge.publish)
         self._screen_model.load()
+
+    def reject(self) -> None:
+        self.dismissed.emit()
 
     def _apply_state(self, state: SettingsScreenState) -> None:
         with QSignalBlocker(self._verbose_checkbox):
@@ -82,6 +129,15 @@ class SettingsDialog(QDialog):
         with QSignalBlocker(self._log_path_edit):
             if self._log_path_edit.text() != state.log_file_path:
                 self._log_path_edit.setText(state.log_file_path)
+
+        with QSignalBlocker(self._restore_snapshot_checkbox):
+            self._restore_snapshot_checkbox.setChecked(state.restore_latest_snapshot_on_load)
+
+        with QSignalBlocker(self._recent_item_limit_spin):
+            self._recent_item_limit_spin.setValue(state.recent_item_limit)
+
+        with QSignalBlocker(self._snapshot_history_limit_spin):
+            self._snapshot_history_limit_spin.setValue(state.snapshot_history_limit)
 
         self._log_path_edit.setEnabled(state.file_logging_enabled)
         self._discard_button.setEnabled(state.has_unsaved_changes)

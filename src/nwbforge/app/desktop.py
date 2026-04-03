@@ -9,6 +9,7 @@ import logging
 
 from nwbforge.adapters import AdapterRegistry, CustomJsonSessionAdapter, SessionManifestAdapter
 from nwbforge.app.logging import get_logger, log_event
+from nwbforge.app.packages.catalog import route_dependencies_available
 from nwbforge.app.packages import (
     PackageCommandRunner,
     PackageInstallationService,
@@ -66,6 +67,10 @@ class DesktopAppServices:
 LOGGER = get_logger(__name__)
 
 
+def _all_routes_available(*route_names: str) -> bool:
+    return all(route_dependencies_available(route_name) for route_name in route_names)
+
+
 def build_adapter_registry() -> AdapterRegistry:
     """Build the default desktop adapter registry from available adapters."""
 
@@ -77,16 +82,130 @@ def build_adapter_registry() -> AdapterRegistry:
 
     for adapter_name in (
         "NeuroConvCsvTimeIntervalsAdapter",
-        "NeuroConvExcelTimeIntervalsAdapter",
-        "NeuroConvImageAdapter",
         "NeuroConvFicTracAdapter",
-        "NeuroConvDeepLabCutAdapter",
-        "NeuroConvAudioAdapter",
     ):
         adapter_cls = getattr(adapters_module, adapter_name, None)
         if adapter_cls is None:
             continue
         registry.register(adapter_cls())
+
+    optional_routes = (
+        ("alphaomega", "NeuroConvAlphaOmegaAdapter"),
+        ("axon", "NeuroConvAxonAdapter"),
+        ("axona", "NeuroConvAxonaAdapter"),
+        ("biocam", "NeuroConvBiocamAdapter"),
+        ("blackrock", "NeuroConvBlackrockAdapter"),
+        ("blackrock", "NeuroConvBlackrockSortingAdapter"),
+        ("brukertiff", "NeuroConvBrukerTiffSinglePlaneAdapter"),
+        ("brukertiff", "NeuroConvBrukerTiffMultiPlaneAdapter"),
+        ("caiman", "NeuroConvCaimanSegmentationAdapter"),
+        ("cellexplorer", "NeuroConvCellExplorerSortingAdapter"),
+        ("cnmfe", "NeuroConvCnmfeSegmentationAdapter"),
+        ("excel", "NeuroConvExcelTimeIntervalsAdapter"),
+        ("edf", "NeuroConvEdfAdapter"),
+        ("extract", "NeuroConvExtractSegmentationAdapter"),
+        ("femtonics", "NeuroConvFemtonicsAdapter"),
+        ("image", "NeuroConvImageAdapter"),
+        ("audio", "NeuroConvAudioAdapter"),
+        ("videos", "NeuroConvVideoAdapter"),
+        ("deeplabcut", "NeuroConvDeepLabCutAdapter"),
+        ("inscopix", "NeuroConvInscopixAdapter"),
+        ("inscopix", "NeuroConvInscopixSegmentationAdapter"),
+        ("lightningpose", "NeuroConvLightningPoseAdapter"),
+        ("kilosort", "NeuroConvKiloSortSortingAdapter"),
+        ("mcsraw", "NeuroConvMCSRawAdapter"),
+        ("maxone", "NeuroConvMaxOneAdapter"),
+        ("mearec", "NeuroConvMEArecAdapter"),
+        ("medpc", "NeuroConvMedPCAdapter"),
+        ("neuralynx", "NeuroConvNeuralynxNvtAdapter"),
+        ("sleap", "NeuroConvSLEAPAdapter"),
+        ("intan", "NeuroConvIntanAdapter"),
+        ("neuralynx", "NeuroConvNeuralynxAdapter"),
+        ("neuralynx", "NeuroConvNeuralynxSortingAdapter"),
+        ("neuroscope", "NeuroConvNeuroScopeAdapter"),
+        ("neuroscope", "NeuroConvNeuroScopeSortingAdapter"),
+        ("openephys_binary", "NeuroConvOpenEphysBinaryAnalogAdapter"),
+        ("openephys_binary", "NeuroConvOpenEphysBinaryAdapter"),
+        ("openephys_legacy", "NeuroConvOpenEphysLegacyAdapter"),
+        ("plexon", "NeuroConvPlexonAdapter"),
+        ("plexon", "NeuroConvPlexonSortingAdapter"),
+        ("plexon2", "NeuroConvPlexon2Adapter"),
+        ("phy", "NeuroConvPhySortingAdapter"),
+        ("spike2", "NeuroConvSpike2Adapter"),
+        ("spikegadgets", "NeuroConvSpikeGadgetsAdapter"),
+        ("spikeglx", "NeuroConvSpikeGLXAdapter"),
+        ("suite2p", "NeuroConvSuite2pSegmentationAdapter"),
+        ("tdt", "NeuroConvTdtAdapter"),
+        ("tdt_fiber_photometry", "NeuroConvTdtFiberPhotometryAdapter"),
+        ("whitematter", "NeuroConvWhiteMatterAdapter"),
+        ("hdf5", "NeuroConvHdf5ImagingAdapter"),
+        ("micromanager", "NeuroConvMicroManagerTiffAdapter"),
+        ("miniscope", "NeuroConvMiniscopeAdapter"),
+        ("scanbox", "NeuroConvScanboxAdapter"),
+        ("scanimage", "NeuroConvScanImageAdapter"),
+        ("scanimage_legacy", "NeuroConvScanImageLegacyAdapter"),
+        ("tiff", "NeuroConvTiffImagingAdapter"),
+        ("thor", "NeuroConvThorAdapter"),
+    )
+    for route_name, adapter_name in optional_routes:
+        if not route_dependencies_available(route_name):
+            log_event(
+                LOGGER,
+                logging.DEBUG,
+                "Skipping optional supported adapter because route dependencies are not installed.",
+                route_name=route_name,
+                adapter_name=adapter_name,
+            )
+            continue
+        adapter_cls = getattr(adapters_module, adapter_name, None)
+        if adapter_cls is None:
+            log_event(
+                LOGGER,
+                logging.WARNING,
+                "Route dependencies are installed but the adapter export is unavailable.",
+                route_name=route_name,
+                adapter_name=adapter_name,
+            )
+            continue
+        registry.register(adapter_cls())
+
+    workflow_routes = (
+        (
+            ("spikeglx", "phy"),
+            "NeuroConvSpikeGLXPhyWorkflowAdapter",
+            {
+                "recording": "neuroconv_spikeglx",
+                "sorting": "neuroconv_phy_sorting",
+            },
+        ),
+        (
+            ("tiff", "suite2p"),
+            "NeuroConvTiffSuite2pWorkflowAdapter",
+            {
+                "imaging": "neuroconv_tiff_imaging",
+                "segmentation": "neuroconv_suite2p_segmentation",
+            },
+        ),
+        (
+            ("openephys_binary", "deeplabcut"),
+            "NeuroConvOpenEphysDeepLabCutWorkflowAdapter",
+            {
+                "recording": "neuroconv_openephys_binary",
+                "behavior": "neuroconv_deeplabcut",
+            },
+        ),
+    )
+    for required_routes, workflow_name, delegate_map in workflow_routes:
+        if not _all_routes_available(*required_routes):
+            continue
+        workflow_cls = getattr(adapters_module, workflow_name, None)
+        if workflow_cls is None:
+            continue
+        try:
+            delegates = {role: registry.get(adapter_id) for role, adapter_id in delegate_map.items()}
+        except KeyError:
+            continue
+        registry.register_workflow(workflow_cls(delegates))
 
     return registry
 
@@ -161,12 +280,16 @@ def build_desktop_services(
     conversion_executor = ThreadedConversionExecutor(pipeline_service)
     review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
     persistence_service = SessionPersistenceService(
-        JsonSessionSnapshotStore(app_state_dir / "session-state")
+        JsonSessionSnapshotStore(
+            app_state_dir / "session-state",
+            history_limit=settings_screen_model.state.applied_settings.snapshot_history_limit,
+        )
     )
     conversion_screen_model = ConversionSessionScreenModel(
         conversion_executor,
         review_service=review_service,
         persistence_service=persistence_service,
+        restore_latest_snapshot_on_load=settings_screen_model.state.applied_settings.restore_latest_snapshot_on_load,
     )
 
     return DesktopAppServices(

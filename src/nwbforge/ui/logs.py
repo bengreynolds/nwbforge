@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import json
 import logging
 from pathlib import Path
+from threading import Lock
 from typing import Any, Callable, Protocol
 
 
@@ -52,20 +53,26 @@ class InMemoryUiLogSink:
     def __init__(self, *, capacity: int = 200) -> None:
         self._entries: deque[UiLogEntry] = deque(maxlen=capacity)
         self._listeners: list[UiLogListener] = []
+        self._lock = Lock()
 
     def append(self, entry: UiLogEntry) -> None:
-        self._entries.append(entry)
-        snapshot = self.entries()
-        for listener in self._listeners:
+        with self._lock:
+            self._entries.append(entry)
+            snapshot = tuple(self._entries)
+            listeners = tuple(self._listeners)
+        for listener in listeners:
             listener(snapshot)
 
     def entries(self) -> tuple[UiLogEntry, ...]:
-        return tuple(self._entries)
+        with self._lock:
+            return tuple(self._entries)
 
     def subscribe(self, listener: UiLogListener, *, emit_initial: bool = True) -> None:
-        self._listeners.append(listener)
+        with self._lock:
+            self._listeners.append(listener)
+            snapshot = tuple(self._entries)
         if emit_initial:
-            listener(self.entries())
+            listener(snapshot)
 
 
 class FileUiLogSink:
@@ -88,7 +95,7 @@ class FileUiLogSink:
             "context": entry.context,
         }
         with self._path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload, sort_keys=True))
+            handle.write(json.dumps(payload, sort_keys=True, default=str))
             handle.write("\n")
 
     def entries(self) -> tuple[UiLogEntry, ...]:
@@ -129,11 +136,13 @@ class UiLogHandler(logging.Handler):
         context = getattr(record, "nwbforge_context", {})
         if not isinstance(context, dict):
             context = {"raw_context": context}
+        created_at = datetime.fromtimestamp(record.created, tz=UTC)
         self._sink.append(
             UiLogEntry(
                 level_name=record.levelname,
                 message=message,
                 logger_name=record.name,
                 context=dict(context),
+                created_at=created_at,
             )
         )

@@ -23,17 +23,153 @@ audio = [
   "ndx-sound>=0.2,<0.3",
   "scipy>=1.13,<2",
 ]
+alphaomega = [
+  "neuroconv[alphaomega]>=0.9,<0.10",
+]
+axon = [
+  "spikeinterface>=0.103,<0.104",
+]
+axona = [
+  "neuroconv[axona]>=0.9,<0.10",
+]
+biocam = [
+  "neuroconv[biocam]>=0.9,<0.10",
+]
+blackrock = [
+  "neuroconv[blackrock]>=0.9,<0.10",
+]
+cellexplorer = [
+  "neuroconv[cellexplorer]>=0.9,<0.10",
+]
+brukertiff = [
+  "neuroconv[brukertiff]>=0.9,<0.10",
+]
+caiman = [
+  "neuroconv[caiman]>=0.9,<0.10",
+]
 deeplabcut = [
   "ndx-pose>=0.2,<0.3",
+]
+cnmfe = [
+  "neuroconv[cnmfe]>=0.9,<0.10",
+]
+edf = [
+  "spikeinterface>=0.103,<0.104",
+  "pyedflib>=0.1,<0.2",
+]
+femtonics = [
+  "neuroconv[femtonics]>=0.9,<0.10",
+]
+extract = [
+  "neuroconv[extract]>=0.9,<0.10",
+]
+intan = [
+  "neuroconv[intan]>=0.9,<0.10",
+]
+kilosort = [
+  "neuroconv[kilosort]>=0.9,<0.10",
+]
+inscopix = [
+  "neuroconv[inscopix]>=0.9,<0.10",
+]
+neuralynx = [
+  "neuroconv[neuralynx]>=0.9,<0.10",
+]
+lightningpose = [
+  "ndx-pose>=0.2,<0.3",
+  "opencv-python-headless>=4.10,<5",
+]
+mcsraw = [
+  "neuroconv[mcsraw]>=0.9,<0.10",
+]
+maxone = [
+  "neuroconv[maxwell]>=0.9,<0.10",
+]
+medpc = [
+  "neuroconv[medpc]>=0.9,<0.10",
+]
+mearec = [
+  "neuroconv[mearec]>=0.9,<0.10",
 ]
 excel = [
   "openpyxl>=3.1,<4",
 ]
+hdf5 = [
+  "h5py>=3.10,<4",
+  "roiextractors>=0.6,<0.8",
+]
 image = [
   "pillow>=10,<12",
 ]
+micromanager = [
+  "neuroconv[micromanagertiff]>=0.9,<0.10",
+]
+miniscope = [
+  "neuroconv[miniscope]>=0.9,<0.10",
+]
+neuroscope = [
+  "neuroconv[neuroscope]>=0.9,<0.10",
+]
+sleap = [
+  "neuroconv[sleap]>=0.9,<0.10",
+]
+thor = [
+  "neuroconv[thor]>=0.9,<0.10",
+]
+openephys_binary = [
+  "spikeinterface>=0.103,<0.104",
+]
+openephys_legacy = [
+  "neuroconv[openephys]>=0.9,<0.10",
+]
+plexon = [
+  "neuroconv[plexon]>=0.9,<0.10",
+]
+plexon2 = [
+  "neuroconv[plexon2]>=0.9,<0.10",
+]
+phy = [
+  "neuroconv[phy]>=0.9,<0.10",
+]
+scanbox = [
+  "neuroconv[ophys]>=0.9,<0.10",
+]
+suite2p = [
+  "neuroconv[suite2p]>=0.9,<0.10",
+]
+spike2 = [
+  "neuroconv[spike2]>=0.9,<0.10",
+]
+spikegadgets = [
+  "spikeinterface>=0.103,<0.104",
+]
+spikeglx = [
+  "spikeinterface>=0.103,<0.104",
+]
+tiff = [
+  "neuroconv[ophys]>=0.9,<0.10",
+]
+tdt = [
+  "neuroconv[tdt]>=0.9,<0.10",
+]
+tdt_fiber_photometry = [
+  "neuroconv[tdt-fp]>=0.9,<0.10",
+]
+videos = [
+  "opencv-python-headless>=4.10,<5",
+]
+viewer_rich = [
+  "nwbwidgets>=0.11,<0.12",
+  "panel>=1.8,<2",
+]
+whitematter = [
+  "neuroconv[whitematter]>=0.9,<0.10",
+]
 scanimage = [
   "neuroconv[scanimage]>=0.9,<0.10",
+]
+scanimage_legacy = [
+  "neuroconv[scanimage_legacy]>=0.9,<0.10",
 ]
 
 [tool.setuptools]

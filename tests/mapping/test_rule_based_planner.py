@@ -90,6 +90,28 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
                     "rate": NormalizedValue(20.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
                 },
             ),
+            AcquisitionStream(
+                stream_id="camera-frames",
+                name=NormalizedValue("Camera Frames", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="imaging",
+                source_ids=("source-2",),
+                metadata={
+                    "data": NormalizedValue([[[1, 2], [3, 4]]], origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "unit": NormalizedValue("n/a", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "rate": NormalizedValue(5.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
+            AcquisitionStream(
+                stream_id="probe-voltage",
+                name=NormalizedValue("Probe Voltage", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                modality="ecephys",
+                source_ids=("source-3",),
+                metadata={
+                    "data": NormalizedValue([[0.1, 0.2], [0.3, 0.4]], origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "unit": NormalizedValue("volts", origin=ValueOrigin.ADAPTER_EXTRACTED),
+                    "rate": NormalizedValue(30000.0, origin=ValueOrigin.ADAPTER_EXTRACTED),
+                },
+            ),
         ),
     )
 
@@ -109,6 +131,8 @@ def test_rule_based_planner_maps_core_session_and_subject_fields() -> None:
     assert "BehavioralTimeSeries[behavior].TimeSeries[lick-trace].unit" in target_paths
     assert "Position[position].SpatialSeries[animal-position].data" in target_paths
     assert "Position[position].SpatialSeries[animal-position].reference_frame" in target_paths
+    assert "ImageSeries[camera-frames].data" in target_paths
+    assert "ElectricalSeries[probe-voltage].data" in target_paths
     assert any(decision.action == MappingAction.MERGE for decision in plan.decisions)
 
 

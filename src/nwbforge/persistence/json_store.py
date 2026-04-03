@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from nwbforge.domain.contracts import SessionSnapshotStore
 from nwbforge.domain.enums import (
@@ -21,6 +22,7 @@ from nwbforge.domain.models import (
     ProvenanceArtifact,
     ProvenanceRecord,
     SessionSnapshot,
+    SessionSnapshotHistoryEntry,
     SourceReference,
     ValidationIssue,
     ValidationReviewOutcome,
@@ -31,16 +33,40 @@ from nwbforge.domain.models import (
 class JsonSessionSnapshotStore(SessionSnapshotStore):
     """Persist session snapshots as JSON files under a configurable base directory."""
 
-    def __init__(self, base_dir: str | Path = Path("artifacts") / "session-state") -> None:
+    def __init__(
+        self,
+        base_dir: str | Path = Path("artifacts") / "session-state",
+        *,
+        history_limit: int = 10,
+    ) -> None:
         self._base_dir = Path(base_dir)
+        self._history_limit = max(int(history_limit), 1)
+
+    @property
+    def history_limit(self) -> int:
+        return self._history_limit
+
+    def set_history_limit(self, history_limit: int) -> None:
+        self._history_limit = max(int(history_limit), 1)
 
     def save(self, snapshot: SessionSnapshot) -> ProvenanceArtifact:
-        snapshot_path = self.snapshot_path(snapshot.session.session_id)
+        normalized_snapshot = self._with_snapshot_identity(snapshot)
+        snapshot_path = self.snapshot_path(normalized_snapshot.session.session_id)
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         snapshot_path.write_text(
-            json.dumps(self._serialize_snapshot(snapshot), indent=2, sort_keys=True),
+            json.dumps(self._serialize_snapshot(normalized_snapshot), indent=2, sort_keys=True),
             encoding="utf-8",
         )
+        history_path = self.version_path(
+            normalized_snapshot.session.session_id,
+            normalized_snapshot.snapshot_id or "latest",
+        )
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        history_path.write_text(
+            json.dumps(self._serialize_snapshot(normalized_snapshot), indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        self._trim_history(normalized_snapshot.session.session_id)
         return ProvenanceArtifact(
             artifact_type="session_snapshot",
             location=snapshot_path,
@@ -54,13 +80,58 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
         payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
         return self._deserialize_snapshot(payload)
 
+    def list_history(self, session_id: str) -> tuple[SessionSnapshotHistoryEntry, ...]:
+        history_dir = self.history_dir(session_id)
+        if not history_dir.exists():
+            return ()
+        entries: list[SessionSnapshotHistoryEntry] = []
+        for snapshot_path in sorted(history_dir.glob("*.json"), reverse=True):
+            payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            snapshot = self._deserialize_snapshot(payload)
+            if snapshot.snapshot_id is None or snapshot.saved_at is None:
+                continue
+            issue_count = len(snapshot.validation_summary.issues) if snapshot.validation_summary is not None else 0
+            artifact_count = (
+                len(snapshot.provenance_record.generated_artifacts)
+                if snapshot.provenance_record is not None
+                else 0
+            )
+            entries.append(
+                SessionSnapshotHistoryEntry(
+                    snapshot_id=snapshot.snapshot_id,
+                    session_id=snapshot.session.session_id,
+                    saved_at=snapshot.saved_at,
+                    location=snapshot_path,
+                    status=snapshot.session.status.value,
+                    artifact_count=artifact_count,
+                    issue_count=issue_count,
+                    has_review_record=snapshot.review_record is not None,
+                )
+            )
+        return tuple(sorted(entries, key=lambda entry: entry.saved_at, reverse=True))
+
+    def load_version(self, session_id: str, snapshot_id: str) -> SessionSnapshot | None:
+        snapshot_path = self.version_path(session_id, snapshot_id)
+        if not snapshot_path.exists():
+            return None
+        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        return self._deserialize_snapshot(payload)
+
     def snapshot_path(self, session_id: str) -> Path:
         return self._base_dir / session_id / "session-state.json"
+
+    def history_dir(self, session_id: str) -> Path:
+        return self._base_dir / session_id / "history"
+
+    def version_path(self, session_id: str, snapshot_id: str) -> Path:
+        return self.history_dir(session_id) / f"{snapshot_id}.json"
 
     @staticmethod
     def _serialize_snapshot(snapshot: SessionSnapshot) -> dict[str, object]:
         return {
             "schema_version": 1,
+            "snapshot_id": snapshot.snapshot_id,
+            "saved_at": snapshot.saved_at.isoformat() if snapshot.saved_at is not None else None,
             "session": JsonSessionSnapshotStore._serialize_session(snapshot.session),
             "provenance_record": JsonSessionSnapshotStore._serialize_provenance(snapshot.provenance_record),
             "validation_summary": JsonSessionSnapshotStore._serialize_validation_summary(
@@ -73,6 +144,12 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
     @staticmethod
     def _deserialize_snapshot(payload: dict[str, object]) -> SessionSnapshot:
         return SessionSnapshot(
+            snapshot_id=None if payload.get("snapshot_id") is None else str(payload["snapshot_id"]),
+            saved_at=(
+                None
+                if payload.get("saved_at") is None
+                else datetime.fromisoformat(str(payload["saved_at"]))
+            ),
             session=JsonSessionSnapshotStore._deserialize_session(payload["session"]),
             provenance_record=JsonSessionSnapshotStore._deserialize_provenance(
                 payload.get("provenance_record")
@@ -85,6 +162,26 @@ class JsonSessionSnapshotStore(SessionSnapshotStore):
             ),
             review_record=JsonSessionSnapshotStore._deserialize_review_record(payload.get("review_record")),
         )
+
+    @staticmethod
+    def _with_snapshot_identity(snapshot: SessionSnapshot) -> SessionSnapshot:
+        snapshot_id = snapshot.snapshot_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + f"-{uuid4().hex[:8]}"
+        saved_at = snapshot.saved_at or datetime.now(UTC)
+        return SessionSnapshot(
+            snapshot_id=snapshot_id,
+            saved_at=saved_at,
+            session=snapshot.session,
+            provenance_record=snapshot.provenance_record,
+            validation_summary=snapshot.validation_summary,
+            review_outcome=snapshot.review_outcome,
+            review_record=snapshot.review_record,
+        )
+
+    def _trim_history(self, session_id: str) -> None:
+        history = self.list_history(session_id)
+        for entry in history[self._history_limit :]:
+            if entry.location.exists():
+                entry.location.unlink()
 
     @staticmethod
     def _serialize_session(session: ConversionSession) -> dict[str, object]:

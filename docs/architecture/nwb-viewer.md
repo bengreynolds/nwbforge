@@ -1,12 +1,12 @@
-# Standalone NWB Viewer
+# NWB Viewer
 
 Last updated: 2026-04-01
 
 ## Purpose
 
-This note documents the first standalone NWB viewer path for the local desktop app.
+This note documents the current NWB viewer path for the local desktop app.
 
-The viewer is intentionally separate from the conversion workflow surface:
+The viewer is intentionally separate from the conversion workflow logic even though it now lives inside the same main application window by default:
 - conversion screens stay focused on ingest, preview, write, validation, and review
 - the viewer handles generic read-only inspection of arbitrary `.nwb` files
 - generated outputs and external NWB files use the same viewer path
@@ -46,16 +46,37 @@ Responsibilities:
 - show small tabular previews for `DynamicTable` objects
 - show bounded array/time-series preview text without forcing full-file traversal
 
+### `NwbViewerWidget`
+
+Location: `src/nwbforge/ui/qt/nwb_viewer_widget.py`
+
+Responsibilities:
+- own the integrated viewer state for the main desktop shell
+- support `File -> Open NWB...`
+- support `Reload`
+- optionally support `Open Rich Preview` for the selected node when optional renderer packages are installed
+- host the tree/detail split view and default expansion behavior
+- emit status messages back to the shell without needing a second top-level window lifecycle
+
 ### `NwbViewerWindow`
 
 Location: `src/nwbforge/ui/qt/nwb_viewer_window.py`
 
 Responsibilities:
-- own a standalone top-level viewer lifecycle
-- support `File -> Open NWB...`
-- support `Reload`
-- keep viewer state independent from the main conversion shell
-- host the tree/detail split view and default expansion behavior
+- provide a thin standalone wrapper around `NwbViewerWidget`
+- keep compatibility for direct programmatic or manual viewer launch
+- avoid becoming the primary routine viewer path inside the desktop shell
+
+### `NwbWidgetsPanelRenderer`
+
+Location: `src/nwbforge/app/services/nwb_viewer_rich.py`
+
+Responsibilities:
+- remain optional and unavailable unless both `nwbwidgets` and `panel` are installed
+- wrap the selected NWB node with `nwbwidgets.nwb2widget(...)`
+- serve that widget through a small Panel session
+- open the resulting rich preview in a browser without changing the base Qt viewer architecture
+- keep richer rendering outside the base viewer contract so the default path remains lightweight
 
 ## Read-only behavior
 
@@ -68,7 +89,7 @@ Responsibilities:
 - top-level sections map to major NWB groups when present, including metadata, acquisition, processing, stimulus, intervals, analysis, scratch, lab metadata, units, and electrodes
 - all nodes start collapsed on load
 - the `Metadata` node is expanded initially when available
-- expanding one node loads only that node’s immediate children
+- expanding one node loads only that node's immediate children
 - selecting a node updates the detail pane without changing unrelated expansion state
 - explicit actions now include:
   - `Expand All`
@@ -78,19 +99,27 @@ Responsibilities:
 
 ## Desktop integration
 
-- the main shell now exposes `File -> Open NWB Viewer...`
-- opening a generated `.nwb` artifact from the conversion workspace now launches the standalone viewer window instead of delegating to the operating system
-- `scripts/run_app.py --view-nwb <path>` can open the desktop app and a preloaded viewer window for manual testing
+- the main shell now exposes `File -> Open NWB...`
+- opening a generated `.nwb` artifact from the conversion workspace now loads that file into the integrated viewer tab instead of delegating to the operating system
+- `scripts/run_app.py --view-nwb <path>` can open the desktop app with the viewer tab preloaded for manual testing
+- inside the viewer surface, `Render -> Open Rich Preview` is enabled only when the optional renderer is installed and a node is selected
+
+## Optional renderer path
+
+- the base viewer path depends only on `PyNWB` and the desktop Qt layer
+- the optional rich renderer path uses `nwbwidgets + Panel`
+- the optional dependency group is exposed through the project extra `viewer_rich`
+- notebook/web tooling is still not a hard dependency of the local app baseline
 
 ## Current limitations
 
-- initial file open still happens synchronously in the current process; lazy traversal and bounded previews are the main protection against slow loads
+- initial file open still happens synchronously in the current process; lazy traversal, bounded previews, and single-window reuse are the main protection against slow loads
 - the viewer currently uses generic text/table previews instead of modality-specific plots
-- `nwbwidgets` is not yet integrated; richer renderers remain optional follow-on work rather than a base dependency
+- `nwbwidgets` integration is now available only as an optional browser-backed rich preview layer, not as a base dependency
 - raw HDF5 fallback traversal is intentionally absent from the first baseline
 
 ## Immediate follow-on work
 
 1. Add more specialized node renderers where generic text/table previews are not sufficient.
 2. Consider background loading only if it can be done without compromising read-only file-handle correctness.
-3. Add richer viewer launch affordances from the desktop shell once the broader local-app workflow settles.
+3. Keep viewer behavior integrated into the main shell unless a later use case clearly justifies another separate top-level window.

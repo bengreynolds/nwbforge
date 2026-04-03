@@ -31,6 +31,7 @@ class RoutePackageSpec:
     display_name: str
     extra_name: str
     description: str
+    required_modules: tuple[str, ...] = ()
     implemented_in_code: bool = False
 
 

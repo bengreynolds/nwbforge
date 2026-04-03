@@ -1,6 +1,6 @@
 # Package Management Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 ## Purpose
 
@@ -10,6 +10,8 @@ This note captures the current route-based dependency-management direction for d
 
 Package installation is framed around supported route names rather than raw dependency names. Examples:
 - `DeepLabCut`
+- `Axon / ABF`
+- `MedPC`
 - `ScanImage`
 - `Audio`
 - `Excel`
@@ -30,10 +32,39 @@ The repository now includes a Python package-planning layer under `src/nwbforge/
 
 Current route package catalog examples:
 - `audio`
+- `alphaomega`
+- `axon`
+- `axona`
+- `biocam`
+- `blackrock`
+- `brukertiff`
 - `deeplabcut`
+- `edf`
+- `femtonics`
+- `lightningpose`
+- `inscopix`
+- `mcsraw`
+- `medpc`
 - `excel`
+- `hdf5`
 - `image`
+- `micromanager`
+- `miniscope`
+- `neuralynx`
+- `neuroscope`
+- `openephys_binary`
+- `openephys_legacy`
+- `plexon`
+- `sleap`
+- `spikegadgets`
+- `spikeglx`
+- `tdt`
+- `thor`
+- `videos`
+- `whitematter`
 - `scanimage`
+- `scanimage_legacy`
+- `intan`
 
 ## Setup modes
 
@@ -86,6 +117,52 @@ Current service responsibilities:
 - emit install progress events and structured failure information
 - expose one thin UI-facing binding for route listing, preview, saved selection loading, and background install submission
 - run install execution off the UI thread for future setup and extension-install screens
+
+## Availability gating
+
+The route package catalog is now also used as the first runtime availability gate for optional supported adapters.
+
+Current rule:
+- optional supported routes are implemented in code only when useful
+- they are only registered into the active desktop adapter registry when the current environment satisfies the curated dependency gate for that route
+- package installation and route availability therefore use the same route names and the same shared catalog
+
+Examples:
+- `deeplabcut` depends on `ndx_pose`
+- `lightningpose` depends on `cv2` and `ndx_pose`
+- `sleap` depends on `sleap_io` and `ndx_pose`
+- `medpc` depends on `ndx_events`
+- `alphaomega` depends on `spikeinterface`
+- `axon` depends on `spikeinterface`
+- `axona` depends on `spikeinterface`
+- `blackrock` depends on `spikeinterface`
+- `edf` depends on `spikeinterface` and `pyedflib`
+- `videos` depends on `cv2`
+- `hdf5` depends on `h5py` and `roiextractors`
+- `brukertiff` depends on `roiextractors`, `tifffile`, and `natsort`
+- `femtonics` depends on `roiextractors` and `h5py`
+- `inscopix` depends on `roiextractors` and `isx`
+- `scanimage` depends on `roiextractors` and `tifffile`
+- `scanimage_legacy` depends on `roiextractors` and `tifffile`
+- `biocam` depends on `spikeinterface`
+- `mcsraw` depends on `spikeinterface`
+- `intan` depends on `spikeinterface`
+- `neuralynx` depends on `spikeinterface` and `natsort`
+- `neuroscope` depends on `spikeinterface` and `lxml`
+- `openephys_binary` depends on `spikeinterface`
+- `openephys_legacy` depends on `spikeinterface`
+- `plexon` depends on `spikeinterface`
+- `spikegadgets` depends on `spikeinterface`
+- `spikeglx` depends on `spikeinterface`
+- `tdt` depends on `spikeinterface`
+- `whitematter` depends on `spikeinterface`
+
+This keeps optional routes out of direct-ingest matching and supported execution until the corresponding route package has actually been installed.
+
+In some cases one install gate enables more than one adapter because the same software stack supports more than one route shape:
+- `brukertiff` enables both Bruker single-plane and Bruker multi-plane adapters
+- `neuralynx` enables both Neuralynx recording and Neuralynx NVT adapters
+- `openephys_binary` enables both OpenEphys Binary recording and OpenEphys Binary analog adapters
 
 ## Future UI expectations
 

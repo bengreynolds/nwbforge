@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from nwbforge.adapters import AdapterCapabilities, AdapterRegistry
+from nwbforge.adapters.neuroconv import NeuroConvWorkflowAdapter, NeuroConvWorkflowRouteConfig, WorkflowSourceRequirement
 from nwbforge.app.services import (
     AdapterSelectionError,
     RegistrySourceInspectionService,
@@ -43,6 +45,42 @@ class DummyAdapter:
                     source_id=source.source_id,
                 )
             },
+        )
+
+
+class DummyWorkflowAdapter(NeuroConvWorkflowAdapter):
+    route_config = NeuroConvWorkflowRouteConfig(
+        adapter_id="dummy_workflow",
+        display_name="Dummy Workflow",
+        source_requirements=(
+            WorkflowSourceRequirement(
+                role="recording",
+                source_types=(SourceType.DIRECTORY,),
+                required_adapter_hints=("alpha",),
+            ),
+            WorkflowSourceRequirement(
+                role="sorting",
+                source_types=(SourceType.DIRECTORY,),
+                required_adapter_hints=("recording",),
+            ),
+        ),
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def inspect_matched_sources(
+        self,
+        matched_sources: dict[str, SourceReference],
+    ) -> tuple[ExtractionResult, ...]:
+        return tuple(
+            ExtractionResult(
+                source_id=source.source_id,
+                adapter_id=self.adapter_id,
+                record_type=f"workflow_{role}",
+                notes=(f"Matched role {role}.",),
+            )
+            for role, source in matched_sources.items()
         )
 
 
@@ -139,6 +177,34 @@ def test_registry_source_inspection_applies_source_specific_metadata_overrides()
     assert result.fields["subject.subject_id"].value == "override-mouse-01"
     assert result.fields["subject.subject_id"].is_user_override is True
     assert "Applied from source-specific metadata override." in result.fields["subject.subject_id"].notes
+
+
+def test_registry_source_inspection_can_use_workflow_adapter_for_whole_session() -> None:
+    registry = AdapterRegistry()
+    registry.register(DummyAdapter(adapter_id="alpha"))
+    registry.register(DummyAdapter(adapter_id="recording"))
+    registry.register_workflow(DummyWorkflowAdapter())
+    session = make_session(
+        SourceReference(
+            source_id="source-1",
+            location=Path("data/source-1"),
+            source_type=SourceType.DIRECTORY,
+            label="alpha recording session",
+            adapter_hint="alpha",
+        ),
+        SourceReference(
+            source_id="source-2",
+            location=Path("data/source-2"),
+            source_type=SourceType.DIRECTORY,
+            label="recording session",
+            adapter_hint="recording",
+        ),
+    )
+
+    results = RegistrySourceInspectionService(registry).inspect_session(session)
+
+    assert results is not None
+    assert tuple(result.record_type for result in results) == ("workflow_recording", "workflow_sorting")
 
 
 def test_session_provenance_service_uses_session_metadata() -> None:

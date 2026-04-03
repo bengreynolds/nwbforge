@@ -65,12 +65,27 @@ def test_package_installer_screen_model_updates_custom_routes(tmp_path: Path) ->
     screen = make_screen_model(tmp_path)
     screen.load()
 
-    state = screen.set_custom_routes(("image", "scanimage", "image", "missing"))
+    state = screen.set_custom_routes(("image", "scanimage", "lightningpose", "image", "missing"))
 
     assert state.install_preset is InstallPreset.CUSTOM
-    assert state.selected_routes == ("image", "scanimage")
+    assert state.selected_routes == ("image", "scanimage", "lightningpose")
     assert state.preview is not None
-    assert any(issue.route_names == ("scanimage",) for issue in state.issues)
+    assert not any(issue.route_names == ("scanimage",) for issue in state.issues)
+    screen.shutdown()
+
+
+def test_package_installer_screen_model_normalizes_string_mode_and_preset_inputs(tmp_path: Path) -> None:
+    screen = make_screen_model(tmp_path)
+    screen.load()
+
+    mode_state = screen.set_install_mode("full")
+    preset_state = screen.set_install_mode("selected")
+    preset_state = screen.select_preset("custom")
+
+    assert mode_state.install_mode is InstallMode.FULL
+    assert mode_state.install_preset is InstallPreset.FULL
+    assert preset_state.install_mode is InstallMode.SELECTED
+    assert preset_state.install_preset is InstallPreset.CUSTOM
     screen.shutdown()
 
 

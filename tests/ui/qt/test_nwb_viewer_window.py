@@ -11,6 +11,7 @@ from pynwb.file import Subject
 from nwbforge.app.packages import PackageInstallationService, PackageManagementService
 from nwbforge.app.runtime import ThreadedPackageInstallationExecutor
 from nwbforge.app.services import PackageManagementController, UiSettingsService
+from nwbforge.app.services.nwb_viewer_rich import BaseRichNodeRenderer, NwbRichRendererStatus
 from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.qt import MainWindow, NwbViewerWindow
@@ -30,6 +31,45 @@ class FakeConversionExecutor:
         future = Future()
         future.set_result(None)
         return future
+
+
+class FakeRichSession:
+    def __init__(self, url: str) -> None:
+        self.url = url
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class FakeRichRenderer(BaseRichNodeRenderer):
+    renderer_name = "fake-rich"
+
+    def __init__(self) -> None:
+        self.launched_paths: list[str] = []
+        self.closed = False
+
+    def status_for_node(self, node):
+        if node is None:
+            return NwbRichRendererStatus(
+                renderer_name=self.renderer_name,
+                is_available=True,
+                is_supported=False,
+                message="Select a node.",
+            )
+        return NwbRichRendererStatus(
+            renderer_name=self.renderer_name,
+            is_available=True,
+            is_supported=True,
+            message="Open fake rich preview.",
+        )
+
+    def launch_for_node(self, node):
+        self.launched_paths.append(node.path)
+        return FakeRichSession("http://127.0.0.1:9000/")
+
+    def close(self) -> None:
+        self.closed = True
 
     def submit_execute(self, preview, output_path: Path, *, progress_callback=None):
         from concurrent.futures import Future
@@ -119,7 +159,30 @@ def test_nwb_viewer_window_can_open_from_file_menu(qapp, tmp_path: Path, monkeyp
     window.close()
 
 
-def test_main_window_opens_nwb_artifact_in_viewer_window(qapp, tmp_path: Path) -> None:
+def test_nwb_viewer_window_can_launch_optional_rich_preview(qapp, tmp_path: Path) -> None:
+    nwb_path = write_example_nwb_file(tmp_path)
+    rich_renderer = FakeRichRenderer()
+
+    window = NwbViewerWindow(file_path=nwb_path, rich_renderer=rich_renderer)
+    window.show()
+    qapp.processEvents()
+
+    acquisition_item = window.tree_widget.topLevelItem(1)
+    acquisition_item.setExpanded(True)
+    qapp.processEvents()
+    trace_item = acquisition_item.child(0)
+    window.tree_widget.setCurrentItem(trace_item)
+    qapp.processEvents()
+    window._open_rich_preview_action.trigger()
+    qapp.processEvents()
+
+    assert rich_renderer.launched_paths == ["/acquisition/raw_trace"]
+    assert "http://127.0.0.1:9000/" in window.statusBar().currentMessage()
+    window.close()
+    assert rich_renderer.closed is True
+
+
+def test_main_window_opens_nwb_artifact_in_integrated_viewer(qapp, tmp_path: Path) -> None:
     nwb_path = write_example_nwb_file(tmp_path)
     window = MainWindow(
         DesktopShellModel(),
@@ -134,7 +197,6 @@ def test_main_window_opens_nwb_artifact_in_viewer_window(qapp, tmp_path: Path) -
     qapp.processEvents()
 
     assert opened is True
-    assert len(window._viewer_windows) == 1
-    assert window._viewer_windows[0].controller.file_path == nwb_path.resolve()
-    window._viewer_windows[0].close()
+    assert window.workspace_tabs.currentWidget() is window.nwb_viewer_widget
+    assert window.nwb_viewer_widget.controller.file_path == nwb_path.resolve()
     window.close()

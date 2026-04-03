@@ -2,45 +2,49 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSignalBlocker, Qt
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
-    QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QGroupBox,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from nwbforge.app.packages import InstallMode, InstallPreset
 from nwbforge.ui.models import PackageInstallerState
 from nwbforge.ui.package_setup import PackageInstallerScreenModel
 from nwbforge.ui.qt.bridge import StateBridge
+from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
-class PackageInstallerDialog(QDialog):
-    """Dialog bound to `PackageInstallerScreenModel`."""
+class PackageInstallerDialog(QWidget):
+    """Embedded panel bound to `PackageInstallerScreenModel`."""
+
+    dismissed = Signal()
 
     def __init__(self, screen_model: PackageInstallerScreenModel, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Install Extensions / Packages")
-        self.resize(560, 520)
+        self.resize(680, 620)
+        apply_window_chrome(self)
         self._screen_model = screen_model
 
         self._mode_combo = QComboBox(self)
-        self._mode_combo.addItem("Minimal", InstallMode.MINIMAL)
-        self._mode_combo.addItem("Selected", InstallMode.SELECTED)
-        self._mode_combo.addItem("Full", InstallMode.FULL)
+        self._mode_combo.addItem("Minimal", InstallMode.MINIMAL.value)
+        self._mode_combo.addItem("Selected", InstallMode.SELECTED.value)
+        self._mode_combo.addItem("Full", InstallMode.FULL.value)
         self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
 
         self._preset_combo = QComboBox(self)
-        self._preset_combo.addItem("Minimal", InstallPreset.MINIMAL)
-        self._preset_combo.addItem("Common", InstallPreset.COMMON)
-        self._preset_combo.addItem("Full", InstallPreset.FULL)
-        self._preset_combo.addItem("Custom", InstallPreset.CUSTOM)
+        self._preset_combo.addItem("Minimal", InstallPreset.MINIMAL.value)
+        self._preset_combo.addItem("Common", InstallPreset.COMMON.value)
+        self._preset_combo.addItem("Full", InstallPreset.FULL.value)
+        self._preset_combo.addItem("Custom", InstallPreset.CUSTOM.value)
         self._preset_combo.currentIndexChanged.connect(self._on_preset_changed)
 
         self._route_list = QListWidget(self)
@@ -55,28 +59,56 @@ class PackageInstallerDialog(QDialog):
         self._install_button.clicked.connect(self._on_install_clicked)
         self._close_button = QPushButton("Close", self)
         self._close_button.clicked.connect(self.reject)
+        self._close_button.setProperty("secondary", True)
+
+        (
+            self._header_frame,
+            self._header_title_label,
+            self._header_subtitle_label,
+            self._header_badge_label,
+        ) = build_page_header(
+            "Install Extensions / Packages",
+            "Choose route-based optional dependencies for the dedicated development environment without reinstalling everything.",
+            badge_text="Route Packages",
+            parent=self,
+        )
 
         form_layout = QFormLayout()
         form_layout.addRow("Install mode", self._mode_combo)
         form_layout.addRow("Preset", self._preset_combo)
+        options_group = QGroupBox("Install Options", self)
+        options_group.setLayout(form_layout)
+
+        route_group = QGroupBox("Route Packages", self)
+        route_layout = QVBoxLayout(route_group)
+        route_layout.addWidget(self._route_list)
+
+        summary_group = QGroupBox("Resolution Summary", self)
+        summary_layout = QVBoxLayout(summary_group)
+        summary_layout.addWidget(self._extras_label)
+        summary_layout.addWidget(self._issues_label)
+        summary_layout.addWidget(self._status_label)
 
         buttons = QDialogButtonBox(self)
         buttons.addButton(self._install_button, QDialogButtonBox.ButtonRole.AcceptRole)
         buttons.addButton(self._close_button, QDialogButtonBox.ButtonRole.RejectRole)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form_layout)
-        layout.addWidget(QLabel("Route packages", self))
-        layout.addWidget(self._route_list, stretch=1)
-        layout.addWidget(self._extras_label)
-        layout.addWidget(self._issues_label)
-        layout.addWidget(self._status_label)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+        layout.addWidget(self._header_frame)
+        layout.addWidget(options_group)
+        layout.addWidget(route_group, stretch=1)
+        layout.addWidget(summary_group)
         layout.addWidget(buttons)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
         self._screen_model.subscribe(self._bridge.publish)
         self._screen_model.load()
+
+    def reject(self) -> None:
+        self.dismissed.emit()
 
     def _apply_state(self, state: PackageInstallerState) -> None:
         self._sync_mode_combo(state.install_mode)
@@ -110,13 +142,13 @@ class PackageInstallerDialog(QDialog):
 
     def _sync_mode_combo(self, mode: InstallMode) -> None:
         with QSignalBlocker(self._mode_combo):
-            index = self._mode_combo.findData(mode)
+            index = self._mode_combo.findData(mode.value)
             if index >= 0:
                 self._mode_combo.setCurrentIndex(index)
 
     def _sync_preset_combo(self, preset: InstallPreset) -> None:
         with QSignalBlocker(self._preset_combo):
-            index = self._preset_combo.findData(preset)
+            index = self._preset_combo.findData(preset.value)
             if index >= 0:
                 self._preset_combo.setCurrentIndex(index)
 
@@ -135,17 +167,18 @@ class PackageInstallerDialog(QDialog):
                 item.setCheckState(Qt.CheckState.Checked if spec.route_name in selected else Qt.CheckState.Unchecked)
 
     def _on_mode_changed(self) -> None:
-        mode = self._mode_combo.currentData()
+        mode = self._mode_combo.currentData(Qt.ItemDataRole.UserRole)
         if mode is not None:
-            self._screen_model.set_install_mode(mode)
+            self._screen_model.set_install_mode(InstallMode(str(mode)))
 
     def _on_preset_changed(self) -> None:
-        preset = self._preset_combo.currentData()
+        preset = self._preset_combo.currentData(Qt.ItemDataRole.UserRole)
         if preset is not None:
-            self._screen_model.select_preset(preset)
+            self._screen_model.select_preset(InstallPreset(str(preset)))
 
     def _on_route_item_changed(self) -> None:
-        if self._preset_combo.currentData() is not InstallPreset.CUSTOM:
+        preset = self._preset_combo.currentData(Qt.ItemDataRole.UserRole)
+        if preset is None or InstallPreset(str(preset)) is not InstallPreset.CUSTOM:
             return
         selected = []
         for index in range(self._route_list.count()):

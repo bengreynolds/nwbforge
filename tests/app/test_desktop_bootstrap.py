@@ -28,6 +28,73 @@ def test_build_adapter_registry_includes_manifest_adapter() -> None:
     assert "custom_json_session" in registry.registered_ids()
 
 
+def test_build_adapter_registry_applies_route_dependency_gates(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "nwbforge.app.desktop.route_dependencies_available",
+        lambda route_name: route_name == "excel",
+    )
+
+    registry = build_adapter_registry()
+    registered = set(registry.registered_ids())
+
+    assert "neuroconv_alphaomega" not in registered
+    assert "neuroconv_axon" not in registered
+    assert "neuroconv_axona" not in registered
+    assert "neuroconv_biocam" not in registered
+    assert "neuroconv_blackrock" not in registered
+    assert "neuroconv_blackrock_sorting" not in registered
+    assert "neuroconv_brukertiff_singleplane" not in registered
+    assert "neuroconv_brukertiff_multiplane" not in registered
+    assert "neuroconv_caiman_segmentation" not in registered
+    assert "neuroconv_cellexplorer_sorting" not in registered
+    assert "neuroconv_cnmfe_segmentation" not in registered
+    assert "neuroconv_excel_time_intervals" in registered
+    assert "neuroconv_deeplabcut" not in registered
+    assert "neuroconv_edf" not in registered
+    assert "neuroconv_extract_segmentation" not in registered
+    assert "neuroconv_femtonics" not in registered
+    assert "neuroconv_lightningpose" not in registered
+    assert "neuroconv_inscopix" not in registered
+    assert "neuroconv_inscopix_segmentation" not in registered
+    assert "neuroconv_mcsraw" not in registered
+    assert "neuroconv_maxone" not in registered
+    assert "neuroconv_mearec" not in registered
+    assert "neuroconv_medpc" not in registered
+    assert "neuroconv_audio" not in registered
+    assert "neuroconv_image" not in registered
+    assert "neuroconv_video" not in registered
+    assert "neuroconv_sleap" not in registered
+    assert "neuroconv_intan" not in registered
+    assert "neuroconv_kilosort_sorting" not in registered
+    assert "neuroconv_neuralynx" not in registered
+    assert "neuroconv_neuralynx_sorting" not in registered
+    assert "neuroconv_neuralynx_nvt" not in registered
+    assert "neuroconv_neuroscope" not in registered
+    assert "neuroconv_neuroscope_sorting" not in registered
+    assert "neuroconv_openephys_binary_analog" not in registered
+    assert "neuroconv_openephys_binary" not in registered
+    assert "neuroconv_openephys_legacy" not in registered
+    assert "neuroconv_plexon" not in registered
+    assert "neuroconv_plexon_sorting" not in registered
+    assert "neuroconv_plexon2" not in registered
+    assert "neuroconv_phy_sorting" not in registered
+    assert "neuroconv_spike2" not in registered
+    assert "neuroconv_spikegadgets" not in registered
+    assert "neuroconv_spikeglx" not in registered
+    assert "neuroconv_tdt" not in registered
+    assert "neuroconv_whitematter" not in registered
+    assert "neuroconv_hdf5_imaging" not in registered
+    assert "neuroconv_micromanager_tiff" not in registered
+    assert "neuroconv_miniscope" not in registered
+    assert "neuroconv_scanbox" not in registered
+    assert "neuroconv_scanimage" not in registered
+    assert "neuroconv_scanimage_legacy" not in registered
+    assert "neuroconv_suite2p_segmentation" not in registered
+    assert "neuroconv_tiff_imaging" not in registered
+    assert "neuroconv_thor" not in registered
+    assert "neuroconv_tdt_fiber_photometry" not in registered
+
+
 def test_desktop_services_run_real_manifest_preview_and_execution(tmp_path: Path) -> None:
     manifest_path = ensure_demo_manifest(tmp_path)
     session = load_manifest_session(manifest_path)

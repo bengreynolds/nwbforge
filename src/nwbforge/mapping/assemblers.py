@@ -6,9 +6,12 @@ from datetime import UTC, datetime
 from math import nan
 from pathlib import Path
 
+import numpy as np
 from pynwb import NWBHDF5IO, NWBFile, TimeSeries
 from pynwb.behavior import BehavioralTimeSeries, Position, SpatialSeries
+from pynwb.ecephys import ElectricalSeries
 from pynwb.file import Subject
+from pynwb.image import ImageSeries
 
 from nwbforge.domain.contracts import AssemblyService
 from nwbforge.domain.models import MappingPlan, NormalizedMetadataBundle, ProvenanceArtifact, ConversionSession
@@ -157,14 +160,23 @@ class PyNWBAssemblyService(AssemblyService):
                 position_container.add_spatial_series(cls._spatial_series(stream))
                 continue
 
-            timeseries = cls._timeseries(stream)
             if modality == "behavior":
+                timeseries = cls._timeseries(stream)
                 if behavior_container is None:
                     behavior_container = BehavioralTimeSeries(name="behavior")
                     nwbfile.add_acquisition(behavior_container)
                 behavior_container.add_timeseries(timeseries)
                 continue
-            nwbfile.add_acquisition(timeseries)
+
+            if modality in {"image", "images", "imaging", "ophys", "video"}:
+                nwbfile.add_acquisition(cls._image_series(stream))
+                continue
+
+            if modality in {"ecephys", "electrical"}:
+                nwbfile.add_acquisition(cls._electrical_series(nwbfile, stream))
+                continue
+
+            nwbfile.add_acquisition(cls._timeseries(stream))
 
     @classmethod
     def _write_time_interval_tables(cls, nwbfile: NWBFile, metadata: NormalizedMetadataBundle) -> None:
@@ -252,6 +264,118 @@ class PyNWBAssemblyService(AssemblyService):
             )
 
         return SpatialSeries(**kwargs)
+
+    @classmethod
+    def _image_series(cls, stream) -> ImageSeries:
+        kwargs = {
+            "name": str(stream.name.value),
+            "unit": str(cls._optional_stream_metadata(stream, "unit") or "n/a"),
+            "description": cls._optional_text(stream.description) or "no description",
+            "format": str(cls._optional_stream_metadata(stream, "format") or "raw"),
+        }
+        external_file = cls._optional_stream_metadata(stream, "external_file")
+        if external_file is not None:
+            if isinstance(external_file, (list, tuple)):
+                kwargs["external_file"] = [str(item) for item in external_file]
+            else:
+                kwargs["external_file"] = [str(external_file)]
+            starting_frame = cls._optional_stream_metadata(stream, "starting_frame")
+            if starting_frame is not None:
+                kwargs["starting_frame"] = starting_frame
+        else:
+            kwargs["data"] = cls._required_stream_metadata(stream, "data")
+
+        timestamps = cls._optional_stream_metadata(stream, "timestamps")
+        rate = cls._optional_stream_metadata(stream, "rate")
+        if timestamps is not None:
+            kwargs["timestamps"] = timestamps
+        elif rate is not None:
+            kwargs["rate"] = float(rate)
+            starting_time = cls._optional_stream_metadata(stream, "starting_time")
+            if starting_time is not None:
+                kwargs["starting_time"] = float(starting_time)
+        else:
+            raise ValueError(
+                f"Image stream '{stream.stream_id}' requires either timestamps or rate for writing."
+            )
+
+        return ImageSeries(**kwargs)
+
+    @classmethod
+    def _electrical_series(cls, nwbfile: NWBFile, stream) -> ElectricalSeries:
+        data = np.asarray(cls._required_stream_metadata(stream, "data"))
+        if data.ndim == 1:
+            data = data[:, np.newaxis]
+        channel_count = int(cls._optional_stream_metadata(stream, "channel_count") or data.shape[1])
+
+        device_name = str(cls._optional_stream_metadata(stream, "device_name") or f"{stream.stream_id}-device")
+        if device_name in nwbfile.devices:
+            device = nwbfile.devices[device_name]
+        else:
+            device = nwbfile.create_device(
+                name=device_name,
+                description=str(cls._optional_stream_metadata(stream, "device_description") or "Auto-generated ecephys device."),
+                manufacturer=str(cls._optional_stream_metadata(stream, "device_manufacturer") or "Unknown"),
+            )
+
+        group_name = str(
+            cls._optional_stream_metadata(stream, "electrode_group_name") or f"{stream.stream_id}-group"
+        )
+        group_description = str(
+            cls._optional_stream_metadata(stream, "electrode_group_description")
+            or "Auto-generated electrode group for custom/hybrid ecephys stream."
+        )
+        group_location = str(cls._optional_stream_metadata(stream, "electrode_location") or "unknown")
+        if group_name in nwbfile.electrode_groups:
+            electrode_group = nwbfile.electrode_groups[group_name]
+        else:
+            electrode_group = nwbfile.create_electrode_group(
+                name=group_name,
+                description=group_description,
+                location=group_location,
+                device=device,
+            )
+
+        base_index = len(nwbfile.electrodes) if nwbfile.electrodes is not None else 0
+        filtering = str(cls._optional_stream_metadata(stream, "filtering") or "unknown")
+        for channel_index in range(channel_count):
+            nwbfile.add_electrode(
+                id=base_index + channel_index,
+                x=float("nan"),
+                y=float("nan"),
+                z=float("nan"),
+                imp=float("nan"),
+                location=group_location,
+                filtering=filtering,
+                group=electrode_group,
+            )
+        region = nwbfile.create_electrode_table_region(
+            region=list(range(base_index, base_index + channel_count)),
+            description=f"Auto-generated electrodes for {stream.stream_id}.",
+        )
+
+        kwargs = {
+            "name": str(stream.name.value),
+            "data": data,
+            "electrodes": region,
+            "filtering": filtering,
+            "description": cls._optional_text(stream.description) or "no description",
+        }
+        timestamps = cls._optional_stream_metadata(stream, "timestamps")
+        rate = cls._optional_stream_metadata(stream, "rate")
+        if timestamps is not None:
+            kwargs["timestamps"] = timestamps
+        elif rate is not None:
+            kwargs["rate"] = float(rate)
+            starting_time = cls._optional_stream_metadata(stream, "starting_time")
+            if starting_time is not None:
+                kwargs["starting_time"] = float(starting_time)
+        else:
+            raise ValueError(
+                f"Electrical stream '{stream.stream_id}' requires either timestamps or rate for writing."
+            )
+
+        return ElectricalSeries(**kwargs)
 
     @staticmethod
     def _trial_extra_columns(rows) -> tuple[str, ...]:

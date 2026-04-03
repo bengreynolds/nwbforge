@@ -1309,3 +1309,309 @@ Consequences:
 - `NwbFileController` now opens `.nwb` files in read-only mode through `NWBHDF5IO(..., mode="r", load_namespaces=True)`
 - viewer tree nodes are generated lazily over major NWB sections and immediate child branches
 - richer renderers such as `nwbwidgets` remain optional follow-on work rather than a base viewer dependency
+
+### DEC-103: Add `nwbwidgets + Panel` only as an optional rich-preview layer for the standalone viewer
+Status: Accepted
+
+Reasoning:
+- `nwbwidgets` can provide richer object-specific NWB rendering, but it is primarily notebook-oriented and should not redefine the base desktop viewer architecture.
+- The local app still needs a robust generic viewer even when richer web/notebook tooling is unavailable.
+- A browser-backed optional preview is enough to prove richer rendering without turning the Qt viewer into a web shell.
+
+Consequences:
+- the base standalone viewer remains `PyNWB` + custom Qt tree/detail UI
+- the viewer now has an optional `Open Rich Preview` action powered by `nwbwidgets + Panel` when those packages are installed
+- `nwbwidgets` and `panel` are now exposed through an optional dependency group rather than the core app dependency set
+
+### DEC-104: Treat direct-ingest group confirmation and source-specific metadata resolution as first-class local-app state
+Status: Accepted
+
+Reasoning:
+- Heuristic grouping and read-only disagreement review were enough for first-pass testing, but not enough for a stronger local-app workflow.
+- Users need to explicitly acknowledge dataset bundles and preserve that acknowledgement through project save/reopen flows.
+- Mixed-source conflict review also needs a narrower source-specific path before a fuller field-by-field conflict engine exists.
+
+Consequences:
+- direct-ingest groups now carry explicit confirmation state, and that state persists through workspace recovery and saved project files
+- the `New Session` dialog now supports confirming groups and splitting selected sources back into individual groups
+- the post-preview metadata-review workspace now supports source-specific override actions in addition to the existing session-wide override path
+- fuller dataset modeling and richer conflict-resolution history remain follow-on work
+
+### DEC-105: Require confirmation for reviewable multi-source bundles and broaden metadata-review actions before local-app signoff
+Status: Accepted
+
+Reasoning:
+- Direct-ingest grouping was still too easy to ignore; users could create sessions from heuristic multi-source bundles without explicitly acknowledging them.
+- The metadata-review workspace had become useful, but it still favored one narrow override path instead of deliberate per-field decisions.
+- A stronger local-only app needs clearer bundle semantics and a more truthful per-field resolution surface before broader internal testing.
+
+Consequences:
+- direct-ingest groups now expose dataset kind and anchor-path context in addition to label/pathway summaries
+- reviewable auto-grouped or mixed-pathway bundles now block session creation until they are explicitly confirmed
+- the metadata-review workspace now supports manual session overrides, one-click source-to-source override actions, and clearer override-count summaries
+- fuller dataset/session modeling and true conflict-resolution history remain follow-on work
+
+### DEC-106: Explain heuristic dataset bundles explicitly and add per-field metadata review controls before deeper dataset modeling
+Status: Accepted
+
+Reasoning:
+- Heuristic grouping had become actionable, but users still lacked enough context to understand why a bundle existed or what was inside it.
+- The metadata-review workspace surfaced conflicts, but it still needed stronger review ergonomics before a fuller conflict engine existed.
+- The next local-app step should improve explanation and control, not jump prematurely into a larger rewrite of dataset/session modeling.
+
+Consequences:
+- direct-ingest groups now surface grouping reason text, member labels, and whole-group split actions in the `New Session` workflow
+- the metadata-review workspace now supports pending/resolved filtering, explicit resolution-status/history display, and clearing all overrides for one canonical field
+- richer dataset/session modeling and durable field-resolution history remain follow-on work rather than being hidden behind current UI state
+
+### DEC-107: Apply one shared desktop visual system before broader local-app polish
+Status: Accepted
+
+Reasoning:
+- The desktop app had enough behavior to be useful, but it still looked like separate engineering panels rather than one product.
+- A shared visual system is cheaper and more durable than continuing to hand-tune each dialog independently.
+- Local-app polish should improve hierarchy and scanability without introducing a heavy custom widget framework.
+
+Consequences:
+- the Qt layer now uses one shared application stylesheet plus reusable header-card and metric-card helpers
+- the main shell, direct-ingest dialog, package installer, settings dialog, and NWB viewer now share cleaner spacing, restrained color treatment, and stronger section hierarchy
+- future UI polish should extend the shared design system rather than adding one-off widget styling
+
+### DEC-108: Consolidate routine desktop workflows into one integrated main-window workspace
+Status: Accepted
+
+Reasoning:
+- Internal testing showed that separate top-level dialogs and windows were adding lifecycle complexity, slowing down routine task switching, and making the app feel less like one product.
+- The local desktop app has now grown past the stage where `New Session`, settings, package management, NWB viewing, and conversion review should behave like loosely related utilities.
+- The shell already had a stable central workspace and tab pattern, so consolidating routine surfaces into one main window was lower risk than continuing to tune separate windows.
+
+Consequences:
+- the main window now hosts conversion review, direct-ingest session assembly, package management, settings, and NWB viewing inside one integrated tabbed workspace
+- routine flows no longer depend on separate top-level dialogs or a separate NWB viewer window during normal shell use
+- the standalone `NwbViewerWindow` remains only as a compatibility wrapper around the embedded viewer widget, not the primary user-facing path
+- future desktop UI work should default to integrated workspace tabs or panes unless a separate top-level window is clearly justified
+
+### DEC-109: Favor incremental UI log rendering and true record timestamps during internal testing
+Status: Accepted
+
+Reasoning:
+- UI responsiveness had started to degrade as more runtime and desktop actions emitted structured logs into the in-app viewer.
+- Internal testing also needed log timestamps that match the original logging event, not the later UI append time.
+- The cheapest durable improvement was to preserve `logging` record timestamps and avoid resetting the entire log widget on every new entry.
+
+Consequences:
+- UI log entries now use the originating `logging` record timestamp when rendered or mirrored to file
+- the docked log viewer now appends incrementally when possible instead of redrawing the entire visible log buffer for every update
+- future high-volume UI observability work should prefer incremental rendering and stable event timestamps over convenience rebuilds
+
+### DEC-110: Gate optional supported-route availability on installed route dependencies
+Status: Accepted
+
+Reasoning:
+- Supported-route growth now needs to scale, but the local app should not expose every route unconditionally just because code exists in the repository.
+- Route-based package installation already exists for setup and later UI installs, so adapter registration should respect those same route boundaries.
+- The desktop registry is the cleanest first enforcement point because it controls what direct ingest can detect and what supported execution can select.
+
+Consequences:
+- optional supported routes now carry curated dependency gates through the route package catalog
+- the desktop adapter registry now skips optional adapters whose required route dependencies are not installed in the current environment
+- newly implemented optional routes should be wired through both the package catalog and the registry gate, not added as unconditional app surface area
+- the first routes added under this rule are `ScanImage` and `SLEAP`
+
+### DEC-111: Scale optional route growth by extending category-first family backbones instead of adding isolated wrappers
+Status: Accepted
+
+Reasoning:
+- Supported-route growth is now a scaling problem, so new routes should reinforce the family-module pattern rather than drifting back toward one-off top-level adapter files.
+- The package-gated registry model makes it safe to add more implemented routes, but only if those routes stay organized around shared semantics and dependency gates.
+- Behavior pose, media, and imaging each need at least one more proof case to validate that the optional-route model works across different route shapes.
+
+Consequences:
+- the `behavior` family now includes `LightningPose` alongside `FicTrac`, `DeepLabCut`, and `SLEAP`
+- the `media` family now includes `Videos` alongside still-image and audio support
+- the `imaging` family now includes `HDF5 Imaging` alongside `ScanImage`
+- new optional routes should continue to land through category-first family modules plus package-catalog gates rather than unconditional registry growth
+
+### DEC-112: Prefer distinctive source-pattern routes before adding generic overlapping TIFF backbones
+Status: Accepted
+
+Reasoning:
+- Optional route growth now needs to improve practical ingest coverage without flooding direct ingest with ambiguous adapter matches.
+- Several imaging routes in NeuroConv share `.tif` or `.tiff` suffixes, but some have stronger directory or sidecar signatures that are safer to expose first.
+- A generic TIFF route is still valuable later, but it should not arrive before more distinctive imaging routes such as Micro-Manager, Miniscope, or Thor are in place.
+
+Consequences:
+- the next imaging-family scaling slice prioritizes `Micro-Manager TIFF`, `Miniscope`, and `Thor`
+- route matching should use the strongest available path/layout hints rather than only suffix matching when overlapping formats exist
+- future generic TIFF-family routes should be evaluated against direct-ingest ambiguity and may need stronger user-review affordances before being exposed
+
+### DEC-113: Add configuration-gated task routes and distinctive acquisition-file routes before broader ambiguous behavior/ecephys backbones
+Status: Accepted
+
+Reasoning:
+- The optional route catalog now needs to grow beyond imaging, but behavior/task and ecephys routes should still be chosen to minimize direct-ingest ambiguity.
+- MedPC is a good task-route proof case because it should not match arbitrary text files; it can be exposed honestly only when explicit NeuroConv interface configuration is provided.
+- Intan is a good acquisition-route proof case because `.rhd` and `.rhs` files are distinctive enough to gate cleanly without inventing a broader ecephys catch-all.
+
+Consequences:
+- the `behavior` family now includes `MedPC` as a configuration-gated task/events route
+- the new `ecephys` family now starts with `Intan` as a distinctive acquisition-file route
+- optional route scaling should continue to prefer strong path/config signatures before exposing broader ambiguous behavior or ecephys backbones
+
+### DEC-114: Extend the ecephys family with distinctive file and folder signatures before broader ecephys catch-alls
+Status: Accepted
+
+Reasoning:
+- After `Intan`, the next scaling value comes from routes that remain honest under direct ingest without forcing generic multi-format ecephys matching.
+- `Axon / ABF`, `EDF`, `SpikeGadgets`, `OpenEphys Binary`, and `SpikeGLX` all have stronger file or folder signatures than broader ecephys families such as generic HDF5-like or multi-layout acquisitions.
+- Multi-stream folder routes such as `OpenEphys Binary` and `SpikeGLX` should only claim compatibility when stream selection is unambiguous or explicitly configured.
+
+Consequences:
+- the `ecephys` family now also includes `Axon / ABF`, `EDF`, `OpenEphys Binary`, `SpikeGadgets`, and `SpikeGLX`
+- package-gated route growth should continue preferring distinctive suffixes, manifests, and folder-layout signals before broader ambiguous ecephys backbones
+- multi-stream folder routes should stay conservative in `can_handle` and require explicit configuration when stream selection is not unambiguous
+
+### DEC-115: Keep scaling ecephys through strong path signatures and explicit required configuration before generic binary catch-alls
+Status: Accepted
+
+Reasoning:
+- The next honest ecephys expansion comes from routes that still have clear file or folder signatures under direct ingest, or from routes whose ambiguity can be contained by explicit required configuration.
+- `AlphaOmega`, `Axona`, `Blackrock`, `Neuralynx`, `OpenEphys Legacy`, `Plexon`, `TDT`, and `WhiteMatter` extend useful acquisition coverage without forcing the app to claim arbitrary generic binary folders.
+- Some of these routes still overlap with broader file shapes, so the adapter backbone should only match them conservatively: stream-based folders remain gated on unambiguous or configured stream selection, and generic binary routes remain gated on required shape/gain metadata.
+
+Consequences:
+- the `ecephys` family now also includes `AlphaOmega`, `Axona`, `Blackrock`, `Neuralynx`, `OpenEphys Legacy`, `Plexon`, `TDT`, and `WhiteMatter`
+- package-gated scaling should continue to prefer strong suffixes, stream manifests, and required configuration over broad file-type claims
+- generic `.bin` and multi-stream folder routes should remain conservative until richer dataset modeling and ambiguity review affordances exist
+
+### DEC-116: Reuse one install gate for closely related adapters when they share the same software stack, but keep adapter matching split by semantics
+Status: Accepted
+
+Reasoning:
+- The next route-scaling batch adds several cases where one installed software stack legitimately exposes more than one route shape: Bruker TIFF single-plane vs multi-plane, Neuralynx ecephys vs Neuralynx NVT tracking, OpenEphys Binary recordings vs OpenEphys Binary analog streams, and ScanImage current vs ScanImage legacy.
+- The install UI should stay route-name oriented and simple, but the runtime adapter layer still needs semantically distinct matching so the wrong reader does not claim a source.
+- This means the right scaling unit is sometimes one package/install gate mapped to multiple adapters, not one adapter per gate.
+
+Consequences:
+- the `brukertiff` install gate now enables both Bruker TIFF single-plane and Bruker TIFF multi-plane adapters
+- the `neuralynx` install gate now enables both Neuralynx ecephys and Neuralynx NVT adapters
+- the `openephys_binary` install gate now enables both OpenEphys Binary recording and OpenEphys Binary analog adapters
+- ScanImage current and legacy matching are now split so the current adapter stops claiming legacy TIFFs
+- future optional-route growth can reuse one curated install gate for multiple semantically distinct adapters when that reflects one real software stack rather than unrelated formats
+
+### DEC-117: Finish the approved recording and imaging route catalog with conservative gates for ambiguous or partially supported readers
+Status: Accepted
+
+Reasoning:
+- The approved NeuroConv-first recording and imaging catalog is now complete only if the remaining approved routes land in the same family-backed, package-gated architecture as the earlier slices.
+- `MaxOne`, `MEArec`, `Plexon2`, `Spike2`, `Scanbox`, and generic `TIFF` all have legitimate NeuroConv interfaces, but not all of them should auto-claim sources equally aggressively.
+- `Spike2` still depends on the external `sonpy` stack, and generic TIFF overlaps with several more distinctive imaging routes, so both need stricter availability or matching behavior than the simpler suffix-based cases.
+
+Consequences:
+- the `ecephys` family now also includes `MaxOne`, `MEArec`, `Plexon2`, and `Spike2`
+- the `imaging` family now also includes `Scanbox` and generic `TIFF`
+- generic TIFF matching now requires explicit imaging configuration and declines sources that already match more distinctive TIFF-based readers
+- `Spike2` remains implemented in code but only becomes available when the `sonpy` dependency gate is actually satisfied in the current environment
+
+### DEC-118: Sorting routes should use a dedicated family module and conservative auto-detection where sorting and recording sources overlap
+Status: Accepted
+
+Reasoning:
+- The approved NeuroConv sorting catalog is broad enough that it should not be folded back into the recording adapters; it needs its own category-first family boundary.
+- Some sorting interfaces are easy to auto-detect safely, such as Blackrock `.nev`, Cell Explorer spikes cellinfo files, NeuroScope `.res/.clu` folders, KiloSort folders with `ops.npy`, and Phy folders with cluster tables.
+- Other sorting interfaces overlap too directly with recording routes, especially Plexon `.plx` and Neuralynx session folders, so auto-detection would either collide or misclassify until the desktop UI has an explicit sort-vs-record choice.
+
+Consequences:
+- the repo now has a dedicated `supported/sorting/` family for NeuroConv-backed sorting routes
+- `Blackrock`, `Cell Explorer`, `KiloSort`, `Neuralynx`, `NeuroScope`, `Phy`, and `Plexon` sorting routes are now implemented in that family
+- `Plexon` and `Neuralynx` sorting stay hint-driven for now, and `KiloSort` vs `Phy` is split by stronger folder markers instead of letting both claim the same directory
+- future sorting or workflow growth should preserve that explicit family boundary and prefer honest ambiguity handling over optimistic auto-detection
+
+### DEC-119: Segmentation and fiber-photometry routes should use dedicated family modules and conservative overlap handling
+Status: Accepted
+
+Reasoning:
+- The remaining approved NeuroConv ophys-analysis routes are not just more imaging readers; they represent segmentation outputs and photometry workflows with different ambiguity patterns and metadata requirements.
+- File-based segmentation outputs like Caiman, CNMFE, and EXTRACT can overlap generic HDF5 or MATLAB files, so they should prefer explicit hints, distinctive filenames, or required config rather than optimistic auto-detection.
+- `Suite2p` is distinctive enough for folder-level auto-detection, while `Inscopix` segmentation can share the existing install gate but still deserves a distinct adapter boundary from raw imaging.
+- `TDT` fiber photometry can overlap the same block folders as TDT recording, so it should remain hint-driven until the desktop UI grows an explicit recording-versus-photometry choice.
+
+Consequences:
+- the repo now has dedicated `supported/segmentation/` and `supported/fiber_photometry/` families
+- `Caiman`, `CNMFE`, `EXTRACT`, `Inscopix` segmentation, `Suite2p`, and `TDT Fiber Photometry` are now implemented as optional NeuroConv-backed routes
+- `Caiman`, `CNMFE`, and `EXTRACT` use conservative matching, `Suite2p` uses stronger folder markers, and `TDT Fiber Photometry` stays hint-driven for now
+- the supported-route registry and package catalog now treat segmentation and fiber photometry as first-class optional install surfaces rather than folding them into generic imaging or TDT recording
+
+### DEC-120: Session persistence should keep a stable latest snapshot path while also maintaining bounded version history
+Status: Accepted
+
+Reasoning:
+- Internal testing now needs more than bare latest-state reopen; it needs versioned recovery points so confusing runs can be restored and inspected without losing the latest workflow path.
+- The existing JSON snapshot store is already the desktop persistence baseline, so the least disruptive evolution is to add bounded version history under the same session-state directory instead of replacing it outright.
+- Keeping `session-state.json` as the stable latest path avoids breaking reopen behavior while adding explicit history listing and restore support for the desktop UI.
+
+Consequences:
+- session persistence now writes both the latest snapshot and a bounded history of versioned snapshots
+- the conversion workspace can list and restore earlier saved session states
+- snapshot-history retention is now a configurable desktop setting instead of a hard-coded store behavior
+
+### DEC-121: Desktop settings should control recovery and history behavior, not only logging
+Status: Accepted
+
+Reasoning:
+- The settings surface had become too narrow for real internal testing: recent-item retention, snapshot retention, and auto-recovery materially affect how testers reproduce and triage issues.
+- These are desktop-behavior preferences rather than conversion semantics, so they belong in the persisted UI settings model rather than scattered constants.
+
+Consequences:
+- desktop settings now include latest-snapshot auto-recovery, recent-item limit, and snapshot-history limit
+- recent session/project tracking now follows the configured retention limit
+- conversion-session recovery behavior is now driven by settings rather than being unconditionally on
+
+### DEC-122: Combined NeuroConv workflows should register as workflow adapters over existing route delegates before adding workflow-specific write paths
+Status: Accepted
+
+Reasoning:
+- The repo already had a workflow-adapter base and many single-interface route backbones, but no real combined workflow behavior.
+- The fastest honest way to finish that gap is to register workflow adapters that compose existing source adapters and whole-session matching first, instead of inventing premature workflow-specific write logic.
+- This lets the app recognize real combined workflows such as `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut` without forcing them into single-source wrappers.
+
+Consequences:
+- the adapter registry now includes workflow-adapter registration and whole-session matching
+- session inspection can now route through workflow adapters when a whole source set matches one combined workflow unambiguously
+- combined-workflow direct execution remains a follow-on step rather than being implied complete
+
+### DEC-123: Combined NeuroConv workflow execution should compose existing direct delegates before adding bespoke workflow writers
+Status: Accepted
+
+Reasoning:
+- The repo already had real workflow matching plus many direct NeuroConv route adapters, so the least risky execution expansion was to reuse those delegates rather than invent separate workflow-specific conversion paths immediately.
+- This keeps supported workflow execution honest: a workflow can execute directly only when every matched step is already a direct NeuroConv route.
+
+Consequences:
+- workflow adapters can now expose a direct execution plan over matched direct delegates
+- supported execution now prefers a matched direct workflow over a single-route selection when the whole source set is an executable workflow
+- workflow-specific custom writers remain optional follow-on work rather than a requirement for the first execution baseline
+
+### DEC-124: Manual-testing triage should combine bounded snapshot history with a runtime progress-history surface
+Status: Accepted
+
+Reasoning:
+- Latest-state recovery alone was not enough for internal testing because testers also need a readable timeline of stage transitions when diagnosing failures or confusing runs.
+- The repo already had structured logs and versioned snapshots; the missing piece was an app-facing progress timeline that stays aligned with session state.
+
+Consequences:
+- the conversion workspace now shows a diagnostics view over captured runtime progress events
+- desktop recovery now includes both versioned snapshots and a readable progress-history surface for triage
+- future diagnostics work should build on these contracts instead of inventing ad hoc per-widget traces
+
+### DEC-125: The repo-owned custom/hybrid writer should choose modality-aware NWB containers when the normalized stream metadata is sufficient
+Status: Accepted
+
+Reasoning:
+- The custom and hybrid paths had outgrown a behavior-only plus generic `TimeSeries` writer baseline.
+- Inline imaging and ecephys streams can be represented more truthfully with standard PyNWB containers without requiring new extensions or speculative abstractions.
+
+Consequences:
+- custom and hybrid assembly now writes inline imaging streams through `ImageSeries`
+- custom and hybrid assembly now writes inline ecephys streams through `ElectricalSeries` with auto-generated electrode metadata when needed
+- broader modality coverage should continue to prefer standard PyNWB containers before inventing parallel writer abstractions

@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
-Last updated: 2026-04-01
-Status: First pass complete / internal testing underway
+Last updated: 2026-04-03
+Status: First pass complete / internal testing and local-product hardening underway
 
 ## Current Execution Status
 
@@ -38,6 +38,57 @@ Completed:
 - Added a NeuroConv-backed audio route using `AudioInterface`
 - Added a NeuroConv-backed FicTrac behavior route using `FicTracDataInterface`
 - Added a NeuroConv-backed DeepLabCut pose-estimation route using `DeepLabCutInterface`
+- Added a NeuroConv-backed SLEAP pose-estimation route using `SLEAPInterface`
+- Added a NeuroConv-backed LightningPose pose-estimation route using `LightningPoseDataInterface`
+- Added a NeuroConv-backed MedPC behavior/task route using `MedPCInterface`
+- Added a NeuroConv-backed AlphaOmega ecephys route using `AlphaOmegaRecordingInterface`
+- Added a NeuroConv-backed external-video route using `ExternalVideoInterface`
+- Added a NeuroConv-backed Axon/ABF ecephys route using `AxonRecordingInterface`
+- Added a NeuroConv-backed Axona ecephys route using `AxonaRecordingInterface`
+- Added a NeuroConv-backed Blackrock ecephys route using `BlackrockRecordingInterface`
+- Added a NeuroConv-backed EDF ecephys route using `EDFRecordingInterface`
+- Added a NeuroConv-backed HDF5 imaging route using `Hdf5ImagingInterface`
+- Added a NeuroConv-backed Micro-Manager TIFF imaging route using `MicroManagerTiffImagingInterface`
+- Added a NeuroConv-backed Miniscope imaging route using `MiniscopeImagingInterface`
+- Added a NeuroConv-backed Neuralynx ecephys route using `NeuralynxRecordingInterface`
+- Added a NeuroConv-backed OpenEphys Binary ecephys route using `OpenEphysBinaryRecordingInterface`
+- Added a NeuroConv-backed OpenEphys Legacy ecephys route using `OpenEphysLegacyRecordingInterface`
+- Added a NeuroConv-backed Plexon ecephys route using `PlexonRecordingInterface`
+- Added a NeuroConv-backed ScanImage imaging route using `ScanImageImagingInterface`
+- Added a NeuroConv-backed SpikeGadgets ecephys route using `SpikeGadgetsRecordingInterface`
+- Added a NeuroConv-backed SpikeGLX ecephys route using `SpikeGLXRecordingInterface`
+- Added a NeuroConv-backed TDT ecephys route using `TdtRecordingInterface`
+- Added a NeuroConv-backed Thor imaging route using `ThorImagingInterface`
+- Added a NeuroConv-backed Intan ecephys route using `IntanRecordingInterface`
+- Added a NeuroConv-backed WhiteMatter ecephys route using `WhiteMatterRecordingInterface`
+- Added a NeuroConv-backed Biocam ecephys route using `BiocamRecordingInterface`
+- Added NeuroConv-backed Bruker TIFF single-plane and multi-plane imaging routes using `BrukerTiffSinglePlaneImagingInterface` and `BrukerTiffMultiPlaneImagingInterface`
+- Added a NeuroConv-backed Femtonics imaging route using `FemtonicsImagingInterface`
+- Added a NeuroConv-backed Inscopix imaging route using `InscopixImagingInterface`
+- Added a NeuroConv-backed MCSRaw ecephys route using `MCSRawRecordingInterface`
+- Added a NeuroConv-backed MaxOne ecephys route using `MaxOneRecordingInterface`
+- Added a NeuroConv-backed MEArec ecephys route using `MEArecRecordingInterface`
+- Added a NeuroConv-backed NeuroScope ecephys route using `NeuroScopeRecordingInterface`
+- Added a NeuroConv-backed OpenEphys Binary analog route using `OpenEphysBinaryAnalogInterface`
+- Added a NeuroConv-backed Plexon2 ecephys route using `Plexon2RecordingInterface`
+- Added a NeuroConv-backed Scanbox imaging route using `SbxImagingInterface`
+- Added a NeuroConv-backed ScanImage Legacy imaging route using `ScanImageLegacyImagingInterface`
+- Added a NeuroConv-backed Spike2 ecephys route using `Spike2RecordingInterface`
+- Added a NeuroConv-backed Neuralynx NVT behavior route using `NeuralynxNvtInterface`
+- Added a NeuroConv-backed TIFF imaging route using `TiffImagingInterface`
+- Added a NeuroConv-backed Blackrock sorting route using `BlackrockSortingInterface`
+- Added a NeuroConv-backed Cell Explorer sorting route using `CellExplorerSortingInterface`
+- Added a NeuroConv-backed KiloSort sorting route using `KiloSortSortingInterface`
+- Added a NeuroConv-backed Neuralynx sorting route using `NeuralynxSortingInterface`
+- Added a NeuroConv-backed NeuroScope sorting route using `NeuroScopeSortingInterface`
+- Added a NeuroConv-backed Phy sorting route using `PhySortingInterface`
+- Added a NeuroConv-backed Plexon sorting route using `PlexonSortingInterface`
+- Added a NeuroConv-backed Caiman segmentation route using `CaimanSegmentationInterface`
+- Added a NeuroConv-backed CNMFE segmentation route using `CnmfeSegmentationInterface`
+- Added a NeuroConv-backed EXTRACT segmentation route using `ExtractSegmentationInterface`
+- Added a NeuroConv-backed Inscopix segmentation route using `InscopixSegmentationInterface`
+- Added a NeuroConv-backed Suite2p segmentation route using `Suite2pSegmentationInterface`
+- Added a NeuroConv-backed TDT fiber photometry route using `TDTFiberPhotometryInterface`
 - Added first-class normalized interval-table and trial-row support
 - Added trial-table mapping and PyNWB trial assembly support
 - Added machine-readable validation report artifacts to the execution pipeline
@@ -94,31 +145,127 @@ Completed:
 - Added dataset-level grouping actions in `New Session`, including group rename plus create/move flows over selected sources
 - Added first actionable mixed-source conflict resolution in the metadata-review tab through session-wide override actions on selected source values
 - Polished the desktop review flow so metadata-resolution actions clear stale preview/execution state and explicitly prompt a rebuild
+- Added explicit group-confirmation state for direct-ingest dataset groups, persisted through saved projects and reopened draft workspaces
+- Added direct-ingest split actions so selected sources can be broken back into individual dataset groups
+- Added first source-specific metadata-resolution actions from the post-preview metadata-review workspace
+- Expanded metadata-review status summaries to show both session-wide and source-specific override state
+- Added explicit dataset-group kind and anchor-path summaries to direct ingest so groups read more like real bundles than loose labels
+- Added a direct-ingest confirmation gate so reviewable grouped bundles must be confirmed before a session can be created
+- Added manual session-override entry and one-click source-to-source override actions in the metadata-review workspace
+- Added direct-ingest grouping reasons and member summaries so detected bundles explain why they exist
+- Added selected-group split actions so whole grouped bundles can be broken back into individual dataset groups
+- Added metadata-review filtering, resolution-status/history summaries, and a clear-all-overrides action for one canonical field
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
+- Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
+- Added a shared Qt visual system with reusable header cards, metric cards, restrained color treatment, and cleaner dialog/workspace composition across the desktop shell
+- Consolidated routine desktop workflows into one integrated main-window workspace with tabs for conversion, direct ingest, packages, settings, and NWB viewing
+- Embedded the NWB viewer into the main shell while keeping the standalone viewer class only as a thin compatibility wrapper
+- Switched UI-visible log timestamps to use the original logging-record time instead of UI append time
+- Improved log-viewer responsiveness by appending new entries incrementally instead of redrawing the full log buffer on every update
+- Added bounded snapshot history plus explicit restore actions, settings-driven auto-recovery, and snapshot-history retention controls to the real desktop workflow
+- Expanded the conversion workspace with a dedicated diagnostics view over runtime progress history for manual-testing triage
+- Expanded custom/hybrid repository-owned assembly beyond behavior-only streams so inline imaging streams now write to `ImageSeries` and inline ecephys streams now write to `ElectricalSeries`
+- Expanded combined NeuroConv workflows from inspection/composition only into direct supported execution for workflow-matched sessions backed entirely by direct NeuroConv delegates
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Operational hardening around persistence, recovery, reporting, and reviewability during the first serious manual-testing round
-- Modality-aware assembly expansion beyond the current behavior trace/position baseline
-- Snapshot-history design beyond the current latest-snapshot store
-- UI runtime and observability expansion beyond the current logging/progress baseline
-- Route-based dependency management and package-install workflow for setup and future UI package management
-- Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
-- Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, and current group-action baseline
+- Workstream 1: deepen direct-ingest dataset modeling beyond the current heuristic grouping, confirmation, and manual correction baseline so heterogeneous multi-file bundles are represented more honestly during session assembly.
+- Workstream 2: expand mixed-source metadata disagreement handling beyond the current session/source override actions into a fuller field-level review workflow with clearer durable resolution history.
+- Workstream 3: harden local-app recovery, diagnostics, review/report behavior, and internal-testing triage so repeated local runs are predictable and failures are easier to diagnose.
 
 Next:
-- Continue formal first-pass internal testing in the dedicated Conda environment using the full suite plus the internal smoke baseline
-- Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
-- Deepen direct-ingest grouping from current heuristics and manual correction toward a richer dataset/session model
-- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and session-wide override actions toward fuller field-by-field conflict resolution
-- Expand the standalone NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
-- Keep supported-route growth focused only on what is needed to unblock first-pass workflow testing
-- Keep release engineering planned but defer implementation until after first-pass internal testing
+- Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth.
+- Define and run the internal-testing matrix in the dedicated Conda environment: smoke baseline, focused route/workflow checks, and at least 3 representative local datasets that stress supported, custom, or hybrid ingest paths.
+- Capture internal-testing findings in a repeatable triage loop and convert them into prioritized UI, workflow, performance, and operational fixes instead of reopening broad architecture work.
+- Deliver the next direct-ingest milestone as a richer dataset/session model: stronger bundle identity, clearer confirmation semantics, and better handling of ambiguous multi-file groups.
+- Deliver the next metadata-review milestone as fuller field-by-field disagreement resolution with clearer session-wide versus source-specific override history.
+- Continue hardening persistence, recovery, logging, review/report, and diagnostics flows until routine manual testing no longer depends on frequent developer intervention.
+- Reduce reliance on `Open Session...` JSON/bootstrap fixtures during day-to-day testing by preferring direct-ingest plus explicit project reopen flows wherever practical.
+- Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps.
+- Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area only when a real testing scenario is blocked by the current baseline.
+- Keep release engineering planned but defer implementation until after local-app maturity and the first user decision/change phase.
+
+## Final Local App Maturity Path
+
+The current repo has passed the first-pass baseline. The next milestone is not more broad architecture work; it is finishing a trustworthy local application that can survive internal testing and then enter a user decision/change phase.
+
+Priority order:
+1. Desktop polish and workflow clarity
+2. Operational hardening and recovery
+3. Structured internal testing on real datasets
+4. User decision/change phase
+5. Combined-workflow expansion only where it unblocks real user scenarios
+6. Release engineering after the above
+
+### Near-Term Milestone Checklist
+
+#### Milestone A: Direct-Ingest Dataset Model
+- Keep refining the structured source-ingest flow that now lets users add NeuroConv-supported sources, custom files/folders, or a mixture of both within one session-assembly workspace.
+- Preserve the structured source selector as the default ingest model: the `New Session` workflow should expose a repeatable source-type choice with a `Custom` option plus all currently installed NeuroConv-supported packages.
+- Treat proprietary and custom ingest as additive, not mutually exclusive, so one session can include multiple structured sources plus arbitrary supported custom files/folders without splitting the workflow into separate sessions.
+- For supported-route selection, prompt for the package's project file, main file, or root dataset directory and treat that chosen path as the canonical dataset entry reference for the structured source bundle.
+- Tighten route-specific entry-path validation and canonical dataset-entry semantics so a selected NeuroConv package clearly owns the expected project/main file or root directory for that bundle.
+- Represent supported selections as structured source objects that carry route identity, canonical entry semantics, and any later bundle/context decisions into downstream grouping, review, persistence, and provenance.
+- Use the selected NeuroConv package as real context in session assembly: proprietary selections should contribute known modality and relationship hints to later grouping and mapping rather than behaving like unlabeled generic files.
+- Represent direct-ingest bundles with stronger dataset identity than the current grouped-path summary alone, including durable group intent, clearer canonical entry-path semantics, and better saved-project round trips for proprietary-plus-custom sessions.
+- Keep proprietary-path validation conservative but explicit: reject obviously wrong entry selections early, preserve plausible-but-uncertain cases as reviewable, and do not silently reinterpret a selected package as generic custom ingest.
+- Keep custom ingest open to individual files, multiple files, or folders, but only admit supported scientific/media/metadata file types into the candidate pool.
+- Preserve the distinction that custom inputs join the session file pool directly and are not tied to a specific NeuroConv package, even when they are later associated with a structured source bundle.
+- Continue evolving the decision engine so it accepts both structured and unstructured inputs, uses route context plus file structure and metadata to organize them, and proposes associations or new mappings without silently overcommitting.
+- Keep mixed-source attachment logic reviewable: attach nearby custom inputs to an existing structured bundle when the evidence is narrow enough, propose new groupings when association is weak, and explicitly flag ambiguity for user review.
+- Push custom-input organization toward NWB-facing roles such as acquisition, behavior, metadata, and processed data whenever the evidence supports it, while preserving provenance and keeping uncertain mappings included but marked for review.
+- Keep UI language and issue text researcher-facing: use technically precise NWB and NeuroConv terminology without oversimplifying the workflow.
+- Preserve explicit provenance for bundle membership, grouping reasons, and user corrections so later review/report flows can explain how a session was assembled.
+- Keep hardening custom ingest acceptance so supported scientific/media/metadata files remain eligible while obviously unrelated files are rejected with clear reviewable feedback.
+- Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, structured-source context propagation, and saved-project round trips over the richer dataset model.
+
+#### Milestone B: Metadata Review And Resolution
+- Expand the metadata-review workspace from the current override actions into a fuller field-by-field resolution workflow over the current canonical field set.
+- Make session-wide versus source-specific override history more explicit so users can tell which action resolved a disagreement and what still remains unresolved.
+- Add tests that cover repeated review/rebuild cycles, override clearing, and mixed-source disagreement resolution in supported, custom, and hybrid sessions.
+
+#### Milestone C: Recovery, Diagnostics, And Testing Triage
+- Finish hardening snapshot recovery, restore, report/review reopen behavior, and desktop error handling so repeated manual-testing runs are predictable.
+- Define and run the first internal-testing matrix: smoke baseline, focused route/workflow checks, and representative local datasets.
+- Record findings as explicit blocking versus non-blocking local-app issues so testing-driven fixes can be prioritized without reopening broad architecture scope.
+
+### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
+
+The app should be considered mature enough to move from engineering-led internal testing into a broader user-feedback/change phase only when all of the following are true:
+
+- Direct-ingest session creation is reliable enough that users can assemble representative real sessions without frequent manual rescue from bootstrap JSON compatibility paths.
+- The internal smoke baseline remains green while testing fixes are applied.
+- Focused route/workflow checks for the currently exercised supported and combined-workflow slices remain green while testing fixes are applied.
+- At least 3 representative local datasets have been exercised through the current desktop workflow, with at least one stressing multi-source grouping or mixed-source metadata disagreement handling.
+- Project save/load, recent history, snapshot recovery, output selection, and review/report actions behave predictably across repeated local runs and at least one explicit recovery/restore scenario per session type has been checked.
+- Mixed-source metadata review is usable enough that important disagreements can be understood and resolved without developer intervention for the current canonical field set.
+- Logging, diagnostics, and user-facing error surfaces are strong enough that failed or confusing local runs are diagnosable after the fact without needing ad hoc instrumentation.
+- The integrated NWB viewer is stable enough for routine inspection of generated files and arbitrary external NWB files during testing.
+- The findings from at least one real internal-testing round have been triaged into explicit follow-up work with blocking versus non-blocking status.
+
+### User Decision/Change Phase
+
+Once the local app meets the maturity gate above, the next phase should be explicitly user-facing:
+
+- place the app in front of real internal users, not just engineering validation runs
+- collect requested changes around ingest, grouping, metadata review, viewer usability, review/report clarity, and route selection/install behavior
+- prioritize change requests by operator friction and scientific correctness, not by novelty
+- prefer improving existing flows over adding more broad route surface area unless a missing route is a real testing blocker
+
+### Explicit Non-Priorities For This Phase
+
+- broad new single-interface route accumulation beyond the approved catalog
+- packaging, installer, updater, and deployment/distribution work
+- speculative plugin/governance rollout work
+- rich viewer rendering layers beyond what testing clearly justifies
 
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
+- The Qt desktop layer now also has a shared visual system with reusable page headers, metric cards, cleaner hierarchy, and restrained styling across the integrated shell workspace.
+- Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
+- Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `AlphaOmega`, `Axon/ABF`, `Axona`, `Biocam`, `Blackrock` recording and sorting, `Bruker TIFF` (single-plane and multi-plane), `Caiman` segmentation, `Cell Explorer` sorting, `CNMFE` segmentation, `EDF`, `EXTRACT` segmentation, `Femtonics`, `Videos`, `HDF5 Imaging`, `Inscopix` imaging and segmentation, `KiloSort` sorting, `MCSRaw`, `MaxOne`, `MEArec`, `Micro-Manager TIFF`, `Miniscope`, `Neuralynx` recording and sorting, `Neuralynx NVT`, `NeuroScope` recording and sorting, `OpenEphys Binary`, `OpenEphys Binary Analog`, `OpenEphys Legacy`, `Plexon` recording and sorting, `Plexon2`, `Phy` sorting, `Scanbox`, `ScanImage`, `ScanImage Legacy`, `Spike2`, `SpikeGadgets`, `SpikeGLX`, `Suite2p` segmentation, `TDT`, `TDT Fiber Photometry`, `TIFF`, `Thor`, `Intan`, and `WhiteMatter` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment and with the overlap-sensitive sorting, segmentation, and TDT photometry readers kept conservative until the desktop UI grows more explicit workflow selection for ambiguous sources.
+- The supported-route layer now also includes first real combined-workflow adapters for `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut`, registered only when the required underlying route packages are installed in the current environment and now capable of direct supported execution when every matched delegate is a direct NeuroConv route.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
 - The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.
@@ -126,15 +273,17 @@ Next:
 - The first concrete direct-ingest slice now exists: `New Session` opens a draft session-assembly workflow over real files/folders instead of behaving only as a shell reset.
 - Direct ingest now has explicit saved-project behavior through app-owned `.nwbforge-project.json` files, with open/save/recent project desktop flows layered on top of the in-progress draft workspace.
 - “Load any combination of files” is a real product goal for ingestion and organization, but it does not imply arbitrary automatic scientific interpretation; uncertain groupings and mappings must remain reviewable.
-- Direct ingest now also has first-pass dataset-level grouping actions, including selected-group rename plus create/move flows for selected sources on top of heuristic grouping and first-class group summaries.
+- Direct ingest now also has first-pass dataset-level grouping actions, including selected-group rename plus create/move flows for selected sources, explicit group confirmation, and selected-source split actions on top of heuristic grouping and first-class group summaries.
+- Direct ingest groups now also surface dataset kind and anchor-path context, and reviewable multi-source bundles must be confirmed before a session can be created from `New Session`.
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Supported NeuroConv routes now use category-first package layout for the `behavior`, `tabular`, and `media` families, while keeping stable public adapter exports.
-- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real direct-NeuroConv workflow route is implemented yet.
+- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements plus real workflow-backed inspection, composition, and direct supported execution baselines.
 - The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for combined manifest-plus-image, manifest-plus-audio, manifest-plus-FicTrac, and manifest-plus-DeepLabCut supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
 - Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, threaded executor, desktop bootstrap, session assembly, and settings persistence.
-- The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
+- Structured logging now also carries original event timestamps into the UI, includes operation timing on preview/execution/persistence paths, supports versioned snapshot history for recovery triage, and now pairs with a runtime progress-history diagnostics surface in the conversion workspace.
+- The project now includes runtime contracts for stage/progress/error reporting, threaded execution, an integrated local desktop shell, broad approved-route backbone coverage, and first-pass multimodal custom/hybrid assembly, but it still needs testing-driven refinement before deployment work.
 - Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
 - The first concrete category-first package refactors are now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/` and the text/tabular family under `src/nwbforge/adapters/supported/tabular/`.
 - Development workflow now also requires explicit Codex subagent orchestration guidance: use at most three concurrent subagents, keep state isolated, collate results deterministically, and fall back to sequential handling on failure.
@@ -149,9 +298,9 @@ Next:
 - The `ui/` layer now also includes a shared observability baseline: `InMemoryUiLogSink` and `UiLogHandler` for an in-app log viewer path, plus `DefaultUiErrorPresenter` for consistent user-facing errors across screens.
 - The repository now also includes the first concrete `PySide6` widget layer under `src/nwbforge/ui/qt/`, with a `QMainWindow`, File menu, status bar, log dock, package-install dialog, and conversion-session widget bound to the existing UI models.
 - The PySide6 shell now also includes a `SessionAssemblyDialog`, so `New Session` begins the direct-ingest workflow by letting users add real files/folders and create a draft `ConversionSession`.
-- The `SessionAssemblyDialog` now also supports dataset-level grouping actions so users can rename a detected group, create a new group from selected sources, or move selected sources into the currently selected group.
-- The desktop shell still does not include a standalone NWB inspection window; NWB-file viewing remains a distinct planned slice rather than an embedded conversion-panel concern.
+- The `SessionAssemblyDialog` now also supports dataset-level grouping actions so users can rename a detected group, confirm it, split selected sources back into individual groups, create a new group from selected sources, or move selected sources into the currently selected group.
 - The desktop shell now includes a standalone read-only NWB viewer window that can open arbitrary `.nwb` files through `PyNWB`, launch from the main shell, and inspect generated outputs without embedding NWB browsing into the conversion panel.
+- The standalone viewer now also includes an optional `nwbwidgets + Panel` rich-preview path for selected nodes when those packages are installed, but the base viewer remains PyNWB-first and dependency-light.
 - The PySide6 shell can now optionally mirror UI-visible logs to a JSON-lines file while preserving the in-app log viewer, and shell-level user-facing errors are now surfaced through real modal warnings rather than status text alone.
 - The `File -> Settings` entry point is now a real dialog backed by persisted desktop settings, with current coverage for verbose logging and file-log path/configuration.
 - The conversion-session UI now exposes validation-summary, review-outcome, issue-acknowledgement, and approve/reject controls over the existing execution-review service.
@@ -197,6 +346,10 @@ Required direction:
 - session loading, navigation, output selection, review, validation, settings, and logs should be reachable through clear product-level workflows
 - major conversion surfaces should present summary, status, review, and artifact information intentionally rather than as stacked debug fields
 - major conversion workspaces should use intentional desktop navigation patterns such as tabs or dedicated panes when that improves readability and task focus
+- desktop windows and dialogs should share a consistent visual system so the shell, viewer, settings, package install, and direct-ingest flows read like one product
+- routine workflows should live inside the same main application window; separate top-level windows should be avoided unless there is a strong technical reason
+- UI-visible logging should always include timestamps, and internal-testing logs should be easy to correlate across background work and user actions
+- UI state changes should favor incremental updates and lazy loading over full redraw behavior when possible
 - the primary start flow should become `New Conversion Session`, not “prepare an app-specific JSON file by hand”
 - users should be able to add real files and folders incrementally, combine supported and custom inputs in one session, and review the resulting source grouping before preview/build
 - direct-ingest grouping should start with automatic heuristics first, then grow toward richer confirmation and correction workflows rather than starting fully manual
@@ -204,8 +357,11 @@ Required direction:
 
 Current status:
 - the first direct-ingest slice is now in place through `SessionAssemblyService`, `SessionAssemblyScreenModel`, and the Qt `New Session` dialog
-- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, reviewable auto-grouping and mixed-group issues, per-source grouping correction, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
+- current assembly supports additive path selection, adapter/pathway suggestion, source-role assignment, session-wide metadata overrides for core canonical fields, source-specific metadata overrides for the same canonical field set, heuristic-first grouping with first-class dataset/group summaries, dataset kind/anchor-path summaries, grouping-reason/member summaries, reviewable auto-grouping and mixed-group issues, explicit group confirmation with a create-session gate, per-source grouping correction, selected-source and selected-group split actions, simple same-stem sidecar association, explicit project save/load flows, and draft session creation
 - in-progress `New Session` drafts now persist under app state and reopen with their selected inputs, override values, and saved-project identity instead of resetting on every dialog open
+- the Qt widget layer now also has a shared polished visual treatment with page headers, metric cards, cleaner split layouts, and stronger dialog grouping instead of relying on default stacked utility layouts
+- routine settings, package-management, direct-ingest, conversion-review, and NWB-viewing flows now share one integrated main-window workspace, with remaining UI work focused on performance and workflow polish rather than window consolidation
 
 ### Priority 2: Custom and hybrid workflows
 
@@ -283,7 +439,7 @@ Current status:
 - this JSON-based entry path is a temporary harness and compatibility layer, not the intended primary end-user ingest model
 - the next desktop-ingest milestone should start from `New Conversion Session`, let users add files/folders directly, inspect/group/classify sources, and then optionally persist that assembled state as app-owned session/project data
 - the first concrete version of that milestone is now implemented and now includes initial source-role editing, session-wide metadata overrides, source-specific metadata overrides for core canonical fields, explicit saved-project workflows, and persisted draft/project reopen behavior
-- richer grouping confirmation and explicit post-preview conflict resolution remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
+- richer dataset modeling and fuller field-by-field post-preview conflict resolution remain follow-on work before JSON-first testing paths can be fully demoted in day-to-day use
 - if app-owned session or project files remain in the product, they should represent saved internal state for reopen/recovery or future `Save Project` flows rather than a required hand-authored input format
 
 ### Testing baseline for first-pass handoff
@@ -302,7 +458,9 @@ Current milestone result:
 Operational hardening after the first-pass gate:
 - The current desktop workflow now persists latest preview, execution, and review snapshots automatically.
 - The current desktop workflow now also restores the latest saved session snapshot on reopen through the real desktop path.
-- The next persistence milestone is richer history and recovery behavior on top of the current latest-state store, not basic reopen support.
+- The current desktop workflow now also persists versioned snapshot history, exposes snapshot history in the conversion workspace, supports restoring an earlier saved snapshot, and makes recovery/history retention configurable through desktop settings.
+- The current desktop workflow now also exposes runtime progress history in a dedicated diagnostics view so manual testers can correlate stage transitions with saved-state recovery and report artifacts.
+- The next persistence milestone is deeper recovery comparison/reporting behavior on top of the current versioned snapshot store, not basic reopen support.
 
 Only after this milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
 
@@ -1057,13 +1215,13 @@ Current status:
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
-- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus first-pass behavior trace and position pathways, but broader modality-specific and multimodal content remain out of scope
+- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus first-pass behavior trace and position pathways; the repo-owned custom/hybrid writer baseline now also covers inline imaging and ecephys streams through `ImageSeries` and `ElectricalSeries`.
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
-- Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
+- Session persistence is currently JSON-file based with a stable latest snapshot path plus bounded version history, but it still does not provide concurrent review handling or richer diff/comparison UX across saved versions
 - `neuroconv` is now a declared project dependency and the first real supported-path route is implemented through `CsvTimeIntervalsInterface`
 - The current real supported text/tabular routes cover CSV and Excel interval/trial data and combine cleanly with the manifest-backed metadata pilot in multi-source supported sessions
 - The current real supported text/tabular family now lives under `src/nwbforge/adapters/supported/tabular/`, aligning it with the category-first packaging direction already used for `supported/behavior/`
-- Combined NeuroConv workflows now have a dedicated adapter base and matching contract, but no real workflow-backed route has been implemented yet
+- Combined NeuroConv workflows now have a dedicated adapter base, matching contract, and first real workflow-backed inspection plus direct execution routes for `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut`
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
 - Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise
@@ -1081,7 +1239,7 @@ Current status:
 
 Current status:
 - End-to-end NeuroConv-backed supported workflows now exist for CSV and Excel time intervals carried into NWB trials plus still-image and audio conversion through documented NeuroConv interfaces
-- Additional supported routes and a minimal operator-facing shell remain outstanding
+- The integrated operator-facing desktop shell now exists; remaining supported-path work should be driven by real testing blockers and combined-workflow needs rather than by broad single-interface route accumulation
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
 - This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
 - The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
@@ -1093,7 +1251,7 @@ Current status:
 
 The repository is now in internal-testing mode. The following deviations between the target product plan and the current implementation are real and should remain explicit until resolved.
 
-### 1. Direct ingest now has first-class group actions, but grouping confirmation is still not a full dataset model
+### 1. Direct ingest now has first-class group actions and confirmation, but it is still not a full dataset model
 - Target direction:
   - the app should help users load combinations of files/folders and organize them into one session intentionally
   - grouping should eventually handle related files, sidecars, and mixed supported/custom bundles more honestly
@@ -1102,8 +1260,9 @@ The repository is now in internal-testing mode. The following deviations between
   - grouping heuristics now distinguish descriptor-parent groups and same-stem sidecar bundles instead of relying only on flat parent-folder grouping
   - auto-grouping issues are surfaced for review when multiple selected inputs collapse into the same draft group, and mixed supported/custom-looking groups now emit an explicit warning
   - users can now correct grouping per source in the `New Session` workflow, and the dialog now shows a dedicated detected-group summary panel
-  - the dialog now also supports dataset-level actions, including group rename plus create/move flows for selected sources
-  - there is still no richer dataset model beyond grouped selected paths, no explicit merge/split history, and no stronger dataset confirmation artifact beyond the current group overrides
+  - the dialog now also supports dataset-level actions, including group rename, selected-source create/move flows, selected-source split actions, and explicit group confirmation
+  - confirmed groups now persist through saved projects and reopened draft workspaces
+  - there is still no richer dataset model beyond grouped selected paths, no explicit merge/split history, and no stronger dataset confirmation artifact beyond the current confirmation state and group overrides
 - Why this matters:
   - the current ingest path is now honest enough for broader internal testing, but it is still too shallow for heterogeneous lab datasets with ambiguous multi-file bundles
 
@@ -1127,8 +1286,9 @@ The repository is now in internal-testing mode. The following deviations between
   - `ConversionSession.metadata_overrides` remains the session-wide path for simple canonical overrides
   - direct ingest now also supports per-source overrides for the same core canonical field set, and those overrides are applied at the inspection boundary and normalized as user-supplied values
   - the desktop conversion workspace now includes a dedicated metadata-review tab that surfaces pending normalized conflicts, their retained canonical values, contributing source values, and normalization notes after preview or execution
-  - the metadata-review tab now lets users promote a selected source value into a session-wide override directly from that workspace and then rebuild preview
-  - the desktop UI still does not offer fuller field-by-field resolution policy, source-specific conflict actions from the post-preview workspace, or a richer conflict-resolution history beyond the override state itself
+- the metadata-review tab now lets users promote a selected source value into a session-wide override, apply a source-specific override, clear either override path, and then rebuild preview
+- the desktop UI now also shows explicit session/source override status, resolution-status summaries, resolution-history notes, filterable pending/resolved conflicts, and a clear-all-overrides action for one canonical field
+- the desktop UI still does not offer fuller field-by-field resolution policy or durable conflict-resolution history beyond current override state and derived review notes
 - Why this matters:
   - the architectural shortcut is gone and a real disagreement-review surface now exists, but resolution is still narrower than a fuller mixed-source conflict workspace
 
@@ -1159,9 +1319,10 @@ The repository is now in internal-testing mode. The following deviations between
 - Current implementation:
   - the shell now has an app-owned `Open NWB Viewer...` flow and can launch generated `.nwb` artifacts into the same standalone viewer
   - the viewer now opens `.nwb` files through `PyNWB` in read-only mode, surfaces a generic lazy tree/detail browser, and keeps all branches collapsed by default except the initial metadata node
-  - the current viewer still uses generic text/table previews and does not yet include richer modality-specific renderers or background file-open orchestration
+  - the viewer now also supports an optional `nwbwidgets + Panel` rich-preview action for selected nodes when those packages are installed
+  - the current viewer still uses generic text/table previews for the main in-app detail surface and does not yet include broader modality-specific renderers or background file-open orchestration
 - Why this matters:
-  - internal testing and local use now have a truthful in-app NWB inspection path, but richer renderers and heavier large-file polish remain follow-on work
+  - internal testing and local use now have a truthful in-app NWB inspection path plus an optional richer preview layer, but the main viewer still needs to remain robust without those optional dependencies
 
 ### Phase 4: Custom-path MVP
 - Implement source inspection workflow
@@ -1195,8 +1356,9 @@ Current status:
 ## Open Questions
 
 - Which 3 to 5 lab pipelines should define the initial architecture tests?
-- Do we need a desktop-first UI, browser-first UI, or both?
-- Where should session state live for early deployments: local files, SQLite, or service-backed storage?
+- Which exact representative local datasets should define the first internal-testing matrix for supported, custom, and hybrid/direct-ingest behavior?
+- When should the current local desktop-first direction justify a browser surface, if ever, instead of continuing to deepen one desktop product?
+- What criteria should trigger migration from the current JSON snapshot/project baseline to SQLite or another structured local store?
 - What minimum provenance record is required for auditability?
 - When should the system recommend descriptive metadata versus a formal NDX?
 - How should lab vocabularies be versioned and reviewed?

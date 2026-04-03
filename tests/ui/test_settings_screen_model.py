@@ -26,12 +26,18 @@ def test_settings_screen_model_saves_updated_settings(tmp_path: Path) -> None:
     screen.set_verbose_logging_enabled(True)
     screen.set_file_logging_enabled(True)
     screen.set_log_file_path(str(tmp_path / "logs" / "ui.jsonl"))
+    screen.set_restore_latest_snapshot_on_load(False)
+    screen.set_recent_item_limit(7)
+    screen.set_snapshot_history_limit(12)
 
     state = screen.save()
 
     assert state.applied_settings.verbose_logging_enabled is True
     assert state.applied_settings.file_logging_enabled is True
     assert state.applied_settings.log_file_path == tmp_path / "logs" / "ui.jsonl"
+    assert state.applied_settings.restore_latest_snapshot_on_load is False
+    assert state.applied_settings.recent_item_limit == 7
+    assert state.applied_settings.snapshot_history_limit == 12
     assert state.has_unsaved_changes is False
 
 

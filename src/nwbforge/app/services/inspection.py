@@ -16,6 +16,22 @@ class RegistrySourceInspectionService(SourceInspectionService):
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
 
+    def inspect_session(self, session: ConversionSession) -> tuple[ExtractionResult, ...] | None:
+        matches = self._registry.matching_workflow_adapters(session.sources)
+        if not matches:
+            return None
+        if len(matches) > 1:
+            adapter_ids = ", ".join(adapter.adapter_id for adapter in matches)
+            raise AdapterSelectionError(
+                f"Multiple workflow adapters matched session '{session.session_id}': {adapter_ids}."
+            )
+        adapter = matches[0]
+        results = []
+        for result in adapter.inspect_sources(session.sources):
+            source = self._find_source(session, result.source_id)
+            results.append(self._apply_source_metadata_overrides(session, source, result))
+        return tuple(results)
+
     def inspect(self, session: ConversionSession, source_id: str) -> ExtractionResult:
         source = self._find_source(session, source_id)
         adapter = self._select_adapter(source)

@@ -17,3 +17,15 @@ def _try_import_optional() -> None:
 
 
 _try_import_optional()
+
+
+def _try_import_videos() -> None:
+    try:
+        from nwbforge.adapters.supported.media.videos import NeuroConvVideoAdapter
+    except ImportError:
+        return
+    globals()["NeuroConvVideoAdapter"] = NeuroConvVideoAdapter
+    __all__.append("NeuroConvVideoAdapter")
+
+
+_try_import_videos()

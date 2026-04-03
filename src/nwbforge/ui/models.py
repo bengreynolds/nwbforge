@@ -23,6 +23,7 @@ from nwbforge.app.services.models import ConversionExecution, ConversionPreview,
 from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
+    SessionSnapshotHistoryEntry,
     SourceReference,
     ValidationReviewOutcome,
     ValidationSummary,
@@ -103,19 +104,37 @@ class SessionAssemblySourceItem:
     """A UI-facing summary of one selected input in session assembly."""
 
     source_id: str
+    ingest_kind: str
+    selection_label: str
+    route_name: str | None
     group_key: str
     group_label: str
     label: str
     location: Path
     source_type: str
     suggested_pathway: str
+    entry_path_kind: str | None = None
+    entry_role_label: str | None = None
+    entry_validation_status: str | None = None
     role: str = "primary"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None
     sidecar_for_label: str | None = None
+    context_source_id: str | None = None
+    context_label: str | None = None
     matching_adapter_ids: tuple[str, ...] = ()
     suggested_adapter_id: str | None = None
     needs_review: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SessionAssemblySourceTypeOption:
+    """One user-selectable source-ingest option in the direct-ingest workspace."""
+
+    ingest_kind: str
+    label: str
+    route_name: str | None = None
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,12 +144,24 @@ class SessionAssemblyGroupItem:
     group_key: str
     group_label: str
     suggested_pathway: str
+    group_kind: str = "folder"
+    anchor_path: Path | None = None
+    canonical_source_id: str | None = None
+    canonical_source_label: str | None = None
+    canonical_source_path: Path | None = None
+    canonical_entry_role_label: str | None = None
+    canonical_selection_label: str | None = None
+    grouping_reason: str = ""
+    member_labels: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
     source_count: int = 0
     primary_count: int = 0
     supplemental_count: int = 0
     metadata_count: int = 0
+    review_issue_count: int = 0
+    requires_confirmation: bool = False
     needs_review: bool = False
+    is_confirmed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +179,8 @@ class SessionAssemblyState:
     """State consumable by a direct-ingest session-assembly screen."""
 
     selected_paths: tuple[Path, ...] = ()
+    source_type_options: tuple[SessionAssemblySourceTypeOption, ...] = ()
+    source_intents: dict[str, dict[str, str]] = field(default_factory=dict)
     project_path: Path | None = None
     session_id: str = ""
     title: str = ""
@@ -190,6 +223,29 @@ class GeneratedArtifactItem:
 
 
 @dataclass(frozen=True, slots=True)
+class ProgressHistoryItem:
+    """A UI-facing runtime progress event with a stable timestamp for triage."""
+
+    created_at_text: str
+    stage: str
+    percent_complete: int
+    message: str
+    source_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SessionSnapshotHistoryItem:
+    """A UI-facing summary of one persisted session snapshot version."""
+
+    snapshot_id: str
+    saved_at_text: str
+    status: str
+    artifact_count: int = 0
+    issue_count: int = 0
+    has_review_record: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class MetadataDisagreementSourceItem:
     """One source-specific value contributing to a mixed-source disagreement."""
 
@@ -198,6 +254,7 @@ class MetadataDisagreementSourceItem:
     role: str
     extracted_key: str
     value: str
+    override_value: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +268,10 @@ class MetadataDisagreementItem:
     notes: tuple[str, ...] = ()
     source_values: tuple[MetadataDisagreementSourceItem, ...] = ()
     session_override_value: str | None = None
+    resolution_status: str = "pending"
+    resolution_notes: tuple[str, ...] = ()
+    resolution_history: tuple[str, ...] = ()
+    pending_resolution: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,8 +285,10 @@ class ConversionSessionScreenState:
     persisted_validation_summary: ValidationSummary | None = None
     persisted_review_outcome: ValidationReviewOutcome | None = None
     progress_event: PipelineProgressEvent | None = None
+    progress_history: tuple[ProgressHistoryItem, ...] = ()
     output_path: Path | None = None
     generated_artifacts: tuple[GeneratedArtifactItem, ...] = ()
+    snapshot_history: tuple[SessionSnapshotHistoryItem, ...] = ()
     validation_issues: tuple[ValidationIssueItem, ...] = ()
     metadata_disagreements: tuple[MetadataDisagreementItem, ...] = ()
     reviewer_name: str = ""
@@ -269,6 +332,9 @@ class SettingsScreenState:
     verbose_logging_enabled: bool = False
     file_logging_enabled: bool = False
     log_file_path: str = str(UiSettings().log_file_path)
+    restore_latest_snapshot_on_load: bool = UiSettings().restore_latest_snapshot_on_load
+    recent_item_limit: int = UiSettings().recent_item_limit
+    snapshot_history_limit: int = UiSettings().snapshot_history_limit
     last_open_project_path: str = ""
     recent_project_paths: tuple[str, ...] = ()
     last_open_session_path: str = ""
@@ -364,4 +430,22 @@ ShellStateListener = Callable[[DesktopShellState], None]
 PackageInstallerStateListener = Callable[[PackageInstallerState], None]
 ConversionSessionStateListener = Callable[[ConversionSessionScreenState], None]
 SettingsScreenStateListener = Callable[[SettingsScreenState], None]
+
+
+def snapshot_history_items(
+    entries: tuple[SessionSnapshotHistoryEntry, ...],
+) -> tuple[SessionSnapshotHistoryItem, ...]:
+    """Project persisted snapshot history into UI-facing items."""
+
+    return tuple(
+        SessionSnapshotHistoryItem(
+            snapshot_id=entry.snapshot_id,
+            saved_at_text=entry.saved_at.isoformat(timespec="seconds"),
+            status=entry.status,
+            artifact_count=entry.artifact_count,
+            issue_count=entry.issue_count,
+            has_review_record=entry.has_review_record,
+        )
+        for entry in entries
+    )
 SessionAssemblyStateListener = Callable[[SessionAssemblyState], None]
