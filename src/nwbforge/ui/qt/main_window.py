@@ -133,8 +133,8 @@ class MainWindow(QMainWindow):
             self._workspace_subtitle_label,
             self._workspace_badge_label,
         ) = build_page_header(
-            "Conversion Workspace",
-            "Create sessions, review metadata, run conversions, and inspect generated artifacts in one desktop workflow.",
+            "New Conversion Session",
+            "Start with direct ingest: add files or folders, review grouped bundles, and assemble a draft session inside the main workspace.",
             badge_text="Direct Ingest Ready",
             parent=self,
         )
@@ -142,12 +142,13 @@ class MainWindow(QMainWindow):
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
         self._workspace_tabs.setUsesScrollButtons(True)
-        self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
         self._workspace_tabs.addTab(self._session_assembly_dialog, "New Session")
+        self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
         self._workspace_tabs.addTab(self._package_dialog, "Optional Support")
         self._workspace_tabs.addTab(self._settings_dialog, "Settings")
         self._workspace_tabs.addTab(self._nwb_viewer_widget, "NWB Viewer")
         self._workspace_tabs.currentChanged.connect(self._sync_tab_header)
+        self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
 
         central = QWidget(self)
         central_layout = QVBoxLayout(central)

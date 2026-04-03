@@ -327,8 +327,11 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     assert "Import Session JSON (Compatibility)..." in compatibility_labels
     assert "Reopen Last Imported Session" in compatibility_labels
     assert window._recent_sessions_menu.title() == "Open Recent Imported Session"
-    assert window._workspace_title_label.text() == "Conversion Workspace"
-    assert "Start with New Session for direct ingest." in window._workspace_subtitle_label.text()
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
+    assert window.workspace_tabs.tabText(0) == "New Session"
+    assert window.workspace_tabs.tabText(1) == "Conversion"
+    assert window._workspace_title_label.text() == "New Conversion Session"
+    assert "Add files or folders" in window._workspace_subtitle_label.text()
 
     window._toggle_log_viewer_action.trigger()
     qapp.processEvents()
@@ -359,6 +362,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
 
     window.conversion_widget.load_session(session)
+    window.workspace_tabs.setCurrentWidget(window.conversion_widget)
     qapp.processEvents()
     assert window._workspace_title_label.text() == "sess-qt"
     assert "Supported pathway" in window._workspace_subtitle_label.text()
