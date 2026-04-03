@@ -655,6 +655,7 @@ class MainWindow(QMainWindow):
         )
 
     def _load_built_session(self, session: ConversionSession) -> None:
+        project_name = self._session_project_name(session)
         log_event(
             self._logger,
             logging.INFO,
@@ -662,12 +663,16 @@ class MainWindow(QMainWindow):
             session_id=session.session_id,
             pathway=session.pathway.value,
             source_count=len(session.sources),
+            project_name=project_name or "",
         )
         self._activate_loaded_session(session)
+        message = f"Built session {session.session_id} from selected inputs."
+        if project_name:
+            message = f"Built session {session.session_id} from project {project_name}."
         self._shell_model.set_status_bar(
             StatusBarState(
                 stage_key="session:assembled",
-                message=f"Built session {session.session_id} from selected inputs.",
+                message=message,
                 percent_complete=100,
                 is_busy=False,
                 is_error=False,
@@ -697,6 +702,17 @@ class MainWindow(QMainWindow):
         )
         self._set_current_conversion_tab(tab_id)
         self._workspace_tabs.setCurrentWidget(self._conversion_widget)
+        project_name = self._session_project_name(session)
+        if project_name:
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:project-context",
+                    message=f"Active project session: {project_name} | {session.session_id}.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=False,
+                )
+            )
 
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
         output_directory = self._settings_screen_model.state.applied_settings.last_output_directory

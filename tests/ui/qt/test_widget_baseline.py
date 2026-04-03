@@ -1104,6 +1104,7 @@ def test_main_window_keeps_multiple_sessions_in_conversion_tabs(qapp, tmp_path: 
 def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_path: Path) -> None:
     project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
     session = make_session(tmp_path)
+    shell_model = DesktopShellModel()
     session = replace(
         session,
         sources=(
@@ -1119,7 +1120,7 @@ def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_
     )
     preview, execution = make_preview_and_execution(session)
     window = MainWindow(
-        DesktopShellModel(),
+        shell_model,
         make_settings_screen(tmp_path),
         make_package_screen(tmp_path),
         ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
@@ -1137,6 +1138,7 @@ def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_
     assert "Project: saved-project" in window._workspace_subtitle_label.text()
     assert window._workspace_badge_label.text() == "saved-project | Sources Added"
     assert window._close_current_session_action.text() == "Close Current Session (saved-project | sess-qt)"
+    assert shell_model.state.status_bar.message == "Built session sess-qt from project saved-project."
     assert "Project: saved-project | sess-qt" in window.conversion_widget._session_context_label.text()
     window.conversion_widget._session_details_toggle.setChecked(True)
     qapp.processEvents()
