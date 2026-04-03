@@ -7,6 +7,7 @@ from pathlib import Path
 from threading import Lock
 import logging
 
+from nwbforge.app.packages.catalog import ROUTE_PACKAGE_CATALOG, route_dependencies_available
 from nwbforge.app.logging import get_logger, log_event
 from nwbforge.app.services import (
     JsonSessionAssemblyWorkspaceStore,
@@ -21,6 +22,7 @@ from nwbforge.ui.models import (
     SessionAssemblySourceItem,
     SessionAssemblyState,
     SessionAssemblyStateListener,
+    SessionAssemblySourceTypeOption,
 )
 
 
@@ -38,7 +40,8 @@ class SessionAssemblyScreenModel:
         project_store: JsonSessionAssemblyProjectStore | None = None,
     ) -> None:
         self._assembly_service = assembly_service
-        self._state = SessionAssemblyState()
+        self._source_type_options = self._build_source_type_options()
+        self._state = SessionAssemblyState(source_type_options=self._source_type_options)
         self._listeners: list[SessionAssemblyStateListener] = []
         self._lock = Lock()
         self._error_presenter = error_presenter or DefaultUiErrorPresenter()
@@ -59,7 +62,7 @@ class SessionAssemblyScreenModel:
 
     def reset(self) -> SessionAssemblyState:
         log_event(self._logger, logging.INFO, "Reset direct-ingest session assembly state.")
-        state = self._set_state(SessionAssemblyState())
+        state = self._set_state(SessionAssemblyState(source_type_options=self._source_type_options))
         self._clear_workspace()
         return state
 
@@ -74,6 +77,10 @@ class SessionAssemblyScreenModel:
         )
         state = self._refresh(
             selected_paths=document.workspace.selected_paths,
+            source_intents={
+                str(path_text): dict(intent)
+                for path_text, intent in (document.workspace.source_intents or {}).items()
+            },
             session_id=document.workspace.session_id,
             title=document.workspace.title,
             source_roles=dict(document.workspace.source_roles or {}),
@@ -122,14 +129,46 @@ class SessionAssemblyScreenModel:
         return state
 
     def add_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
+        return self.add_custom_paths(paths)
+
+    def add_custom_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
         log_event(
             self._logger,
             logging.INFO,
-            "Adding paths to direct-ingest workspace.",
+            "Adding custom paths to direct-ingest workspace.",
             added_path_count=len(paths),
         )
-        combined = self._state.selected_paths + tuple(path.resolve() for path in paths)
-        return self._refresh(selected_paths=combined)
+        resolved_paths = tuple(path.resolve() for path in paths)
+        combined = self._state.selected_paths + resolved_paths
+        next_source_intents = dict(self._state.source_intents)
+        for path in resolved_paths:
+            next_source_intents[str(path)] = {"ingest_kind": "custom"}
+        return self._refresh(selected_paths=combined, source_intents=next_source_intents)
+
+    def add_supported_paths(
+        self,
+        paths: tuple[Path, ...],
+        *,
+        route_name: str,
+        route_display_name: str,
+    ) -> SessionAssemblyState:
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Adding NeuroConv-supported paths to direct-ingest workspace.",
+            added_path_count=len(paths),
+            route_name=route_name,
+        )
+        resolved_paths = tuple(path.resolve() for path in paths)
+        combined = self._state.selected_paths + resolved_paths
+        next_source_intents = dict(self._state.source_intents)
+        for path in resolved_paths:
+            next_source_intents[str(path)] = {
+                "ingest_kind": "supported",
+                "route_name": route_name,
+                "route_display_name": route_display_name,
+            }
+        return self._refresh(selected_paths=combined, source_intents=next_source_intents)
 
     def remove_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
         log_event(
@@ -140,7 +179,12 @@ class SessionAssemblyScreenModel:
         )
         removed = {path.resolve() for path in paths}
         remaining = tuple(path for path in self._state.selected_paths if path.resolve() not in removed)
-        return self._refresh(selected_paths=remaining)
+        next_source_intents = {
+            str(path_text): dict(intent)
+            for path_text, intent in self._state.source_intents.items()
+            if Path(path_text).resolve() not in removed
+        }
+        return self._refresh(selected_paths=remaining, source_intents=next_source_intents)
 
     def set_session_id(self, session_id: str) -> SessionAssemblyState:
         return self._refresh(session_id=session_id)
@@ -301,7 +345,7 @@ class SessionAssemblyScreenModel:
         try:
             session = self._assembly_service.create_session(self._state.draft)
             self._clear_workspace()
-            self._set_state(SessionAssemblyState())
+            self._set_state(SessionAssemblyState(source_type_options=self._source_type_options))
             return session
         except Exception as exc:
             user_error = self._error_presenter.present(exc)
@@ -318,6 +362,7 @@ class SessionAssemblyScreenModel:
         self,
         *,
         selected_paths: tuple[Path, ...] | None = None,
+        source_intents: dict[str, dict[str, str]] | None = None,
         session_id: str | None = None,
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
@@ -327,6 +372,7 @@ class SessionAssemblyScreenModel:
         source_metadata_overrides: dict[str, dict[str, str]] | None = None,
     ) -> SessionAssemblyState:
         next_paths = selected_paths if selected_paths is not None else self._state.selected_paths
+        next_source_intents = source_intents if source_intents is not None else self._state.source_intents
         next_session_id = session_id if session_id is not None else self._state.session_id
         next_title = title if title is not None else self._state.title
         current_roles = (
@@ -369,6 +415,7 @@ class SessionAssemblyScreenModel:
         try:
             draft = self._assembly_service.assemble_draft(
                 next_paths,
+                source_intents=next_source_intents,
                 session_id=next_session_id,
                 title=next_title,
                 source_roles=next_source_roles,
@@ -383,6 +430,10 @@ class SessionAssemblyScreenModel:
                 replace(
                     self._state,
                     selected_paths=tuple(path.resolve() for path in next_paths),
+                    source_intents={
+                        str(path_text): dict(intent)
+                        for path_text, intent in next_source_intents.items()
+                    },
                     error_message=user_error.message,
                     user_error=user_error,
                 )
@@ -392,6 +443,11 @@ class SessionAssemblyScreenModel:
         state = self._set_state(
             SessionAssemblyState(
                 selected_paths=resolved_paths,
+                source_type_options=self._source_type_options,
+                source_intents={
+                    str(path_text): dict(intent)
+                    for path_text, intent in next_source_intents.items()
+                },
                 session_id=draft.session_id,
                 title=draft.title or "",
                 suggested_pathway=draft.pathway.value,
@@ -424,6 +480,9 @@ class SessionAssemblyScreenModel:
                 sources=tuple(
                     SessionAssemblySourceItem(
                         source_id=source.source_id,
+                        ingest_kind=source.ingest_kind,
+                        selection_label=source.selection_label,
+                        route_name=source.route_name,
                         group_key=source.group_key,
                         group_label=source.group_label,
                         label=source.label,
@@ -494,6 +553,10 @@ class SessionAssemblyScreenModel:
         )
         self._refresh(
             selected_paths=workspace.selected_paths,
+            source_intents={
+                str(path_text): dict(intent)
+                for path_text, intent in (workspace.source_intents or {}).items()
+            },
             session_id=workspace.session_id,
             title=workspace.title,
             source_roles=dict(workspace.source_roles or {}),
@@ -510,6 +573,7 @@ class SessionAssemblyScreenModel:
                 self._state,
                 project_path=workspace.project_path,
                 has_unsaved_changes=workspace.has_unsaved_changes,
+                source_type_options=self._source_type_options,
             )
         )
 
@@ -537,6 +601,10 @@ class SessionAssemblyScreenModel:
     def _workspace_from_state(state: SessionAssemblyState) -> SessionAssemblyWorkspace:
         return SessionAssemblyWorkspace(
             selected_paths=state.selected_paths,
+            source_intents={
+                str(path_text): dict(intent)
+                for path_text, intent in state.source_intents.items()
+            },
             project_path=state.project_path,
             has_unsaved_changes=state.has_unsaved_changes,
             session_id=state.session_id,
@@ -559,3 +627,31 @@ class SessionAssemblyScreenModel:
                 if source.metadata_overrides
             },
         )
+
+    @staticmethod
+    def _build_source_type_options() -> tuple[SessionAssemblySourceTypeOption, ...]:
+        options = [
+            SessionAssemblySourceTypeOption(
+                ingest_kind="custom",
+                label="Custom",
+                description="Add arbitrary files or folders for later review and organization.",
+            )
+        ]
+        installed_routes = sorted(
+            (
+                spec
+                for spec in ROUTE_PACKAGE_CATALOG
+                if spec.implemented_in_code and route_dependencies_available(spec.route_name)
+            ),
+            key=lambda spec: spec.display_name.lower(),
+        )
+        options.extend(
+            SessionAssemblySourceTypeOption(
+                ingest_kind="supported",
+                label=spec.display_name,
+                route_name=spec.route_name,
+                description=spec.description,
+            )
+            for spec in installed_routes
+        )
+        return tuple(options)

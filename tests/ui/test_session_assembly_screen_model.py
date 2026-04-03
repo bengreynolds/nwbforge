@@ -284,3 +284,54 @@ def test_session_assembly_screen_model_restores_project_path_from_workspace(tmp_
 
     assert restored_screen.state.project_path == project_path.resolve()
     assert restored_screen.state.has_unsaved_changes is False
+
+
+def test_session_assembly_screen_model_exposes_custom_source_option() -> None:
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    assert screen.state.source_type_options
+    assert screen.state.source_type_options[0].ingest_kind == "custom"
+    assert screen.state.source_type_options[0].label == "Custom"
+
+
+def test_session_assembly_screen_model_tracks_supported_source_intent_and_blocks_route_mismatch(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_supported_paths(
+        (manifest_path,),
+        route_name="deeplabcut",
+        route_display_name="DeepLabCut",
+    )
+
+    assert state.source_intents[str(manifest_path.resolve())]["route_name"] == "deeplabcut"
+    assert state.sources[0].selection_label == "DeepLabCut"
+    assert state.can_create_session is False
+    assert any(issue.code == "session-assembly-selected-route-mismatch" for issue in state.issues)
+
+
+def test_session_assembly_screen_model_persists_supported_source_intent_in_workspace(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    workspace_store = JsonSessionAssemblyWorkspaceStore(tmp_path / "drafts" / "route-draft.json")
+
+    first_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+    first_screen.add_supported_paths(
+        (manifest_path,),
+        route_name="deeplabcut",
+        route_display_name="DeepLabCut",
+    )
+
+    restored_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+
+    assert restored_screen.state.source_intents[str(manifest_path.resolve())]["route_name"] == "deeplabcut"
+    assert restored_screen.state.sources[0].selection_label == "DeepLabCut"

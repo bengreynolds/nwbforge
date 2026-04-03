@@ -9,6 +9,7 @@ import re
 import logging
 
 from nwbforge.adapters import AdapterRegistry
+from nwbforge.adapters.base import SourceAdapter
 from nwbforge.app.logging import get_logger, log_event
 from nwbforge.domain.enums import ConversionPathway, IssueSeverity, SessionStatus, SourceType
 from nwbforge.domain.models import ConversionSession, SourceReference
@@ -29,6 +30,9 @@ class SessionAssemblySource:
     """A UI-facing draft source assembled from one selected path."""
 
     source_id: str
+    ingest_kind: str
+    selection_label: str
+    route_name: str | None
     group_key: str
     group_label: str
     location: Path
@@ -89,6 +93,7 @@ class SessionAssemblyWorkspace:
     """Persistable in-progress state for the direct-ingest session builder."""
 
     selected_paths: tuple[Path, ...]
+    source_intents: dict[str, dict[str, str]] | None = None
     project_path: Path | None = None
     has_unsaved_changes: bool = False
     session_id: str = ""
@@ -109,6 +114,15 @@ class JsonSessionAssemblyWorkspaceStore:
     def save(self, workspace: SessionAssemblyWorkspace) -> None:
         payload = {
             "selected_paths": [str(path) for path in workspace.selected_paths],
+            "source_intents": {
+                str(path_text): {
+                    str(key): str(value)
+                    for key, value in dict(intent).items()
+                    if str(value).strip()
+                }
+                for path_text, intent in dict(workspace.source_intents or {}).items()
+                if intent
+            },
             "project_path": str(workspace.project_path) if workspace.project_path is not None else None,
             "has_unsaved_changes": workspace.has_unsaved_changes,
             "session_id": workspace.session_id,
@@ -136,6 +150,13 @@ class JsonSessionAssemblyWorkspaceStore:
         payload = json.loads(self._workspace_path.read_text(encoding="utf-8"))
         return SessionAssemblyWorkspace(
             selected_paths=tuple(Path(path) for path in payload.get("selected_paths", ())),
+            source_intents={
+                str(path_text): {
+                    str(key): str(value)
+                    for key, value in dict(intent).items()
+                }
+                for path_text, intent in dict(payload.get("source_intents", {})).items()
+            },
             project_path=Path(payload["project_path"]) if payload.get("project_path") else None,
             has_unsaved_changes=bool(payload.get("has_unsaved_changes", False)),
             session_id=str(payload.get("session_id", "")),
@@ -167,6 +188,60 @@ class SessionAssemblyService:
     _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
     _DESKTOP_SESSION_FILENAMES = {"session_manifest.json", "custom_session.json", "hybrid_session.json"}
     _METADATA_SIDECAR_SUFFIXES = {".json", ".yaml", ".yml", ".txt"}
+    _ROUTE_ADAPTER_IDS: dict[str, tuple[str, ...]] = {
+        "audio": ("neuroconv_audio",),
+        "alphaomega": ("neuroconv_alphaomega",),
+        "axon": ("neuroconv_axon",),
+        "axona": ("neuroconv_axona",),
+        "biocam": ("neuroconv_biocam",),
+        "blackrock": ("neuroconv_blackrock", "neuroconv_blackrock_sorting"),
+        "brukertiff": ("neuroconv_brukertiff_single_plane", "neuroconv_brukertiff_multi_plane"),
+        "caiman": ("neuroconv_caiman_segmentation",),
+        "cellexplorer": ("neuroconv_cellexplorer_sorting",),
+        "cnmfe": ("neuroconv_cnmfe_segmentation",),
+        "deeplabcut": ("neuroconv_deeplabcut",),
+        "edf": ("neuroconv_edf",),
+        "excel": ("neuroconv_excel_time_intervals",),
+        "extract": ("neuroconv_extract_segmentation",),
+        "femtonics": ("neuroconv_femtonics",),
+        "hdf5": ("neuroconv_hdf5_imaging",),
+        "image": ("neuroconv_image",),
+        "inscopix": ("neuroconv_inscopix", "neuroconv_inscopix_segmentation"),
+        "intan": ("neuroconv_intan",),
+        "kilosort": ("neuroconv_kilosort_sorting",),
+        "lightningpose": ("neuroconv_lightningpose",),
+        "maxone": ("neuroconv_maxone",),
+        "mcsraw": ("neuroconv_mcsraw",),
+        "mearec": ("neuroconv_mearec",),
+        "medpc": ("neuroconv_medpc",),
+        "micromanager": ("neuroconv_micromanager_tiff",),
+        "miniscope": ("neuroconv_miniscope",),
+        "neuralynx": (
+            "neuroconv_neuralynx",
+            "neuroconv_neuralynx_sorting",
+            "neuroconv_neuralynx_nvt",
+        ),
+        "neuroscope": ("neuroconv_neuroscope", "neuroconv_neuroscope_sorting"),
+        "openephys_binary": ("neuroconv_openephys_binary", "neuroconv_openephys_binary_analog"),
+        "openephys_legacy": ("neuroconv_openephys_legacy",),
+        "phy": ("neuroconv_phy_sorting",),
+        "plexon": ("neuroconv_plexon", "neuroconv_plexon_sorting"),
+        "plexon2": ("neuroconv_plexon2",),
+        "scanbox": ("neuroconv_scanbox",),
+        "scanimage": ("neuroconv_scanimage",),
+        "scanimage_legacy": ("neuroconv_scanimage_legacy",),
+        "sleap": ("neuroconv_sleap",),
+        "spike2": ("neuroconv_spike2",),
+        "spikegadgets": ("neuroconv_spikegadgets",),
+        "spikeglx": ("neuroconv_spikeglx",),
+        "suite2p": ("neuroconv_suite2p_segmentation",),
+        "tdt": ("neuroconv_tdt",),
+        "tdt_fiber_photometry": ("neuroconv_tdt_fiber_photometry",),
+        "thor": ("neuroconv_thor",),
+        "tiff": ("neuroconv_tiff_imaging",),
+        "videos": ("neuroconv_video",),
+        "whitematter": ("neuroconv_whitematter",),
+    }
 
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
@@ -175,6 +250,7 @@ class SessionAssemblyService:
         self,
         selected_paths: tuple[Path, ...],
         *,
+        source_intents: dict[str, dict[str, str]] | None = None,
         session_id: str | None = None,
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
@@ -208,6 +284,15 @@ class SessionAssemblyService:
         normalized_source_roles = {
             str(key): self._normalize_source_role(value)
             for key, value in (source_roles or {}).items()
+        }
+        normalized_source_intents = {
+            str(Path(path_text).resolve()): {
+                str(key): str(value).strip()
+                for key, value in dict(intent).items()
+                if str(value).strip()
+            }
+            for path_text, intent in (source_intents or {}).items()
+            if intent
         }
         normalized_group_overrides = {
             str(key): str(value).strip()
@@ -248,15 +333,39 @@ class SessionAssemblyService:
                 source_type=SourceType.DIRECTORY if path.is_dir() else SourceType.FILE,
                 label=path.name,
             )
+            source_intent = normalized_source_intents.get(str(path.resolve()), {})
+            ingest_kind = (
+                "supported" if source_intent.get("ingest_kind") == "supported" else "custom"
+            )
+            route_name = source_intent.get("route_name") or None
+            route_display_name = source_intent.get("route_display_name") or None
+            selection_label = route_display_name or ("Custom" if ingest_kind == "custom" else "NeuroConv")
             matches = self._registry.matching_adapters(source_reference)
+            matches = self._filter_matches_for_route(route_name, matches)
             matching_ids = tuple(adapter.adapter_id for adapter in matches)
-            suggested_pathway = self._suggest_source_pathway(matches)
+            suggested_pathway = (
+                ConversionPathway.SUPPORTED
+                if ingest_kind == "supported" and not matches
+                else self._suggest_source_pathway(matches)
+            )
             suggested_adapter_id = matching_ids[0] if len(matching_ids) == 1 else None
             needs_review = len(matching_ids) != 1
             sidecar_anchor = sidecar_links.get(path.resolve())
             role = normalized_source_roles.get(source_id, self._default_role_for_index(index, sidecar_anchor is not None))
 
-            if not matching_ids:
+            if ingest_kind == "supported" and route_name and not matching_ids:
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-selected-route-mismatch",
+                        message=(
+                            f"The selected source for '{selection_label}' did not match the expected adapter family. "
+                            "Review the chosen NeuroConv package and dataset entry path before preview."
+                        ),
+                        severity=IssueSeverity.ERROR,
+                        location=path,
+                    )
+                )
+            elif not matching_ids:
                 issues.append(
                     SessionAssemblyIssue(
                         code="session-assembly-no-adapter-match",
@@ -297,6 +406,9 @@ class SessionAssemblyService:
             draft_sources.append(
                 SessionAssemblySource(
                     source_id=source_reference.source_id,
+                    ingest_kind=ingest_kind,
+                    selection_label=selection_label,
+                    route_name=route_name,
                     group_key=group_key,
                     group_label=group_label,
                     location=path,
@@ -466,6 +578,9 @@ class SessionAssemblyService:
                 role=source.role,
                 adapter_hint=source.suggested_adapter_id,
                 metadata={
+                    "session_assembly.ingest_kind": source.ingest_kind,
+                    "session_assembly.selection_label": source.selection_label,
+                    "session_assembly.route_name": source.route_name or "",
                     "session_assembly.group_key": source.group_key,
                     "session_assembly.group_label": source.group_label,
                     "session_assembly.group_confirmed": str(
@@ -660,6 +775,19 @@ class SessionAssemblyService:
                 continue
             sidecar_links[path.resolve()] = anchor
         return sidecar_links
+
+    @classmethod
+    def _filter_matches_for_route(
+        cls,
+        route_name: str | None,
+        matches: tuple[SourceAdapter, ...],
+    ) -> tuple[SourceAdapter, ...]:
+        if route_name is None:
+            return matches
+        allowed_adapter_ids = cls._ROUTE_ADAPTER_IDS.get(route_name)
+        if not allowed_adapter_ids:
+            return matches
+        return tuple(adapter for adapter in matches if adapter.adapter_id in allowed_adapter_ids)
 
     @staticmethod
     def _slugify(value: str) -> str:

@@ -258,3 +258,48 @@ def test_session_assembly_service_requires_primary_source(tmp_path: Path) -> Non
 
     assert draft.can_create_session is False
     assert any(issue.code == "session-assembly-no-primary-source" for issue in draft.issues)
+
+
+def test_session_assembly_service_blocks_mismatched_selected_supported_route(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (manifest_path,),
+        source_intents={
+            str(manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "deeplabcut",
+                "route_display_name": "DeepLabCut",
+            }
+        },
+    )
+
+    assert draft.can_create_session is False
+    assert draft.sources[0].ingest_kind == "supported"
+    assert draft.sources[0].selection_label == "DeepLabCut"
+    assert draft.sources[0].route_name == "deeplabcut"
+    assert draft.sources[0].matching_adapter_ids == ()
+    assert any(issue.code == "session-assembly-selected-route-mismatch" for issue in draft.issues)
+
+
+def test_session_assembly_service_preserves_selected_source_context_in_draft(tmp_path: Path) -> None:
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (notes_path,),
+        source_intents={
+            str(notes_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "deeplabcut",
+                "route_display_name": "DeepLabCut",
+            }
+        },
+        source_roles={"notes": "primary"},
+    )
+
+    assert draft.sources[0].selection_label == "DeepLabCut"
+    assert draft.sources[0].route_name == "deeplabcut"

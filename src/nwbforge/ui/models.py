@@ -104,6 +104,9 @@ class SessionAssemblySourceItem:
     """A UI-facing summary of one selected input in session assembly."""
 
     source_id: str
+    ingest_kind: str
+    selection_label: str
+    route_name: str | None
     group_key: str
     group_label: str
     label: str
@@ -117,6 +120,16 @@ class SessionAssemblySourceItem:
     matching_adapter_ids: tuple[str, ...] = ()
     suggested_adapter_id: str | None = None
     needs_review: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SessionAssemblySourceTypeOption:
+    """One user-selectable source-ingest option in the direct-ingest workspace."""
+
+    ingest_kind: str
+    label: str
+    route_name: str | None = None
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,6 +169,8 @@ class SessionAssemblyState:
     """State consumable by a direct-ingest session-assembly screen."""
 
     selected_paths: tuple[Path, ...] = ()
+    source_type_options: tuple[SessionAssemblySourceTypeOption, ...] = ()
+    source_intents: dict[str, dict[str, str]] = field(default_factory=dict)
     project_path: Path | None = None
     session_id: str = ""
     title: str = ""

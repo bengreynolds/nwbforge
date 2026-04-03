@@ -1,0 +1,22 @@
+{
+  "acknowledged_issue_refs": [
+    "nwbinspector-warning@/general/subject"
+  ],
+  "decision": "approved",
+  "generated_artifact_types": [],
+  "override_blocks_completion": false,
+  "pathway": "supported",
+  "rationale": null,
+  "review_outcome": {
+    "blocks_completion": false,
+    "requires_manual_review": true,
+    "status": "review"
+  },
+  "reviewed_at": "2026-04-03T18:38:50.019258+00:00",
+  "reviewer": "alice",
+  "session_id": "sess-qt",
+  "validation_issue_refs": [
+    "nwbinspector-warning@/general/subject"
+  ],
+  "validation_status": "review"
+}

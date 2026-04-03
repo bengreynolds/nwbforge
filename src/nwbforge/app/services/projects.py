@@ -34,6 +34,15 @@ class JsonSessionAssemblyProjectStore:
             "project_kind": self._PROJECT_KIND,
             "workspace": {
                 "selected_paths": [str(path) for path in workspace.selected_paths],
+                "source_intents": {
+                    str(path_text): {
+                        str(key): str(value)
+                        for key, value in dict(intent).items()
+                        if str(value).strip()
+                    }
+                    for path_text, intent in dict(workspace.source_intents or {}).items()
+                    if intent
+                },
                 "session_id": workspace.session_id,
                 "title": workspace.title,
                 "has_unsaved_changes": False,
@@ -70,6 +79,13 @@ class JsonSessionAssemblyProjectStore:
             project_path=resolved_path,
             workspace=SessionAssemblyWorkspace(
                 selected_paths=tuple(Path(path) for path in workspace_payload.get("selected_paths", ())),
+                source_intents={
+                    str(path_text): {
+                        str(key): str(value)
+                        for key, value in dict(intent).items()
+                    }
+                    for path_text, intent in dict(workspace_payload.get("source_intents", {})).items()
+                },
                 session_id=str(workspace_payload.get("session_id", "")),
                 title=str(workspace_payload.get("title", "")),
                 has_unsaved_changes=bool(workspace_payload.get("has_unsaved_changes", False)),

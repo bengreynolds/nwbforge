@@ -1123,6 +1123,34 @@ def test_main_window_restores_new_session_draft(qapp, tmp_path: Path, monkeypatc
     window.close()
 
 
+def test_session_assembly_dialog_exposes_structured_source_selector(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+
+    assert dialog._source_type_combo.count() >= 1
+    assert dialog._source_type_combo.itemText(0) == "Custom"
+    assert dialog._add_files_button.text() == "Add Custom Files..."
+    assert dialog._add_folder_button.text() == "Add Custom Folder..."
+
+    window.close()
+
+
 def test_main_window_applies_last_output_directory_default(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)
