@@ -244,6 +244,9 @@ Priority order:
 - Keep package, settings, direct-ingest, and conversion controls user-driven and actionable while the surrounding runtime state changes.
 - Add a project-aware session workspace model so multiple sessions created under one project can remain open in tabs and users can quickly switch between them.
 - Support explicit creation and deletion of both projects and sessions as first-class desktop actions rather than relying only on one transient conversion workspace.
+- Add stage-based workflow guidance in the conversion workspace, with explicit `next action` and `ready to write when...` messaging rather than relying only on button enablement and status text.
+- Demote session JSON loading in product-facing navigation and copy so it reads as a compatibility/import path rather than the primary happy path.
+- Move diagnostics, history, and advanced conflict-resolution controls toward progressive disclosure after the main operator path is clearer.
 
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
 
@@ -354,6 +357,23 @@ Interpretation:
 - The first pass is not defined by broad NeuroConv route coverage or installer readiness.
 - The first pass is defined by whether the application feels coherent and testable as a desktop product across supported, custom, and hybrid workflows.
 - Additional supported-route growth and formal packaging remain important, but they are post-first-pass priorities unless they directly block realistic workflow testing.
+
+### Product convergence correction
+
+The current repo now has enough workflow depth that the main product risk is no longer missing capability. The main risk is exposing too much engineering surface at once.
+
+Required correction:
+- treat the desktop product as a guided researcher workflow first, and an internal power-user control surface second
+- keep `New Session` / direct-ingest as the primary operator path and demote session-JSON loading to compatibility, import, reopen, or testing support
+- freeze new product-facing route-surface growth unless it directly unblocks real workflow testing on representative datasets
+- prefer progressive disclosure in metadata review, diagnostics, and internal-testing surfaces rather than showing all resolution controls at once
+- make stage guidance explicit in the conversion workspace so users know what step they are in, what is blocked, and what action is recommended next
+
+Confirmed mismatch to address:
+- the conversion workspace is still too dense for first-pass researcher use and reads more like an engineering console than a guided workflow surface
+- direct-ingest is the intended primary entry path, but legacy session-file import still has more product visibility than it should for this phase
+- supported-route breadth is currently more visible in product surfaces than the core operator journey should allow
+- preview, write, validation, and review stages exist technically, but the UI still needs clearer progression and completion criteria
 
 ### Priority 1: Finished-feeling desktop product surface
 
