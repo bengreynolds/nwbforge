@@ -25,7 +25,7 @@ Typical local-app flow:
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
 5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them.
-6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, what still blocks `Write NWB`, and the recommended resolution path for the currently selected metadata conflict.
+6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, what still blocks `Write NWB`, and the recommended resolution path for the currently selected metadata conflict. Session/source inspection remains available, but it now stays behind an opt-in `Show Session Details` control so the default screen reading order stays workflow-first.
 7. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
