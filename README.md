@@ -183,6 +183,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Conservative custom-ingest filtering so obviously unsupported files are rejected before they enter the direct-ingest workspace, while route-backed selections keep explicit selected-package context for later validation and review
 - Mixed-source grouping that treats selected structured sources as dataset anchors and only attaches nearby custom inputs when the context is narrow enough to stay reviewable
 - Workflow-aware direct-ingest grouping that can collapse clean matched supported combinations such as `TIFF + Suite2p` into one reviewable dataset bundle while preserving conservative handling for ambiguous cases
+- Structured-bundle member absorption so deterministic dependent files selected alongside a supported canonical entry remain inside that structured source bundle instead of appearing as separate draft sources
 - Structured supported-source entry semantics in session assembly, including canonical entry-path kind, entry-role labeling, and persisted validation status for downstream grouping and review
 - Direct-ingest group summaries now surface canonical structured-entry identity for supported-anchor bundles so proprietary-plus-custom groups read as dataset bundles instead of unlabeled file clusters
 - Source-specific metadata overrides for selected direct-ingest sources, carried through inspection and normalization as user-supplied values

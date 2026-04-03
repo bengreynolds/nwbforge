@@ -168,6 +168,7 @@ Completed:
 - Expanded combined NeuroConv workflows from inspection/composition only into direct supported execution for workflow-matched sessions backed entirely by direct NeuroConv delegates
 - Added explicit repo-facing governance docs for the current phase: a maintainer-reviewed contributor guide, end-user workflow guidance in `README.md`, and an MIT license baseline for community use and contribution
 - Added workflow-aware direct-ingest grouping so known multi-source NeuroConv combinations such as `TIFF + Suite2p` can surface as one reviewable dataset bundle instead of remaining separate structured anchors when the match is unambiguous
+- Added first-pass structured-bundle member absorption so deterministically resolved dependent files selected alongside a supported canonical entry stay inside that structured bundle instead of becoming separate draft sources
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -207,6 +208,7 @@ Priority order:
 - Treat proprietary and custom ingest as additive, not mutually exclusive, so one session can include multiple structured sources plus arbitrary supported custom files/folders without splitting the workflow into separate sessions.
 - For supported-route selection, prompt for the package's project file, main file, or root dataset directory and treat that chosen path as the canonical dataset entry reference for the structured source bundle.
 - Tighten route-specific entry-path validation and canonical dataset-entry semantics so a selected NeuroConv package clearly owns the expected project/main file or root directory for that bundle.
+- Keep deterministic route-owned dependent files inside the structured source bundle when they can be resolved from the canonical entry path, even if the user also selected those files directly, while surfacing that absorption explicitly for review.
 - Represent supported selections as structured source objects that carry route identity, canonical entry semantics, and any later bundle/context decisions into downstream grouping, review, persistence, and provenance.
 - Use the selected NeuroConv package as real context in session assembly: proprietary selections should contribute known modality and relationship hints to later grouping and mapping rather than behaving like unlabeled generic files.
 - Surface known combined supported workflows as first-class direct-ingest groups when the matched structured sources cleanly fit one registered workflow, while keeping extra or ambiguous sources outside that workflow bundle until reviewed.
