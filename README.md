@@ -213,6 +213,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - A tabbed conversion workspace for run overview, review work, metadata review, and artifacts
 - Additional runtime session tabs inside the Conversion workspace so users can switch between loaded sessions without leaving the main Conversion surface
 - Researcher-facing workflow messaging in the Conversion workspace that now surfaces the current step, recommended next action, and `ready to write` criteria
+- A staged Conversion workspace tab order so the default reading path now follows run overview, metadata review, quality review, and artifacts
 - Progressive disclosure in the Conversion workspace so advanced review tools plus history/diagnostics stay hidden by default until explicitly requested
 - Simpler researcher-facing labels in the core direct-ingest and conversion widgets, with technical semantics kept as helper text rather than as the default primary wording
 - At-a-glance readiness summaries in the Conversion workspace so users can see whether the current session is blocked, needs review, ready to write, or complete without scanning multiple panes
