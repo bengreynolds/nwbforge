@@ -1,7 +1,7 @@
 # NWB Forge Planning
 
-Last updated: 2026-04-02
-Status: First pass complete / internal testing underway
+Last updated: 2026-04-03
+Status: First pass complete / internal testing and local-product hardening underway
 
 ## Current Execution Status
 
@@ -162,32 +162,66 @@ Completed:
 - Embedded the NWB viewer into the main shell while keeping the standalone viewer class only as a thin compatibility wrapper
 - Switched UI-visible log timestamps to use the original logging-record time instead of UI append time
 - Improved log-viewer responsiveness by appending new entries incrementally instead of redrawing the full log buffer on every update
+- Added bounded snapshot history plus explicit restore actions, settings-driven auto-recovery, and snapshot-history retention controls to the real desktop workflow
+- Expanded the conversion workspace with a dedicated diagnostics view over runtime progress history for manual-testing triage
+- Expanded custom/hybrid repository-owned assembly beyond behavior-only streams so inline imaging streams now write to `ImageSeries` and inline ecephys streams now write to `ElectricalSeries`
+- Expanded combined NeuroConv workflows from inspection/composition only into direct supported execution for workflow-matched sessions backed entirely by direct NeuroConv delegates
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- Operational hardening around persistence, recovery, reporting, and reviewability during the first serious manual-testing round
-- Modality-aware assembly expansion beyond the current behavior trace/position baseline
-- Snapshot-history design beyond the current latest-snapshot store
-- UI runtime and observability expansion beyond the current logging/progress baseline
-- Route-based dependency management and package-install workflow for setup and future UI package management
-- Availability-gated supported-route expansion so newly implemented NeuroConv routes only appear in the app when their route packages are actually installed
-- The current route-scaling slice has finished the approved segmentation and fiber-photometry routes under the same optional dependency-gated model, with ambiguous file- and folder-based routes kept conservative where they overlap imaging or TDT recording sources
-- After the approved segmentation and fiber-photometry routes are finished, the next route-scaling slice should continue with combined-workflow routes before reopening already-complete recording/imaging/sorting/segmentation coverage
-- Broader supported-route implementation work to start scaling beyond the current CSV, Excel, image, audio, videos, FicTrac, and DeepLabCut baseline
-- Broader PySide6 widget expansion beyond the first shell/dialog/panel baseline
-- Broader desktop settings expansion beyond the initial logging-focused settings dialog
-- Richer direct-ingest grouping confirmation beyond the current heuristic, first-class group-summary, group-confirmation, and current group-action baseline
+- No core implementation tracks are currently marked in progress; the repo has closed the active baseline gaps and is now in testing-driven refinement.
 
 Next:
-- Continue formal first-pass internal testing in the dedicated Conda environment using the full suite plus the internal smoke baseline
-- Capture internal testing findings and convert them into prioritized UI, workflow, and operational fixes
+- Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth
+- Continue structured internal testing in the dedicated Conda environment using the smoke baseline, focused route checks, and real representative lab datasets
+- Capture internal testing findings and convert them into prioritized UI, workflow, performance, and operational fixes
 - Deepen direct-ingest grouping from current heuristics, confirmation, and manual correction toward a richer dataset/session model
-- Expand mixed-source disagreement handling from the new post-preview metadata-review workspace and current session/source override actions toward fuller field-by-field conflict resolution
-- Expand the integrated NWB viewer beyond the current generic lazy tree/detail baseline only when a justified richer renderer or large-file behavior need appears
-- Keep the optional `nwbwidgets + Panel` path additive and avoid turning notebook/web tooling into a hard dependency of the base viewer path
-- Add more availability-gated NeuroConv routes behind optional package installs so supported-path growth can scale without turning every route into an unconditional app dependency
-- Continue that scaling pass with realistic next routes from the approved catalog, prioritizing distinctive source-pattern routes and configuration-gated task/ecephys routes before more ambiguous catch-all backbones
-- Keep release engineering planned but defer implementation until after first-pass internal testing
+- Expand mixed-source disagreement handling from the current metadata-review workspace toward fuller field-by-field conflict resolution and clearer override history
+- Harden desktop persistence, recovery, logging, and review/report flows until manual testing can proceed without high-friction recovery or triage gaps
+- Enter a user decision/change phase once the local app is stable enough for broader hands-on feedback, and treat requested changes as the main prioritization input before any deployment work
+- Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps
+- Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area, not more single-interface route accumulation
+- Keep release engineering planned but defer implementation until after local-app maturity and the first user decision/change phase
+
+## Final Local App Maturity Path
+
+The current repo has passed the first-pass baseline. The next milestone is not more broad architecture work; it is finishing a trustworthy local application that can survive internal testing and then enter a user decision/change phase.
+
+Priority order:
+1. Desktop polish and workflow clarity
+2. Operational hardening and recovery
+3. Structured internal testing on real datasets
+4. User decision/change phase
+5. Combined-workflow expansion only where it unblocks real user scenarios
+6. Release engineering after the above
+
+### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
+
+The app should be considered mature enough to move from engineering-led internal testing into a broader user-feedback/change phase only when all of the following are true:
+
+- Direct-ingest session creation is reliable enough that users can assemble real sessions without frequent manual rescue from bootstrap JSON compatibility paths.
+- Project save/load, recent history, recovery, output selection, and review/report actions behave predictably across repeated local runs.
+- Mixed-source metadata review is usable enough that important disagreements can be understood and resolved without developer intervention.
+- Logging and error surfaces are strong enough that failed or confusing local runs are diagnosable after the fact.
+- The integrated NWB viewer is stable enough for routine inspection of generated files and arbitrary external NWB files during testing.
+- The internal smoke baseline plus focused route/workflow tests remain green while testing fixes are applied.
+- At least one real round of internal testing on representative local datasets has been completed and its findings have been triaged into explicit follow-up work.
+
+### User Decision/Change Phase
+
+Once the local app meets the maturity gate above, the next phase should be explicitly user-facing:
+
+- place the app in front of real internal users, not just engineering validation runs
+- collect requested changes around ingest, grouping, metadata review, viewer usability, review/report clarity, and route selection/install behavior
+- prioritize change requests by operator friction and scientific correctness, not by novelty
+- prefer improving existing flows over adding more broad route surface area unless a missing route is a real testing blocker
+
+### Explicit Non-Priorities For This Phase
+
+- broad new single-interface route accumulation beyond the approved catalog
+- packaging, installer, updater, and deployment/distribution work
+- speculative plugin/governance rollout work
+- rich viewer rendering layers beyond what testing clearly justifies
 
 ### Current application baseline
 - The repository now includes a real desktop-shell baseline for development and manual testing, but it is not yet a packaged or production-ready application.
@@ -195,7 +229,7 @@ Next:
 - Routine desktop workflows now live inside one integrated main window rather than depending on separate top-level dialogs or a separate viewer window.
 - Supported-path adapters in code now include the repo-native `session_manifest.json` pilot plus real NeuroConv-backed CSV, Excel, still-image, audio, FicTrac, and DeepLabCut adapters.
 - Supported-path adapters in code now also include real NeuroConv-backed `SLEAP`, `LightningPose`, `MedPC`, `AlphaOmega`, `Axon/ABF`, `Axona`, `Biocam`, `Blackrock` recording and sorting, `Bruker TIFF` (single-plane and multi-plane), `Caiman` segmentation, `Cell Explorer` sorting, `CNMFE` segmentation, `EDF`, `EXTRACT` segmentation, `Femtonics`, `Videos`, `HDF5 Imaging`, `Inscopix` imaging and segmentation, `KiloSort` sorting, `MCSRaw`, `MaxOne`, `MEArec`, `Micro-Manager TIFF`, `Miniscope`, `Neuralynx` recording and sorting, `Neuralynx NVT`, `NeuroScope` recording and sorting, `OpenEphys Binary`, `OpenEphys Binary Analog`, `OpenEphys Legacy`, `Plexon` recording and sorting, `Plexon2`, `Phy` sorting, `Scanbox`, `ScanImage`, `ScanImage Legacy`, `Spike2`, `SpikeGadgets`, `SpikeGLX`, `Suite2p` segmentation, `TDT`, `TDT Fiber Photometry`, `TIFF`, `Thor`, `Intan`, and `WhiteMatter` routes, with those optional routes registered only when their curated route dependencies are installed in the current environment and with the overlap-sensitive sorting, segmentation, and TDT photometry readers kept conservative until the desktop UI grows more explicit workflow selection for ambiguous sources.
-- The next supported-route scaling step should add combined-workflow routes without making them unconditional app surface area; newly implemented routes should only be registered when their required route packages are installed in the current environment.
+- The supported-route layer now also includes first real combined-workflow adapters for `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut`, registered only when the required underlying route packages are installed in the current environment and now capable of direct supported execution when every matched delegate is a direct NeuroConv route.
 - The repository now also includes the first real repo-owned custom-path source through `custom_session.json`, which intentionally carries non-canonical lab metadata into the existing normalization, mapping, review, and PyNWB assembly flow.
 - The repository now also includes the first real hybrid-path session descriptor through `hybrid_session.json`, which combines supported and custom sources into one desktop workflow without bypassing per-source adapters.
 - The current `File -> Open Session...` path is still valid for internal testing, checked-in examples, and future saved-project compatibility, but it is not the intended long-term primary ingest flow for end users.
@@ -208,11 +242,12 @@ Next:
 - NeuroConv-backed single-interface routes now share a common framework for source-config parsing, interface construction, and extracted-field helpers.
 - Supported NeuroConv routes are moving toward a category-first package layout, with shared family modules under category packages rather than software-named top-level adapter files when semantics are shared.
 - Supported NeuroConv routes now use category-first package layout for the `behavior`, `tabular`, and `media` families, while keeping stable public adapter exports.
-- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements, though no real direct-NeuroConv workflow route is implemented yet.
+- Combined NeuroConv workflows now have a dedicated adapter base with declarative multi-source matching requirements plus real workflow-backed inspection, composition, and direct supported execution baselines.
 - The project can write real NWB files for the manifest-backed pilot path, for combined manifest-plus-CSV or manifest-plus-Excel trial sessions, and for combined manifest-plus-image, manifest-plus-audio, manifest-plus-FicTrac, and manifest-plus-DeepLabCut supported sessions, validate them, persist review/report artifacts, and persist latest-state session snapshots.
 - Supported-path execution can now choose a direct NeuroConv write path for compatible routes while still using repository-owned PyNWB assembly as the base-file builder and as the fallback/custom/hybrid path.
 - Structured logging is now implemented on actionable runtime paths in the conversion pipeline, supported execution service, threaded executor, desktop bootstrap, session assembly, and settings persistence.
-- The project now includes runtime contracts for stage/progress/error reporting and a threaded executor abstraction for the future UI, but does not yet include a production UI shell, broader acquisition-format coverage beyond the current supported families, or full multimodal NWB coverage.
+- Structured logging now also carries original event timestamps into the UI, includes operation timing on preview/execution/persistence paths, supports versioned snapshot history for recovery triage, and now pairs with a runtime progress-history diagnostics surface in the conversion workspace.
+- The project now includes runtime contracts for stage/progress/error reporting, threaded execution, an integrated local desktop shell, broad approved-route backbone coverage, and first-pass multimodal custom/hybrid assembly, but it still needs testing-driven refinement before deployment work.
 - Supported behavior-route execution now includes direct NeuroConv processing-module writes for FicTrac and DeepLabCut, which reinforces the planned product shape: the UI should gather route-specific configuration and metadata overrides, then pass them into NeuroConv rather than attempting to recreate those conversions in local PyNWB code.
 - The first concrete category-first package refactors are now in place for supported behavior routes under `src/nwbforge/adapters/supported/behavior/` and the text/tabular family under `src/nwbforge/adapters/supported/tabular/`.
 - Development workflow now also requires explicit Codex subagent orchestration guidance: use at most three concurrent subagents, keep state isolated, collate results deterministically, and fall back to sequential handling on failure.
@@ -387,7 +422,9 @@ Current milestone result:
 Operational hardening after the first-pass gate:
 - The current desktop workflow now persists latest preview, execution, and review snapshots automatically.
 - The current desktop workflow now also restores the latest saved session snapshot on reopen through the real desktop path.
-- The next persistence milestone is richer history and recovery behavior on top of the current latest-state store, not basic reopen support.
+- The current desktop workflow now also persists versioned snapshot history, exposes snapshot history in the conversion workspace, supports restoring an earlier saved snapshot, and makes recovery/history retention configurable through desktop settings.
+- The current desktop workflow now also exposes runtime progress history in a dedicated diagnostics view so manual testers can correlate stage transitions with saved-state recovery and report artifacts.
+- The next persistence milestone is deeper recovery comparison/reporting behavior on top of the current versioned snapshot store, not basic reopen support.
 
 Only after this milestone should formal first-pass testing begin, followed by release engineering and broader route expansion.
 
@@ -1142,13 +1179,13 @@ Current status:
 - A repo-native supported-path pilot adapter is in place for architecture validation
 - A high-level preview/execution orchestration service is in place
 - A thin PyNWB-backed writer is in place for minimal NWB output generation
-- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus first-pass behavior trace and position pathways, but broader modality-specific and multimodal content remain out of scope
+- The current manifest-backed supported path can now satisfy the active validation stack when required subject metadata is present and can emit NWB devices plus first-pass behavior trace and position pathways; the repo-owned custom/hybrid writer baseline now also covers inline imaging and ecephys streams through `ImageSeries` and `ElectricalSeries`.
 - Validation policy now distinguishes `pass`, `review`, and `blocked` outcomes explicitly, with persisted review-decision artifacts layered on top
-- Session persistence is currently latest-snapshot JSON storage and does not yet provide full revision history, preview-state persistence, or concurrent review handling
+- Session persistence is currently JSON-file based with a stable latest snapshot path plus bounded version history, but it still does not provide concurrent review handling or richer diff/comparison UX across saved versions
 - `neuroconv` is now a declared project dependency and the first real supported-path route is implemented through `CsvTimeIntervalsInterface`
 - The current real supported text/tabular routes cover CSV and Excel interval/trial data and combine cleanly with the manifest-backed metadata pilot in multi-source supported sessions
 - The current real supported text/tabular family now lives under `src/nwbforge/adapters/supported/tabular/`, aligning it with the category-first packaging direction already used for `supported/behavior/`
-- Combined NeuroConv workflows now have a dedicated adapter base and matching contract, but no real workflow-backed route has been implemented yet
+- Combined NeuroConv workflows now have a dedicated adapter base, matching contract, and first real workflow-backed inspection plus direct execution routes for `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut`
 - Normalization, mapping, and assembly now include first-class interval-table support targeting NWB trials
 - Runtime contracts now include stage/progress events, user-facing runtime error wrappers, and a threaded conversion executor abstraction on top of `ConversionPipelineService`
 - Additional real supported adapters should continue to be chosen from the approved NeuroConv-first route catalog unless a documented reason is recorded otherwise

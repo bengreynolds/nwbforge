@@ -1,7 +1,7 @@
 # NeuroConv Supported Route Catalog
 
 Research date: 2026-03-31
-Last implementation sync: 2026-04-02
+Last implementation sync: 2026-04-03
 
 ## Purpose
 
@@ -99,9 +99,9 @@ Checklist meaning:
 - [x] Excel
 
 ## Common interface combinations
-- [ ] SpikeGLX & Phy
-- [ ] Tiff & Suite2p
-- [ ] Electrophysiology and Behavior
+- [x] SpikeGLX & Phy
+- [x] Tiff & Suite2p
+- [x] Electrophysiology and Behavior
 
 ## Implementation rules tied to this catalog
 

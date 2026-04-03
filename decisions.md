@@ -1541,3 +1541,77 @@ Consequences:
 - `Caiman`, `CNMFE`, `EXTRACT`, `Inscopix` segmentation, `Suite2p`, and `TDT Fiber Photometry` are now implemented as optional NeuroConv-backed routes
 - `Caiman`, `CNMFE`, and `EXTRACT` use conservative matching, `Suite2p` uses stronger folder markers, and `TDT Fiber Photometry` stays hint-driven for now
 - the supported-route registry and package catalog now treat segmentation and fiber photometry as first-class optional install surfaces rather than folding them into generic imaging or TDT recording
+
+### DEC-120: Session persistence should keep a stable latest snapshot path while also maintaining bounded version history
+Status: Accepted
+
+Reasoning:
+- Internal testing now needs more than bare latest-state reopen; it needs versioned recovery points so confusing runs can be restored and inspected without losing the latest workflow path.
+- The existing JSON snapshot store is already the desktop persistence baseline, so the least disruptive evolution is to add bounded version history under the same session-state directory instead of replacing it outright.
+- Keeping `session-state.json` as the stable latest path avoids breaking reopen behavior while adding explicit history listing and restore support for the desktop UI.
+
+Consequences:
+- session persistence now writes both the latest snapshot and a bounded history of versioned snapshots
+- the conversion workspace can list and restore earlier saved session states
+- snapshot-history retention is now a configurable desktop setting instead of a hard-coded store behavior
+
+### DEC-121: Desktop settings should control recovery and history behavior, not only logging
+Status: Accepted
+
+Reasoning:
+- The settings surface had become too narrow for real internal testing: recent-item retention, snapshot retention, and auto-recovery materially affect how testers reproduce and triage issues.
+- These are desktop-behavior preferences rather than conversion semantics, so they belong in the persisted UI settings model rather than scattered constants.
+
+Consequences:
+- desktop settings now include latest-snapshot auto-recovery, recent-item limit, and snapshot-history limit
+- recent session/project tracking now follows the configured retention limit
+- conversion-session recovery behavior is now driven by settings rather than being unconditionally on
+
+### DEC-122: Combined NeuroConv workflows should register as workflow adapters over existing route delegates before adding workflow-specific write paths
+Status: Accepted
+
+Reasoning:
+- The repo already had a workflow-adapter base and many single-interface route backbones, but no real combined workflow behavior.
+- The fastest honest way to finish that gap is to register workflow adapters that compose existing source adapters and whole-session matching first, instead of inventing premature workflow-specific write logic.
+- This lets the app recognize real combined workflows such as `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut` without forcing them into single-source wrappers.
+
+Consequences:
+- the adapter registry now includes workflow-adapter registration and whole-session matching
+- session inspection can now route through workflow adapters when a whole source set matches one combined workflow unambiguously
+- combined-workflow direct execution remains a follow-on step rather than being implied complete
+
+### DEC-123: Combined NeuroConv workflow execution should compose existing direct delegates before adding bespoke workflow writers
+Status: Accepted
+
+Reasoning:
+- The repo already had real workflow matching plus many direct NeuroConv route adapters, so the least risky execution expansion was to reuse those delegates rather than invent separate workflow-specific conversion paths immediately.
+- This keeps supported workflow execution honest: a workflow can execute directly only when every matched step is already a direct NeuroConv route.
+
+Consequences:
+- workflow adapters can now expose a direct execution plan over matched direct delegates
+- supported execution now prefers a matched direct workflow over a single-route selection when the whole source set is an executable workflow
+- workflow-specific custom writers remain optional follow-on work rather than a requirement for the first execution baseline
+
+### DEC-124: Manual-testing triage should combine bounded snapshot history with a runtime progress-history surface
+Status: Accepted
+
+Reasoning:
+- Latest-state recovery alone was not enough for internal testing because testers also need a readable timeline of stage transitions when diagnosing failures or confusing runs.
+- The repo already had structured logs and versioned snapshots; the missing piece was an app-facing progress timeline that stays aligned with session state.
+
+Consequences:
+- the conversion workspace now shows a diagnostics view over captured runtime progress events
+- desktop recovery now includes both versioned snapshots and a readable progress-history surface for triage
+- future diagnostics work should build on these contracts instead of inventing ad hoc per-widget traces
+
+### DEC-125: The repo-owned custom/hybrid writer should choose modality-aware NWB containers when the normalized stream metadata is sufficient
+Status: Accepted
+
+Reasoning:
+- The custom and hybrid paths had outgrown a behavior-only plus generic `TimeSeries` writer baseline.
+- Inline imaging and ecephys streams can be represented more truthfully with standard PyNWB containers without requiring new extensions or speculative abstractions.
+
+Consequences:
+- custom and hybrid assembly now writes inline imaging streams through `ImageSeries`
+- custom and hybrid assembly now writes inline ecephys streams through `ElectricalSeries` with auto-generated electrode metadata when needed
+- broader modality coverage should continue to prefer standard PyNWB containers before inventing parallel writer abstractions

@@ -1,6 +1,6 @@
 # Qt Widget Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-03
 
 ## Purpose
 
@@ -65,6 +65,8 @@ Responsibilities:
 - separate the session workflow into dedicated summary, execution, review, and artifact panes
 - summarize run readiness through explicit stage, output-target, validation-count, artifact-count, and review-guidance fields
 - expose the right-hand conversion workspace through explicit desktop tabs for run overview, review work, metadata review, and artifacts
+- expose saved snapshot history through a dedicated history tab with explicit restore actions
+- expose runtime progress history through a dedicated diagnostics tab for manual-testing triage
 - surface recovered latest-state session information when a saved snapshot exists for the reopened session
 - open a save dialog for NWB output selection through the shell-provided chooser callback
 - start preview and execution through `ConversionSessionScreenModel`
@@ -103,6 +105,7 @@ Location: `src/nwbforge/ui/qt/settings_dialog.py`
 Responsibilities:
 - render persisted desktop settings for verbose logging and file-log configuration
 - present desktop preferences through a cleaner settings header and grouped form layout
+- present recovery/history controls alongside logging controls
 - manage draft changes through `SettingsScreenModel`
 - save or discard settings without embedding persistence logic in widgets
 - behave as an embedded workspace panel instead of a separate top-level dialog
@@ -204,6 +207,8 @@ Responsibilities:
   - conversion-session manual session-override actions and metadata-resolution summaries
   - conversion-session metadata-review filtering and clear-all-field-override actions
   - conversion-session recovery display for latest saved artifacts, validation state, review state, and output path
+  - conversion-session snapshot-history listing and restore actions
+  - conversion-session runtime diagnostics history presentation
   - settings-dialog save flow and runtime logging reconfiguration
   - conversion-session review submission bindings
   - source-specific direct-ingest metadata override bindings

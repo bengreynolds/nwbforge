@@ -1,6 +1,6 @@
 # UI Screen Model Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-03
 
 ## Purpose
 
@@ -53,6 +53,7 @@ Responsibilities:
 - submit preview work through `ConversionExecutor`
 - submit write/validation work through `ConversionExecutor`
 - consume `PipelineProgressEvent` updates directly
+- retain a bounded progress-history timeline for manual-testing diagnostics
 - surface `PipelineRuntimeError` user messages into screen state
 - project validation issues into UI-facing acknowledgement items
 - project pending mixed-source normalized conflicts into a dedicated metadata-review workspace
@@ -66,17 +67,22 @@ Responsibilities:
 - submit approve/reject decisions through `ExecutionReviewService` when review support is configured
 - persist latest preview, execution, and review state through `SessionPersistenceService` when desktop persistence is configured
 - recover the latest saved snapshot on session load when desktop persistence is configured
+- list persisted snapshot history for the currently loaded session
+- restore one selected saved snapshot version from the conversion workspace
+- honor settings-driven auto-recovery and snapshot-history retention behavior
 
 Current scope:
 - one loaded session at a time
-- in-memory interaction state backed by latest-state snapshot persistence in the real desktop path
+- in-memory interaction state backed by latest-state and bounded-history snapshot persistence in the real desktop path
 - explicit separation between preview-running and execution-running flags
 - listener-based updates suitable for a future widget binding layer
 - review controls are intentionally attached to the same session workflow instead of a separate review screen
 - the same screen model now supports demo sessions plus real supported/custom/hybrid desktop sessions loaded through the desktop bootstrap module
 - persistence failures are surfaced as translated user-facing errors rather than being swallowed inside the screen model
 - recovered state currently restores latest artifacts, validation issues, review status, and last known output path without attempting to recreate a full execution object
+- explicit snapshot restore now exists, but it still restores saved state rather than reconstructing a live execution object
 - metadata review now supports both session-wide and source-specific override actions, but it is still not a full field-history or conflict-policy engine
+- runtime diagnostics now include a UI-facing progress-history timeline, but the screen model still does not export fuller diagnostic bundles or log attachments automatically
 
 ### `SessionAssemblyScreenModel`
 
@@ -111,7 +117,7 @@ Location: `src/nwbforge/ui/settings.py`
 
 Responsibilities:
 - load persisted desktop settings through `UiSettingsService`
-- manage draft settings for verbose logging and file-log configuration
+- manage draft settings for verbose logging, file-log configuration, latest-snapshot auto-recovery, recent-item retention, and snapshot-history retention
 - validate required settings such as the log-file path when file logging is enabled
 - save settings back through the service without exposing persistence details to widgets
 - expose applied settings separately from unsaved draft changes so the shell can reconfigure runtime behavior only after save

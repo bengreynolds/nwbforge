@@ -1,6 +1,6 @@
 # Adapter and Service Contract Baseline
 
-Last updated: 2026-04-02
+Last updated: 2026-04-03
 
 ## Purpose
 
@@ -73,12 +73,13 @@ Near-term framework direction:
 - a shared NeuroConv interface-adapter base for single-source `DataInterface` routes
 - shared source-configuration parsing and extraction helpers reused across supported routes
 - family registries and route-configuration declarations when multiple supported entries share the same semantic path
-- a later workflow-adapter layer for multi-interface NeuroConv gallery workflows
+- a workflow-adapter layer for multi-interface NeuroConv gallery workflows
 
 Implemented framework pieces:
 - `NeuroConvInterfaceAdapter` for common source-config parsing, interface construction, and `ExtractionResult` assembly
 - `NeuroConvDirectConversionAdapter` for supported routes that should hand final writing to NeuroConv directly
 - `NeuroConvWorkflowAdapter` for future combined NeuroConv gallery workflows and multi-source matching
+- `NeuroConvWorkflowAdapter` now used by first real combined-workflow inspection, composition, and direct-execution routes
 - `NeuroConvWorkflowRouteConfig` and `WorkflowSourceRequirement` for declarative workflow route matching
 - `NeuroConvSourceConfig` for parsed NeuroConv-specific source settings
 - metadata merge helpers for NeuroConv interface metadata plus repository overrides
@@ -86,12 +87,13 @@ Implemented framework pieces:
 - `NeuroConvTabularTimeIntervalsAdapter` for the shared CSV/Excel text-tabular route family
 - the CSV and Excel interval adapters plus the still-image, audio, FicTrac, and DeepLabCut adapters now use this framework as proof cases
 - the SLEAP, LightningPose, MedPC, AlphaOmega, Axon/ABF, Axona, Biocam, Blackrock, Bruker TIFF, EDF, Femtonics, Video, HDF5 imaging, Inscopix, MCSRaw, Micro-Manager TIFF, Miniscope, Neuralynx, Neuralynx NVT, NeuroScope, OpenEphys Binary, OpenEphys Binary Analog, OpenEphys Legacy, Plexon, ScanImage, ScanImage Legacy, SpikeGadgets, SpikeGLX, TDT, Thor, Intan, and WhiteMatter adapters now also use this framework as availability-gated proof cases for broader supported-route scaling
+- first real combined-workflow adapters now also exist for `SpikeGLX & Phy`, `TIFF & Suite2p`, and `OpenEphys Binary & DeepLabCut`, and those workflows now expose direct execution whenever every matched delegate is already a direct NeuroConv route
 - the current tabular family implementation now lives in `src/nwbforge/adapters/supported/tabular/neuroconv.py`
 
 Preferred tightening direction:
 - fewer route-specific modules when a route differs only by interface metadata and light sniffing behavior
 - more family modules with route config declarations
-- distinct workflow adapters for combined NeuroConv gallery routes
+- distinct workflow adapters for combined NeuroConv gallery routes, with workflow requirements allowed to depend on adapter hints and source roles instead of only suffixes
 - stricter criteria for when a route truly needs its own module
 - category-first package structure before software-first file naming when organizing supported routes
 
@@ -118,7 +120,6 @@ These protocols define what higher-level services must do without choosing concr
 
 ## Immediate follow-on work
 
-1. Add the first real workflow-backed NeuroConv combined route once a concrete gallery workflow is selected.
-2. Add another family-level real NeuroConv-backed supported adapter behind the registry.
-3. Add lab-profile contracts and normalization rule interfaces.
-4. Keep supported-path adapters extraction-only and route broader source semantics through normalization rather than ad hoc writer logic.
+1. Expand combined-workflow support from the current delegate-composition direct-execution baseline into workflow-specific direct NeuroConv write execution only where the gallery routes justify a bespoke path.
+2. Add lab-profile contracts and normalization rule interfaces.
+3. Keep supported-path adapters extraction-only unless they explicitly delegate final writing to documented NeuroConv execution APIs.
