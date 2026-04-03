@@ -269,7 +269,7 @@ class SessionAssemblyService:
         "axona": ("neuroconv_axona",),
         "biocam": ("neuroconv_biocam",),
         "blackrock": ("neuroconv_blackrock", "neuroconv_blackrock_sorting"),
-        "brukertiff": ("neuroconv_brukertiff_single_plane", "neuroconv_brukertiff_multi_plane"),
+        "brukertiff": ("neuroconv_brukertiff_singleplane", "neuroconv_brukertiff_multiplane"),
         "caiman": ("neuroconv_caiman_segmentation",),
         "cellexplorer": ("neuroconv_cellexplorer_sorting",),
         "cnmfe": ("neuroconv_cnmfe_segmentation",),
@@ -320,8 +320,8 @@ class SessionAssemblyService:
     }
     _ROUTE_ENTRY_PROFILES: dict[str, SupportedRouteEntryProfile] = {
         "audio": SupportedRouteEntryProfile(
-            entry_kind="file",
-            entry_role_label="audio file",
+            entry_kind="either",
+            entry_role_label="audio file or root directory",
             file_suffixes=(".wav", ".mp3", ".flac", ".ogg", ".aif", ".aiff"),
         ),
         "deeplabcut": SupportedRouteEntryProfile(
@@ -340,8 +340,8 @@ class SessionAssemblyService:
             file_suffixes=(".h5", ".hdf5"),
         ),
         "image": SupportedRouteEntryProfile(
-            entry_kind="file",
-            entry_role_label="image file",
+            entry_kind="either",
+            entry_role_label="image file or root directory",
             file_suffixes=(".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tiff"),
         ),
         "lightningpose": SupportedRouteEntryProfile(
@@ -393,17 +393,18 @@ class SessionAssemblyService:
             entry_role_label="block directory",
         ),
         "thor": SupportedRouteEntryProfile(
-            entry_kind="directory",
-            entry_role_label="root directory",
-        ),
-        "tiff": SupportedRouteEntryProfile(
             entry_kind="file",
             entry_role_label="main imaging file",
             file_suffixes=(".tif", ".tiff"),
         ),
+        "tiff": SupportedRouteEntryProfile(
+            entry_kind="either",
+            entry_role_label="main imaging file or root directory",
+            file_suffixes=(".tif", ".tiff"),
+        ),
         "videos": SupportedRouteEntryProfile(
-            entry_kind="file",
-            entry_role_label="video file",
+            entry_kind="either",
+            entry_role_label="video file or root directory",
             file_suffixes=(".avi", ".flv", ".mkv", ".mov", ".mp4", ".wmv"),
         ),
     }

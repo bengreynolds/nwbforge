@@ -3,8 +3,26 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from nwbforge.adapters.base import AdapterCapabilities
+from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.services import SessionAssemblyService
+from nwbforge.domain.enums import ConversionPathway, SourceType
+from nwbforge.domain.models import SourceReference
+
+
+class _AlwaysMatchingAdapter:
+    adapter_id = "neuroconv_brukertiff_singleplane"
+    display_name = "Test Bruker Adapter"
+    version = "0.0.0"
+    source_types = (SourceType.FILE,)
+    capabilities = AdapterCapabilities(supported_pathways=(ConversionPathway.SUPPORTED,))
+
+    def can_handle(self, source: SourceReference) -> bool:
+        return source.source_type is SourceType.FILE and source.location.suffix.lower() == ".tif"
+
+    def inspect(self, source: SourceReference):  # pragma: no cover - not used in this test
+        raise NotImplementedError
 
 
 def test_session_assembly_service_builds_supported_manifest_session(tmp_path: Path) -> None:
@@ -305,6 +323,64 @@ def test_session_assembly_service_accepts_valid_supported_entry_and_records_entr
     assert draft.sources[0].entry_validation_status == "validated"
 
 
+def test_session_assembly_service_accepts_directory_entries_for_media_routes(tmp_path: Path) -> None:
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    (image_dir / "frame-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    audio_dir = tmp_path / "audio"
+    audio_dir.mkdir()
+    (audio_dir / "trial.wav").write_text("binary-placeholder", encoding="utf-8")
+    video_dir = tmp_path / "videos"
+    video_dir.mkdir()
+    (video_dir / "behavior.mp4").write_text("binary-placeholder", encoding="utf-8")
+    tiff_dir = tmp_path / "tiff"
+    tiff_dir.mkdir()
+    (tiff_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+
+    accepted_image, intents_image, rejected_image = service.validate_supported_selected_paths(
+        (image_dir,),
+        route_name="image",
+        route_display_name="Images",
+    )
+    accepted_audio, intents_audio, rejected_audio = service.validate_supported_selected_paths(
+        (audio_dir,),
+        route_name="audio",
+        route_display_name="Audio",
+    )
+    accepted_video, intents_video, rejected_video = service.validate_supported_selected_paths(
+        (video_dir,),
+        route_name="videos",
+        route_display_name="Videos",
+    )
+    accepted_tiff, intents_tiff, rejected_tiff = service.validate_supported_selected_paths(
+        (tiff_dir,),
+        route_name="tiff",
+        route_display_name="TIFF",
+    )
+
+    assert accepted_image == (image_dir.resolve(),)
+    assert rejected_image == ()
+    assert intents_image[str(image_dir.resolve())]["entry_path_kind"] == "directory"
+    assert intents_image[str(image_dir.resolve())]["entry_role_label"] == "image file or root directory"
+
+    assert accepted_audio == (audio_dir.resolve(),)
+    assert rejected_audio == ()
+    assert intents_audio[str(audio_dir.resolve())]["entry_path_kind"] == "directory"
+    assert intents_audio[str(audio_dir.resolve())]["entry_role_label"] == "audio file or root directory"
+
+    assert accepted_video == (video_dir.resolve(),)
+    assert rejected_video == ()
+    assert intents_video[str(video_dir.resolve())]["entry_path_kind"] == "directory"
+    assert intents_video[str(video_dir.resolve())]["entry_role_label"] == "video file or root directory"
+
+    assert accepted_tiff == (tiff_dir.resolve(),)
+    assert rejected_tiff == ()
+    assert intents_tiff[str(tiff_dir.resolve())]["entry_path_kind"] == "directory"
+    assert intents_tiff[str(tiff_dir.resolve())]["entry_role_label"] == "main imaging file or root directory"
+
+
 def test_session_assembly_service_rejects_obviously_wrong_supported_entry_path(tmp_path: Path) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
@@ -321,6 +397,56 @@ def test_session_assembly_service_rejects_obviously_wrong_supported_entry_path(t
     assert len(rejected) == 1
     assert "DeepLabCut" in rejected[0]
     assert ".csv, .h5" in rejected[0]
+
+
+def test_session_assembly_service_validates_thor_entries_as_tiff_files(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    wrong_dir = tmp_path / "thor"
+    wrong_dir.mkdir()
+
+    service = SessionAssemblyService(build_adapter_registry())
+
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+    rejected_dir = service.validate_supported_selected_paths(
+        (wrong_dir,),
+        route_name="thor",
+        route_display_name="Thor",
+    )[2]
+
+    assert accepted == (thor_file.resolve(),)
+    assert rejected == ()
+    assert intents[str(thor_file.resolve())]["entry_role_label"] == "main imaging file"
+    assert rejected_dir
+    assert "main imaging file" in rejected_dir[0]
+
+
+def test_session_assembly_service_filters_bruker_route_matches_with_current_adapter_ids(tmp_path: Path) -> None:
+    image_path = tmp_path / "bruker_recording.tif"
+    image_path.write_text("binary-placeholder", encoding="utf-8")
+
+    registry = AdapterRegistry()
+    registry.register(_AlwaysMatchingAdapter())
+
+    draft = SessionAssemblyService(registry).assemble_draft(
+        (image_path,),
+        source_intents={
+            str(image_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "brukertiff",
+                "route_display_name": "Bruker TIFF",
+            }
+        },
+    )
+
+    assert draft.sources[0].route_name == "brukertiff"
+    assert draft.sources[0].matching_adapter_ids == ("neuroconv_brukertiff_singleplane",)
+    assert draft.sources[0].suggested_adapter_id == "neuroconv_brukertiff_singleplane"
+    assert not any(issue.code == "session-assembly-selected-route-mismatch" for issue in draft.issues)
 
 
 def test_session_assembly_service_preserves_selected_source_context_in_draft(tmp_path: Path) -> None:

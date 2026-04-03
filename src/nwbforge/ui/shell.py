@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from threading import Lock
 
 from nwbforge.app.packages import PackageInstallProgressEvent, PackageInstallStage
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage
@@ -28,6 +29,7 @@ class DesktopShellModel:
     ) -> None:
         self._state = DesktopShellState()
         self._listeners: list[ShellStateListener] = []
+        self._lock = Lock()
         self._log_sink = log_sink
         self._error_presenter = error_presenter or DefaultUiErrorPresenter()
         if self._log_sink is not None:
@@ -35,12 +37,15 @@ class DesktopShellModel:
 
     @property
     def state(self) -> DesktopShellState:
-        return self._state
+        with self._lock:
+            return self._state
 
     def subscribe(self, listener: ShellStateListener, *, emit_initial: bool = True) -> None:
-        self._listeners.append(listener)
+        with self._lock:
+            self._listeners.append(listener)
+            state = self._state
         if emit_initial:
-            listener(self._state)
+            listener(state)
 
     def invoke_file_menu_action(self, action: FileMenuAction) -> DesktopShellState:
         if action in {
@@ -161,10 +166,15 @@ class DesktopShellModel:
         )
 
     def _handle_log_entries(self, entries) -> None:
-        self._set_state(replace(self._state, log_entries=entries))
+        with self._lock:
+            current_state = self._state
+        self._set_state(replace(current_state, log_entries=entries))
 
     def _set_state(self, new_state: DesktopShellState) -> DesktopShellState:
-        self._state = new_state
-        for listener in self._listeners:
-            listener(self._state)
-        return self._state
+        with self._lock:
+            self._state = new_state
+            listeners = tuple(self._listeners)
+            state = self._state
+        for listener in listeners:
+            listener(state)
+        return state

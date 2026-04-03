@@ -32,9 +32,10 @@ __all__ = [
 def _try_import_optional(module_name: str, export_name: str) -> None:
     try:
         module = import_module(module_name)
-    except ImportError:
+        export = getattr(module, export_name)
+    except (AttributeError, ImportError):
         return
-    globals()[export_name] = getattr(module, export_name)
+    globals()[export_name] = export
     __all__.append(export_name)
 
 

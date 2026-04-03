@@ -6,7 +6,14 @@ from pathlib import Path
 
 from nwbforge.app.packages import PackageInstallRuntimeError, PackageInstallStage
 from nwbforge.app.runtime import PipelineRuntimeError, PipelineStage
-from nwbforge.ui import CompositeUiLogSink, DefaultUiErrorPresenter, FileUiLogSink, InMemoryUiLogSink, UiLogHandler
+from nwbforge.ui import (
+    CompositeUiLogSink,
+    DefaultUiErrorPresenter,
+    FileUiLogSink,
+    InMemoryUiLogSink,
+    UiLogEntry,
+    UiLogHandler,
+)
 
 
 def test_default_ui_error_presenter_translates_known_runtime_errors() -> None:
@@ -74,3 +81,21 @@ def test_composite_ui_log_sink_mirrors_to_file(tmp_path: Path) -> None:
     payload = json.loads(file_path.read_text(encoding="utf-8").strip())
     assert payload["message"] == "persisted entry"
     assert payload["context"] == {"route": "deeplabcut"}
+
+
+def test_file_ui_log_sink_serializes_non_json_context_values(tmp_path: Path) -> None:
+    file_path = tmp_path / "ui.log.jsonl"
+    sink = FileUiLogSink(file_path)
+
+    sink.append(
+        UiLogEntry(
+            level_name="INFO",
+            message="persisted entry",
+            logger_name="tests.ui.observability.file",
+            context={"path": tmp_path, "marker": object()},
+        )
+    )
+
+    payload = json.loads(file_path.read_text(encoding="utf-8").strip())
+    assert payload["context"]["path"] == str(tmp_path)
+    assert isinstance(payload["context"]["marker"], str)
