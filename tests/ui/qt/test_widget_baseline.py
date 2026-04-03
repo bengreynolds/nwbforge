@@ -2641,9 +2641,9 @@ def test_conversion_widget_filters_resolved_metadata_conflicts(qapp, tmp_path: P
 
     assert "0 pending review" in window.conversion_widget._metadata_resolution_summary_label.text()
     assert "1 resolved" in window.conversion_widget._metadata_resolution_summary_label.text()
-    assert "Resolved" in window.conversion_widget._disagreement_list.item(0).text()
     window.conversion_widget._disagreement_filter_combo.setCurrentText("Resolved only")
     qapp.processEvents()
+    assert "Resolved" in window.conversion_widget._disagreement_list.item(0).text()
     assert window.conversion_widget._disagreement_list.count() == 1
     window.conversion_widget._disagreement_filter_combo.setCurrentText("Pending only")
     qapp.processEvents()
