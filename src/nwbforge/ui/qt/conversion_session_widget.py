@@ -69,7 +69,7 @@ class ConversionSessionWidget(QWidget):
         self._execute_button.clicked.connect(self._on_execute_clicked)
         self._output_path_edit = QLineEdit(self)
         self._output_path_edit.setPlaceholderText("Output NWB path")
-        self._output_path_edit.textChanged.connect(self._refresh_execute_enabled)
+        self._output_path_edit.textChanged.connect(self._on_output_path_changed)
         self._choose_output_button = QPushButton("Choose Output...", self)
         self._choose_output_button.clicked.connect(self._choose_output_path)
         self._validation_summary_label = QLabel("Validation summary: not available.", self)
@@ -98,6 +98,11 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._ready_to_write_label.setWordWrap(True)
+        self._pre_write_checklist_label = QLabel(
+            "Pre-write checklist:\n- Session loaded: pending\n- Preview built: pending\n- Metadata review: waiting for preview\n- Output path chosen: pending",
+            self,
+        )
+        self._pre_write_checklist_label.setWordWrap(True)
         self._stage_value_label = QLabel("idle", self)
         self._output_value_label = QLabel("No output selected.", self)
         self._issue_count_value_label = QLabel("0 issues", self)
@@ -300,6 +305,7 @@ class ConversionSessionWidget(QWidget):
         execution_layout.addWidget(self._readiness_summary_label)
         execution_layout.addWidget(self._next_action_label)
         execution_layout.addWidget(self._ready_to_write_label)
+        execution_layout.addWidget(self._pre_write_checklist_label)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
         execution_layout.addWidget(self._validation_summary_label)
@@ -510,6 +516,7 @@ class ConversionSessionWidget(QWidget):
         self._readiness_summary_label.setText(self._readiness_summary_text(state))
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
+        self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
         self._session_context_label.setText(self._session_context_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
@@ -887,11 +894,116 @@ class ConversionSessionWidget(QWidget):
             return state.session.status.value
         return "idle"
 
-    @staticmethod
-    def _output_text(state: ConversionSessionScreenState) -> str:
-        if state.output_path is None:
-            return "No output selected."
-        return str(state.output_path)
+    def _output_text(self, state: ConversionSessionScreenState) -> str:
+        if state.output_path is not None:
+            return str(state.output_path)
+        if self._output_path_edit.text().strip():
+            return self._output_path_edit.text().strip()
+        return "No output selected."
+
+    def _has_output_target(self, state: ConversionSessionScreenState) -> bool:
+        return state.output_path is not None or bool(self._output_path_edit.text().strip())
+
+    def _write_blockers(self, state: ConversionSessionScreenState) -> list[str]:
+        blockers: list[str] = []
+        if state.session is None:
+            blockers.append("load or create a session")
+        if state.preview is None:
+            blockers.append("build preview")
+        if any(item.pending_resolution for item in state.metadata_disagreements):
+            blockers.append("review metadata conflicts")
+        if not self._has_output_target(state):
+            blockers.append("choose output path")
+        return blockers
+
+    def _pre_write_checklist_text(self, state: ConversionSessionScreenState) -> str:
+        session_status = "done" if state.session is not None else "pending"
+        if state.is_preview_running:
+            preview_status = "in progress"
+        elif state.preview is not None or state.execution is not None:
+            preview_status = "done"
+        else:
+            preview_status = "pending"
+        if state.preview is None and state.execution is None and not state.is_preview_running:
+            metadata_status = "waiting for preview"
+        elif any(item.pending_resolution for item in state.metadata_disagreements):
+            metadata_status = "pending"
+        else:
+            metadata_status = "done"
+        output_status = "done" if self._has_output_target(state) else "pending"
+        return (
+            "Pre-write checklist:\n"
+            f"- Session loaded: {session_status}\n"
+            f"- Preview built: {preview_status}\n"
+            f"- Metadata review: {metadata_status}\n"
+            f"- Output path chosen: {output_status}"
+        )
+
+    def _next_action_text(self, state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Next action: start with New Session and add supported or custom data sources."
+        if state.is_preview_running:
+            return "Current step: Build Preview. Wait for preview results so the app can surface metadata conflicts and readiness."
+        if state.preview is None:
+            return "Current step: Build Preview. Next action: review the session summary, then select Build Preview."
+        pending_conflicts = [item for item in state.metadata_disagreements if item.pending_resolution]
+        if pending_conflicts:
+            return "Current step: Review Metadata. Next action: inspect pending mixed-source conflicts before writing NWB."
+        if not self._has_output_target(state):
+            return "Current step: Choose Output. Next action: choose an NWB output path before writing."
+        if state.is_execution_running:
+            return "Current step: Write NWB. Wait for conversion to finish, then review validation results and artifacts."
+        if state.execution is None:
+            return "Current step: Write NWB. Next action: run Write NWB when you are satisfied with the current preview."
+        return "Current step: Review Results. Next action: inspect validation issues and artifacts, then complete review if required."
+
+    def _ready_to_write_text(self, state: ConversionSessionScreenState) -> str:
+        blockers = self._write_blockers(state)
+        if blockers:
+            return "Ready to write when: " + ", ".join(blockers) + "."
+        return "Ready to write when: the current preview looks correct and you want to generate NWB plus validation artifacts."
+
+    def _readiness_state_text(self, state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Blocked"
+        if state.is_preview_running:
+            return "Building Preview"
+        if state.is_execution_running:
+            return "Writing NWB"
+        if state.execution is not None:
+            outcome = state.execution.review_outcome
+            if outcome.blocks_completion:
+                return "Blocked by Review"
+            if outcome.requires_manual_review or state.validation_issues:
+                return "Needs Review"
+            return "Completed"
+        blockers = self._write_blockers(state)
+        if not blockers:
+            return "Ready to Write"
+        if state.preview is not None and any(item.pending_resolution for item in state.metadata_disagreements):
+            return "Needs Review"
+        return "Blocked"
+
+    def _readiness_summary_text(self, state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Readiness: blocked until a session is loaded."
+        if state.is_preview_running:
+            return "Readiness: building preview so the app can check grouping, metadata, and conversion readiness."
+        if state.is_execution_running:
+            return "Readiness: writing NWB now. Review results after conversion finishes."
+        if state.execution is not None:
+            outcome = state.execution.review_outcome
+            if outcome.blocks_completion:
+                return "Readiness: blocked by review findings. Add rationale and override only if the result is acceptable."
+            if outcome.requires_manual_review or state.validation_issues:
+                return (
+                    "Readiness: needs review. Inspect validation findings and artifacts before treating the result as complete."
+                )
+            return "Readiness: complete. Output and generated artifacts are ready for inspection or archival."
+        blockers = self._write_blockers(state)
+        if blockers:
+            return "Readiness: blocked by " + ", ".join(blockers) + "."
+        return "Readiness: ready to write. Preview is built, main conflicts are cleared, and output is selected."
 
     @staticmethod
     def _issue_count_text(state: ConversionSessionScreenState) -> str:
@@ -929,89 +1041,6 @@ class ConversionSessionWidget(QWidget):
         return "No blocking review actions are currently required."
 
     @staticmethod
-    def _next_action_text(state: ConversionSessionScreenState) -> str:
-        if state.session is None:
-            return "Next action: start with New Session and add supported or custom data sources."
-        if state.is_preview_running:
-            return "Current step: Build Preview. Wait for preview results so the app can surface metadata conflicts and readiness."
-        if state.preview is None:
-            return "Current step: Build Preview. Next action: review the session summary, then select Build Preview."
-        pending_conflicts = [item for item in state.metadata_disagreements if item.pending_resolution]
-        if pending_conflicts:
-            return "Current step: Review Metadata. Next action: inspect pending mixed-source conflicts before writing NWB."
-        if state.output_path is None:
-            return "Current step: Choose Output. Next action: choose an NWB output path before writing."
-        if state.is_execution_running:
-            return "Current step: Write NWB. Wait for conversion to finish, then review validation results and artifacts."
-        if state.execution is None:
-            return "Current step: Write NWB. Next action: run Write NWB when you are satisfied with the current preview."
-        return "Current step: Review Results. Next action: inspect validation issues and artifacts, then complete review if required."
-
-    @staticmethod
-    def _write_blockers(state: ConversionSessionScreenState) -> list[str]:
-        blockers: list[str] = []
-        if state.session is None:
-            blockers.append("load or create a session")
-        if state.preview is None:
-            blockers.append("build preview")
-        if any(item.pending_resolution for item in state.metadata_disagreements):
-            blockers.append("review metadata conflicts")
-        if state.output_path is None:
-            blockers.append("choose output path")
-        return blockers
-
-    @staticmethod
-    def _ready_to_write_text(state: ConversionSessionScreenState) -> str:
-        blockers = ConversionSessionWidget._write_blockers(state)
-        if blockers:
-            return "Ready to write when: " + ", ".join(blockers) + "."
-        return "Ready to write when: the current preview looks correct and you want to generate NWB plus validation artifacts."
-
-    @staticmethod
-    def _readiness_state_text(state: ConversionSessionScreenState) -> str:
-        if state.session is None:
-            return "Blocked"
-        if state.is_preview_running:
-            return "Building Preview"
-        if state.is_execution_running:
-            return "Writing NWB"
-        if state.execution is not None:
-            outcome = state.execution.review_outcome
-            if outcome.blocks_completion:
-                return "Blocked by Review"
-            if outcome.requires_manual_review or state.validation_issues:
-                return "Needs Review"
-            return "Completed"
-        blockers = ConversionSessionWidget._write_blockers(state)
-        if not blockers:
-            return "Ready to Write"
-        if state.preview is not None and any(item.pending_resolution for item in state.metadata_disagreements):
-            return "Needs Review"
-        return "Blocked"
-
-    @staticmethod
-    def _readiness_summary_text(state: ConversionSessionScreenState) -> str:
-        if state.session is None:
-            return "Readiness: blocked until a session is loaded."
-        if state.is_preview_running:
-            return "Readiness: building preview so the app can check grouping, metadata, and conversion readiness."
-        if state.is_execution_running:
-            return "Readiness: writing NWB now. Review results after conversion finishes."
-        if state.execution is not None:
-            outcome = state.execution.review_outcome
-            if outcome.blocks_completion:
-                return "Readiness: blocked by review findings. Add rationale and override only if the result is acceptable."
-            if outcome.requires_manual_review or state.validation_issues:
-                return (
-                    "Readiness: needs review. Inspect validation findings and artifacts before treating the result as complete."
-                )
-            return "Readiness: complete. Output and generated artifacts are ready for inspection or archival."
-        blockers = ConversionSessionWidget._write_blockers(state)
-        if blockers:
-            return "Readiness: blocked by " + ", ".join(blockers) + "."
-        return "Readiness: ready to write. Preview is built, main conflicts are cleared, and output is selected."
-
-    @staticmethod
     def _acknowledgement_summary_text(state: ConversionSessionScreenState) -> str:
         total_issues = len(state.validation_issues)
         acknowledged = len(state.acknowledged_issue_refs)
@@ -1031,6 +1060,19 @@ class ConversionSessionWidget(QWidget):
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state
         self._execute_button.setEnabled(state.can_run_execution and bool(self._output_path_edit.text().strip()))
+
+    def _on_output_path_changed(self, *_args) -> None:
+        self._refresh_execute_enabled()
+        self._refresh_local_stage_guidance()
+
+    def _refresh_local_stage_guidance(self) -> None:
+        state = self._screen_model.state
+        self._output_value_label.setText(self._output_text(state))
+        self._readiness_metric_value.setText(self._readiness_state_text(state))
+        self._readiness_summary_label.setText(self._readiness_summary_text(state))
+        self._next_action_label.setText(self._next_action_text(state))
+        self._ready_to_write_label.setText(self._ready_to_write_text(state))
+        self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
 
     def _set_session_summary_visible(self, visible: bool) -> None:
         self._session_summary_group.setVisible(visible)

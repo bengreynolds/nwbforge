@@ -386,6 +386,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert "blocked by build preview" in window.conversion_widget._readiness_summary_label.text().lower()
     assert "Build Preview" in window.conversion_widget._next_action_label.text()
     assert "build preview" in window.conversion_widget._ready_to_write_label.text()
+    assert "Session loaded: done" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Preview built: pending" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Metadata review: waiting for preview" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Output path chosen: pending" in window.conversion_widget._pre_write_checklist_label.text()
     assert (
         window.conversion_widget._role_policy_label.text()
         == "Data source priority during conflict review: primary sources take precedence over metadata sources, which take precedence over supplemental sources."
@@ -422,8 +426,17 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.statusBar().findChild(type(window._progress_bar)) is not None
     assert window.conversion_widget._readiness_metric_value.text() == "Blocked"
     assert "blocked by choose output path" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Preview built: done" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Metadata review: done" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Output path chosen: pending" in window.conversion_widget._pre_write_checklist_label.text()
 
     window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    qapp.processEvents()
+    assert window.conversion_widget._output_value_label.text() == "C:/tmp/output.nwb"
+    assert window.conversion_widget._readiness_metric_value.text() == "Ready to Write"
+    assert "ready to write" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Current step: Write NWB." in window.conversion_widget._next_action_label.text()
+    assert "Output path chosen: done" in window.conversion_widget._pre_write_checklist_label.text()
     window.conversion_widget._execute_button.click()
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Execution status: completed"
