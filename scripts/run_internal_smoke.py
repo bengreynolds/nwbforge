@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import suppress
+import json
 import logging
 from pathlib import Path
 import tempfile
@@ -22,10 +23,16 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional workspace directory to reuse instead of a temporary directory.",
     )
+    parser.add_argument(
+        "--report-json",
+        type=Path,
+        default=None,
+        help="Optional path for a JSON smoke summary report.",
+    )
     return parser.parse_args()
 
 
-def _run_conversion_case(repo_root: Path, workspace: Path, relative_session_path: str, output_name: str) -> None:
+def _run_conversion_case(repo_root: Path, workspace: Path, relative_session_path: str, output_name: str) -> dict[str, str]:
     services = build_desktop_services(workspace)
     try:
         session_path = (repo_root / relative_session_path).resolve()
@@ -50,12 +57,22 @@ def _run_conversion_case(repo_root: Path, workspace: Path, relative_session_path
                 }
             },
         )
+        return {
+            "case_type": "conversion",
+            "session_id": session.session_id,
+            "session_path": str(session_path),
+            "workspace": str(workspace),
+            "preview_status": preview.session.status.value,
+            "execution_status": execution.session.status.value,
+            "output_path": str(output_path),
+            "result": "passed",
+        }
     finally:
         services.conversion_screen_model.shutdown(wait=False)
         services.package_screen_model.shutdown(wait=False)
 
 
-def _run_project_round_trip(repo_root: Path, workspace: Path) -> None:
+def _run_project_round_trip(repo_root: Path, workspace: Path) -> dict[str, str]:
     services = build_desktop_services(workspace)
     try:
         screen = services.session_assembly_screen_model
@@ -95,32 +112,57 @@ def _run_project_round_trip(repo_root: Path, workspace: Path) -> None:
                 }
             },
         )
+        return {
+            "case_type": "direct_ingest_project_round_trip",
+            "session_id": session.session_id,
+            "supported_input": str(supported),
+            "custom_input": str(custom),
+            "project_path": str(project_path),
+            "workspace": str(workspace),
+            "preview_status": preview.session.status.value,
+            "execution_status": execution.session.status.value,
+            "output_path": str(output_path),
+            "result": "passed",
+        }
     finally:
         services.conversion_screen_model.shutdown(wait=False)
         services.package_screen_model.shutdown(wait=False)
 
 
-def _run_smoke_suite(repo_root: Path, workspace: Path) -> None:
+def _run_smoke_suite(repo_root: Path, workspace: Path) -> list[dict[str, str]]:
     workspace.mkdir(parents=True, exist_ok=True)
-    _run_conversion_case(
-        repo_root,
-        workspace / "supported-case",
-        "examples/sessions/supported/session_manifest.json",
-        "supported-case.nwb",
-    )
-    _run_conversion_case(
-        repo_root,
-        workspace / "custom-case",
-        "examples/sessions/custom/custom_session.json",
-        "custom-case.nwb",
-    )
-    _run_conversion_case(
-        repo_root,
-        workspace / "hybrid-case",
-        "examples/sessions/hybrid/hybrid_session.json",
-        "hybrid-case.nwb",
-    )
-    _run_project_round_trip(repo_root, workspace / "project-case")
+    return [
+        _run_conversion_case(
+            repo_root,
+            workspace / "supported-case",
+            "examples/sessions/supported/session_manifest.json",
+            "supported-case.nwb",
+        ),
+        _run_conversion_case(
+            repo_root,
+            workspace / "custom-case",
+            "examples/sessions/custom/custom_session.json",
+            "custom-case.nwb",
+        ),
+        _run_conversion_case(
+            repo_root,
+            workspace / "hybrid-case",
+            "examples/sessions/hybrid/hybrid_session.json",
+            "hybrid-case.nwb",
+        ),
+        _run_project_round_trip(repo_root, workspace / "project-case"),
+    ]
+
+
+def _write_report(report_path: Path, *, workspace: Path, cases: list[dict[str, str]]) -> None:
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "workspace": str(workspace),
+        "case_count": len(cases),
+        "result": "passed",
+        "cases": cases,
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
 def main() -> int:
@@ -131,13 +173,17 @@ def main() -> int:
     if args.workspace is not None:
         workspace = args.workspace.resolve()
         LOGGER.info("Running internal smoke suite.", extra={"nwbforge_context": {"workspace": str(workspace)}})
-        _run_smoke_suite(repo_root, workspace)
+        cases = _run_smoke_suite(repo_root, workspace)
+        if args.report_json is not None:
+            _write_report(args.report_json.resolve(), workspace=workspace, cases=cases)
         return 0
 
     with tempfile.TemporaryDirectory(prefix="nwbforge-smoke-") as temp_dir:
         workspace = Path(temp_dir)
         LOGGER.info("Running internal smoke suite.", extra={"nwbforge_context": {"workspace": str(workspace)}})
-        _run_smoke_suite(repo_root, workspace)
+        cases = _run_smoke_suite(repo_root, workspace)
+        if args.report_json is not None:
+            _write_report(args.report_json.resolve(), workspace=workspace, cases=cases)
         with suppress(OSError):
             LOGGER.info("Internal smoke suite finished successfully.")
         return 0
