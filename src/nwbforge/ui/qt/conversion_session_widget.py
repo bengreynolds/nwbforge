@@ -711,7 +711,12 @@ class ConversionSessionWidget(QWidget):
         selected_item = self._disagreement_list.currentItem()
         selected_key = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
         self._disagreement_list.clear()
-        disagreements = self._filtered_metadata_disagreements(state)
+        disagreements = tuple(
+            sorted(
+                self._filtered_metadata_disagreements(state),
+                key=lambda item: (not item.pending_resolution, item.canonical_key),
+            )
+        )
         for disagreement in disagreements:
             status_label = "Pending Review" if disagreement.pending_resolution else "Resolved"
             resolution_suffix = ""

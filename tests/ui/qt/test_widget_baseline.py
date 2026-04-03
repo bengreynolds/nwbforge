@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 import logging
 from pathlib import Path
@@ -49,6 +50,7 @@ from nwbforge.domain.models import (
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SessionAssemblyScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
+from nwbforge.ui.models import MetadataDisagreementItem, MetadataDisagreementSourceItem
 from nwbforge.ui.qt import MainWindow
 from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.validation import JsonExecutionReviewArtifactService
@@ -2001,6 +2003,110 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
         "use the selected source value as the preferred session value"
         in window.conversion_widget._recommended_resolution_label.text().lower()
     )
+    window.close()
+
+
+def test_conversion_widget_sorts_pending_metadata_conflicts_before_resolved(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-review-order-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._screen_model.restore_state(
+        replace(
+            window.conversion_widget._screen_model.state,
+            metadata_disagreements=(
+                MetadataDisagreementItem(
+                    canonical_key="session.session_description",
+                    resolved_value="override description",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="manifest",
+                            source_label="Structured session manifest",
+                            role="primary",
+                            extracted_key="session.session_description",
+                            value="manifest description",
+                        ),
+                        MetadataDisagreementSourceItem(
+                            source_id="custom",
+                            source_label="Custom session JSON",
+                            role="supplemental",
+                            extracted_key="session.session_description",
+                            value="custom description",
+                        ),
+                    ),
+                    session_override_value="override description",
+                    resolution_status="session_override",
+                    resolution_history=(
+                        "Session override currently resolves session.session_description to 'override description'.",
+                    ),
+                    pending_resolution=False,
+                ),
+                MetadataDisagreementItem(
+                    canonical_key="subject.subject_id",
+                    resolved_value="primary-mouse-01",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="manifest",
+                            source_label="Structured session manifest",
+                            role="primary",
+                            extracted_key="subject.subject_id",
+                            value="primary-mouse-01",
+                        ),
+                        MetadataDisagreementSourceItem(
+                            source_id="custom",
+                            source_label="Custom session JSON",
+                            role="supplemental",
+                            extracted_key="subject.subject_id",
+                            value="custom-mouse-01",
+                        ),
+                    ),
+                    resolution_status="pending",
+                    pending_resolution=True,
+                ),
+            ),
+        )
+    )
+    qapp.processEvents()
+    window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
+    qapp.processEvents()
+
+    assert window.conversion_widget._disagreement_list.count() == 2
+    assert "Pending Review" in window.conversion_widget._disagreement_list.item(0).text()
+    assert "subject.subject_id" in window.conversion_widget._disagreement_list.item(0).text()
+    assert "Resolved" in window.conversion_widget._disagreement_list.item(1).text()
+    assert "session.session_description" in window.conversion_widget._disagreement_list.item(1).text()
     window.close()
 
 
