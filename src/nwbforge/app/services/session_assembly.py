@@ -917,6 +917,7 @@ class SessionAssemblyService:
         if not draft.can_create_session:
             raise ValueError("Session draft is not ready to create.")
 
+        groups_by_key = {group.group_key: group for group in draft.groups}
         sidecar_ids_by_anchor: dict[str, tuple[str, ...]] = {}
         for source in draft.sources:
             if source.sidecar_for_source_id is None:
@@ -934,11 +935,29 @@ class SessionAssemblyService:
                 role=source.role,
                 adapter_hint=source.suggested_adapter_id,
                 metadata={
+                    "session_assembly.group_kind": groups_by_key[source.group_key].group_kind,
                     "session_assembly.ingest_kind": source.ingest_kind,
                     "session_assembly.selection_label": source.selection_label,
                     "session_assembly.route_name": source.route_name or "",
                     "session_assembly.group_key": source.group_key,
                     "session_assembly.group_label": source.group_label,
+                    "session_assembly.group_pathway": groups_by_key[source.group_key].suggested_pathway.value,
+                    "session_assembly.grouping_reason": groups_by_key[source.group_key].grouping_reason,
+                    "session_assembly.group_source_ids_json": json.dumps(
+                        list(groups_by_key[source.group_key].source_ids)
+                    ),
+                    "session_assembly.group_member_labels_json": json.dumps(
+                        list(groups_by_key[source.group_key].member_labels)
+                    ),
+                    "session_assembly.group_canonical_source_id": (
+                        groups_by_key[source.group_key].canonical_source_id or ""
+                    ),
+                    "session_assembly.group_canonical_source_label": (
+                        groups_by_key[source.group_key].canonical_source_label or ""
+                    ),
+                    "session_assembly.group_canonical_selection_label": (
+                        groups_by_key[source.group_key].canonical_selection_label or ""
+                    ),
                     "session_assembly.entry_path_kind": source.entry_path_kind or "",
                     "session_assembly.entry_role_label": source.entry_role_label or "",
                     "session_assembly.entry_validation_status": source.entry_validation_status or "",
@@ -949,14 +968,7 @@ class SessionAssemblyService:
                     "session_assembly.workflow_adapter_id": source.workflow_adapter_id or "",
                     "session_assembly.workflow_display_name": source.workflow_display_name or "",
                     "session_assembly.group_confirmed": str(
-                        next(
-                            (
-                                group.is_confirmed
-                                for group in draft.groups
-                                if group.group_key == source.group_key
-                            ),
-                            False,
-                        )
+                        groups_by_key[source.group_key].is_confirmed
                     ).lower(),
                     "session_assembly.sidecar_for_source_id": source.sidecar_for_source_id or "",
                     "session_assembly.sidecar_for_label": source.sidecar_for_label or "",

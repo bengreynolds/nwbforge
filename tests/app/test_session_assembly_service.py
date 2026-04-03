@@ -626,6 +626,35 @@ def test_session_assembly_service_attaches_custom_input_to_single_supported_anch
     assert draft.groups[0].canonical_selection_label == "Session Manifest"
     assert any(issue.code == "session-assembly-custom-context-association" for issue in draft.issues)
 
+    confirmed = service.assemble_draft(
+        (manifest_path, notes_path),
+        source_intents={
+            str(manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "session_manifest",
+                "route_display_name": "Session Manifest",
+                "entry_path_kind": "file",
+                "entry_role_label": "manifest file or session directory",
+                "entry_validation_status": "validated",
+            }
+        },
+        confirmed_group_keys=(draft.groups[0].group_key,),
+    )
+    session = service.create_session(confirmed)
+
+    assert session.sources[0].metadata["session_assembly.group_kind"] == "supported_anchor"
+    assert session.sources[0].metadata["session_assembly.group_pathway"] == "hybrid"
+    assert session.sources[0].metadata["session_assembly.group_canonical_source_label"] == "session_manifest.json"
+    assert session.sources[1].metadata["session_assembly.group_canonical_selection_label"] == "Session Manifest"
+    assert json.loads(session.sources[0].metadata["session_assembly.group_member_labels_json"]) == [
+        "session_manifest.json",
+        "notes.txt",
+    ]
+    assert json.loads(session.sources[1].metadata["session_assembly.group_source_ids_json"]) == [
+        manifest_source.source_id,
+        notes_source.source_id,
+    ]
+
 
 def test_session_assembly_service_leaves_custom_input_separate_when_multiple_supported_anchors_exist(
     tmp_path: Path,
@@ -706,6 +735,17 @@ def test_session_assembly_service_groups_supported_sources_as_combined_workflow(
     assert draft.groups[0].workflow_display_name == "TIFF + Suite2p Workflow"
     assert "combined NeuroConv workflow" in draft.groups[0].grouping_reason
     assert {source.workflow_display_name for source in draft.sources} == {"TIFF + Suite2p Workflow"}
+    assert session.sources[0].metadata["session_assembly.group_kind"] == "workflow_bundle"
+    assert session.sources[0].metadata["session_assembly.group_pathway"] == "supported"
+    assert "combined NeuroConv workflow" in session.sources[0].metadata["session_assembly.grouping_reason"]
+    assert json.loads(session.sources[0].metadata["session_assembly.group_member_labels_json"]) == [
+        "imaging",
+        "suite2p",
+    ]
+    assert json.loads(session.sources[1].metadata["session_assembly.group_source_ids_json"]) == [
+        draft.sources[0].source_id,
+        draft.sources[1].source_id,
+    ]
     assert session.sources[0].metadata["session_assembly.workflow_adapter_id"] == "workflow_tiff_suite2p"
     assert session.sources[1].metadata["session_assembly.workflow_display_name"] == "TIFF + Suite2p Workflow"
 
