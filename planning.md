@@ -173,6 +173,7 @@ Completed:
 - Added clearer field-level metadata-resolution state in the conversion workspace by separating preferred session-value status from source-specific override status and adding rebuild-cycle coverage for session/source override history
 - Added snapshot-history restore context in the desktop workspace so selected saved states show status, artifact count, issue count, and review state before restore
 - Added an explicit `Close Current Session` desktop action so session removal is available through the File menu and not only through the runtime tab strip
+- Completed the first UX-correction baseline from the mismatch audit: `New Session` now opens as the home workspace, imported-session loading is grouped under compatibility, optional route support is visually secondary, advanced review tools stay hidden by default, metadata review shows recommended actions first, and the conversion workspace now includes live readiness plus pre-write checklist guidance
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:

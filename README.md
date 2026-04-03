@@ -20,7 +20,7 @@ The system is planned around three conversion pathways:
 This application is intended for neuroscience researchers who are already comfortable with experimental data structure, acquisition modalities, and metadata interpretation. The UI uses NWB and NeuroConv terminology directly rather than hiding the scientific model behind generic file-import language.
 
 Typical local-app flow:
-1. Start a new session from the integrated desktop workspace.
+1. Start in the integrated `New Session` workspace, which now opens as the default home surface for direct ingest.
 2. Add one or more NeuroConv-supported sources, custom files/folders, or a mixture of both.
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
