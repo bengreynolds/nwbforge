@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 import logging
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtGui import QAction, QDesktopServices
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar, QTabWidget, QVBoxLayout, QWidget
@@ -44,6 +45,15 @@ from nwbforge.ui.qt.settings_dialog import SettingsDialog
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
+@dataclass(slots=True)
+class _ConversionWorkspaceTab:
+    """A runtime session tab inside the conversion workspace."""
+
+    tab_id: str
+    state: ConversionSessionScreenState
+    session_path: Path | None = None
+
+
 class MainWindow(QMainWindow):
     """Minimal Qt desktop shell bound to the UI model layer."""
 
@@ -78,6 +88,10 @@ class MainWindow(QMainWindow):
         self._session_assembly_screen_model = session_assembly_screen_model
         self._conversion_screen_model = conversion_screen_model
         self._session_loader = session_loader or self._default_session_loader
+        self._conversion_workspace_tabs: list[_ConversionWorkspaceTab] = []
+        self._active_conversion_tab_id: str | None = None
+        self._loading_conversion_tab_id: str | None = None
+        self._restoring_conversion_tab = False
         self._recent_session_actions: list[QAction] = []
         self._recent_project_actions: list[QAction] = []
         self._last_recorded_output_directory: Path | None = None
@@ -98,6 +112,8 @@ class MainWindow(QMainWindow):
             artifact_opener=self._open_artifact_path,
             artifact_revealer=self._reveal_artifact_path,
         )
+        self._conversion_widget._session_tabs.currentChanged.connect(self._on_conversion_tab_changed)
+        self._conversion_widget._session_tabs.tabCloseRequested.connect(self._on_conversion_tab_close_requested)
         self._session_assembly_dialog = SessionAssemblyDialog(
             self._session_assembly_screen_model,
             self,
@@ -560,6 +576,8 @@ class MainWindow(QMainWindow):
     def _activate_loaded_session(self, session: ConversionSession, *, session_path: Path | None = None) -> None:
         if session_path is not None:
             self._settings_screen_model.record_recent_session(session_path)
+        tab_id = self._conversion_tab_id_for_session(session, session_path=session_path)
+        self._loading_conversion_tab_id = tab_id
         self._conversion_widget.load_session(session)
         default_output_path = self._default_output_path_for_session(session)
         log_event(
@@ -570,6 +588,13 @@ class MainWindow(QMainWindow):
             default_output_path=str(default_output_path),
         )
         self._conversion_screen_model.set_output_path(default_output_path)
+        self._loading_conversion_tab_id = None
+        self._upsert_conversion_workspace_tab(
+            tab_id,
+            self._conversion_screen_model.state,
+            session_path=session_path,
+        )
+        self._set_current_conversion_tab(tab_id)
         self._workspace_tabs.setCurrentWidget(self._conversion_widget)
 
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
@@ -822,6 +847,8 @@ class MainWindow(QMainWindow):
             )
 
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
+        if not self._restoring_conversion_tab and self._loading_conversion_tab_id is None:
+            self._sync_active_conversion_tab_from_state(state)
         self._sync_workspace_header(state)
         if state.output_path is not None:
             candidate_directory = state.output_path.parent.resolve()
@@ -933,3 +960,145 @@ class MainWindow(QMainWindow):
         if self._workspace_badge_label is not None:
             badge_text = state.progress_event.stage.value if state.progress_event is not None else state.session.status.value
             self._workspace_badge_label.setText(badge_text.replace("_", " ").title())
+
+    @staticmethod
+    def _conversion_tab_id_for_session(session: ConversionSession, *, session_path: Path | None = None) -> str:
+        if session_path is not None:
+            return str(session_path.resolve())
+        return f"runtime:{session.session_id}"
+
+    @staticmethod
+    def _conversion_tab_label(state: ConversionSessionScreenState) -> str:
+        session = state.session
+        if session is None:
+            return "Untitled Session"
+        return session.session_id
+
+    @staticmethod
+    def _conversion_tab_tooltip(tab: _ConversionWorkspaceTab) -> str:
+        session = tab.state.session
+        if session is None:
+            return "No session loaded."
+        parts = [session.session_id, f"pathway={session.pathway.value}", f"status={session.status.value}"]
+        if tab.session_path is not None:
+            parts.append(str(tab.session_path))
+        return "\n".join(parts)
+
+    def _conversion_tab_index(self, tab_id: str) -> int:
+        for index, tab in enumerate(self._conversion_workspace_tabs):
+            if tab.tab_id == tab_id:
+                return index
+        return -1
+
+    def _sync_active_conversion_tab_from_state(self, state: ConversionSessionScreenState) -> None:
+        if state.session is None or self._active_conversion_tab_id is None:
+            if state.session is None and not self._conversion_workspace_tabs:
+                self._conversion_widget._session_tabs.hide()
+            return
+        index = self._conversion_tab_index(self._active_conversion_tab_id)
+        if index < 0:
+            return
+        tab = replace(self._conversion_workspace_tabs[index], state=state)
+        self._conversion_workspace_tabs[index] = tab
+        self._conversion_widget._session_tabs.setTabText(index, self._conversion_tab_label(state))
+        self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
+        self._conversion_widget._session_tabs.show()
+
+    def _upsert_conversion_workspace_tab(
+        self,
+        tab_id: str,
+        state: ConversionSessionScreenState,
+        *,
+        session_path: Path | None = None,
+    ) -> None:
+        index = self._conversion_tab_index(tab_id)
+        if index >= 0:
+            existing = self._conversion_workspace_tabs[index]
+            tab = replace(existing, state=state, session_path=session_path or existing.session_path)
+            self._conversion_workspace_tabs[index] = tab
+            self._conversion_widget._session_tabs.setTabText(index, self._conversion_tab_label(state))
+            self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
+        else:
+            tab = _ConversionWorkspaceTab(tab_id=tab_id, state=state, session_path=session_path)
+            self._conversion_workspace_tabs.append(tab)
+            index = self._conversion_widget._session_tabs.addTab(self._conversion_tab_label(state))
+            self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
+        self._conversion_widget._session_tabs.show()
+
+    def _set_current_conversion_tab(self, tab_id: str) -> None:
+        index = self._conversion_tab_index(tab_id)
+        if index < 0:
+            return
+        self._active_conversion_tab_id = tab_id
+        with QSignalBlocker(self._conversion_widget._session_tabs):
+            self._conversion_widget._session_tabs.setCurrentIndex(index)
+        self._conversion_widget._session_tabs.show()
+
+    def _on_conversion_tab_changed(self, index: int) -> None:
+        if index < 0 or index >= len(self._conversion_workspace_tabs):
+            return
+        next_tab = self._conversion_workspace_tabs[index]
+        if next_tab.tab_id == self._active_conversion_tab_id:
+            return
+        current_state = self._conversion_screen_model.state
+        if current_state.is_preview_running or current_state.is_execution_running:
+            if self._active_conversion_tab_id is not None:
+                with QSignalBlocker(self._conversion_widget._session_tabs):
+                    self._conversion_widget._session_tabs.setCurrentIndex(
+                        self._conversion_tab_index(self._active_conversion_tab_id)
+                    )
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:tab-switch:blocked",
+                    message="Finish the active preview or write before switching sessions.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                )
+            )
+            return
+        self._active_conversion_tab_id = next_tab.tab_id
+        self._restoring_conversion_tab = True
+        try:
+            self._conversion_screen_model.restore_state(next_tab.state)
+        finally:
+            self._restoring_conversion_tab = False
+        if self._workspace_tabs.currentWidget() is self._conversion_widget:
+            self._sync_workspace_header(next_tab.state)
+
+    def _on_conversion_tab_close_requested(self, index: int) -> None:
+        if index < 0 or index >= len(self._conversion_workspace_tabs):
+            return
+        current_state = self._conversion_screen_model.state
+        closing_active = (
+            self._active_conversion_tab_id is not None
+            and self._conversion_workspace_tabs[index].tab_id == self._active_conversion_tab_id
+        )
+        if closing_active and (current_state.is_preview_running or current_state.is_execution_running):
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:tab-close:blocked",
+                    message="Finish the active preview or write before closing this session tab.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                )
+            )
+            return
+        self._conversion_workspace_tabs.pop(index)
+        self._conversion_widget._session_tabs.removeTab(index)
+        if not self._conversion_workspace_tabs:
+            self._active_conversion_tab_id = None
+            self._conversion_widget._session_tabs.hide()
+            self._conversion_screen_model.clear_session()
+            return
+        if closing_active:
+            next_index = min(index, len(self._conversion_workspace_tabs) - 1)
+            next_tab = self._conversion_workspace_tabs[next_index]
+            self._active_conversion_tab_id = None
+            self._set_current_conversion_tab(next_tab.tab_id)
+            self._restoring_conversion_tab = True
+            try:
+                self._conversion_screen_model.restore_state(next_tab.state)
+            finally:
+                self._restoring_conversion_tab = False

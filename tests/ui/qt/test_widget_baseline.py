@@ -937,6 +937,42 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     window.close()
 
 
+def test_main_window_keeps_multiple_sessions_in_conversion_tabs(qapp, tmp_path: Path) -> None:
+    first_session = make_session(tmp_path)
+    second_session = make_custom_session(tmp_path)
+    preview, execution = make_preview_and_execution(first_session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._load_built_session(first_session)
+    qapp.processEvents()
+    window._load_built_session(second_session)
+    qapp.processEvents()
+
+    assert window.conversion_widget._session_tabs.count() == 2
+    assert window.conversion_widget._session_tabs.isHidden() is False
+    assert window.conversion_widget._session_tabs.tabText(0) == "sess-qt"
+    assert window.conversion_widget._session_tabs.tabText(1) == "custom-qt"
+    assert "custom-qt" in window.conversion_widget._session_label.text()
+
+    window.conversion_widget._session_tabs.setCurrentIndex(0)
+    qapp.processEvents()
+    assert "sess-qt" in window.conversion_widget._session_label.text()
+
+    window._on_conversion_tab_close_requested(0)
+    qapp.processEvents()
+    assert window.conversion_widget._session_tabs.count() == 1
+    assert window.conversion_widget._session_tabs.tabText(0) == "custom-qt"
+    assert "custom-qt" in window.conversion_widget._session_label.text()
+    window.close()
+
+
 def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")

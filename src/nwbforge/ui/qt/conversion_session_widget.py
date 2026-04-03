@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSplitter,
+    QTabBar,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -165,6 +166,12 @@ class ConversionSessionWidget(QWidget):
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
         self._workspace_tabs.setUsesScrollButtons(True)
+        self._session_tabs = QTabBar(self)
+        self._session_tabs.setDocumentMode(True)
+        self._session_tabs.setTabsClosable(True)
+        self._session_tabs.setMovable(True)
+        self._session_tabs.setUsesScrollButtons(True)
+        self._session_tabs.hide()
 
         self._source_list.setAlternatingRowColors(True)
         self._issue_list.setAlternatingRowColors(True)
@@ -363,6 +370,7 @@ class ConversionSessionWidget(QWidget):
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(12)
+        content_layout.addWidget(self._session_tabs)
         content_layout.addLayout(metric_row)
         content_layout.addWidget(splitter)
 
