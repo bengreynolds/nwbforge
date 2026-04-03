@@ -167,6 +167,7 @@ Completed:
 - Expanded custom/hybrid repository-owned assembly beyond behavior-only streams so inline imaging streams now write to `ImageSeries` and inline ecephys streams now write to `ElectricalSeries`
 - Expanded combined NeuroConv workflows from inspection/composition only into direct supported execution for workflow-matched sessions backed entirely by direct NeuroConv delegates
 - Added explicit repo-facing governance docs for the current phase: a maintainer-reviewed contributor guide, end-user workflow guidance in `README.md`, and an MIT license baseline for community use and contribution
+- Added workflow-aware direct-ingest grouping so known multi-source NeuroConv combinations such as `TIFF + Suite2p` can surface as one reviewable dataset bundle instead of remaining separate structured anchors when the match is unambiguous
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -208,6 +209,7 @@ Priority order:
 - Tighten route-specific entry-path validation and canonical dataset-entry semantics so a selected NeuroConv package clearly owns the expected project/main file or root directory for that bundle.
 - Represent supported selections as structured source objects that carry route identity, canonical entry semantics, and any later bundle/context decisions into downstream grouping, review, persistence, and provenance.
 - Use the selected NeuroConv package as real context in session assembly: proprietary selections should contribute known modality and relationship hints to later grouping and mapping rather than behaving like unlabeled generic files.
+- Surface known combined supported workflows as first-class direct-ingest groups when the matched structured sources cleanly fit one registered workflow, while keeping extra or ambiguous sources outside that workflow bundle until reviewed.
 - Represent direct-ingest bundles with stronger dataset identity than the current grouped-path summary alone, including durable group intent, clearer canonical entry-path semantics, and better saved-project round trips for proprietary-plus-custom sessions.
 - Keep proprietary-path validation conservative but explicit: reject obviously wrong entry selections early, preserve plausible-but-uncertain cases as reviewable, and do not silently reinterpret a selected package as generic custom ingest.
 - Keep custom ingest open to individual files, multiple files, or folders, but only admit supported scientific/media/metadata file types into the candidate pool.

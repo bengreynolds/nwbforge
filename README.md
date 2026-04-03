@@ -23,7 +23,7 @@ Typical local-app flow:
 1. Start a new session from the integrated desktop workspace.
 2. Add one or more NeuroConv-supported sources, custom files/folders, or a mixture of both.
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
-4. Review the detected dataset bundles, source roles, metadata overrides, and mixed-source conflicts before preview or write.
+4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
 5. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
@@ -182,6 +182,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Follow-up direct-ingest hardening so supported entry validation now matches current Bruker, Thor, audio, image, TIFF, and video route semantics, optional adapter exports fail closed when package-gated symbols are absent, and shell/file logging paths tolerate re-entrant listener updates plus non-JSON context values
 - Conservative custom-ingest filtering so obviously unsupported files are rejected before they enter the direct-ingest workspace, while route-backed selections keep explicit selected-package context for later validation and review
 - Mixed-source grouping that treats selected structured sources as dataset anchors and only attaches nearby custom inputs when the context is narrow enough to stay reviewable
+- Workflow-aware direct-ingest grouping that can collapse clean matched supported combinations such as `TIFF + Suite2p` into one reviewable dataset bundle while preserving conservative handling for ambiguous cases
 - Structured supported-source entry semantics in session assembly, including canonical entry-path kind, entry-role labeling, and persisted validation status for downstream grouping and review
 - Direct-ingest group summaries now surface canonical structured-entry identity for supported-anchor bundles so proprietary-plus-custom groups read as dataset bundles instead of unlabeled file clusters
 - Source-specific metadata overrides for selected direct-ingest sources, carried through inspection and normalization as user-supplied values
