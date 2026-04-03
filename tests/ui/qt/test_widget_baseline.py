@@ -464,6 +464,48 @@ def test_conversion_widget_uses_split_session_and_review_layout(qapp, tmp_path: 
     assert splitter.count() == 2
     assert splitter.widget(0) is window.conversion_widget._session_summary_group
     assert splitter.widget(1).layout().itemAt(0).widget() is window.conversion_widget._workspace_tabs
+    assert window.conversion_widget._scroll_area.widgetResizable() is True
+    assert window.conversion_widget._workspace_tabs.usesScrollButtons() is True
+    assert splitter.childrenCollapsible() is True
+
+    window.close()
+
+
+def test_embedded_workspace_panels_are_scrollable_and_keep_manual_tab_selection(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    shell = DesktopShellModel()
+    window = MainWindow(
+        shell,
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    assert window.workspace_tabs.usesScrollButtons() is True
+    assert window.package_dialog._scroll_area.widgetResizable() is True
+    assert window.settings_dialog._scroll_area.widgetResizable() is True
+    assert window.session_assembly_dialog._scroll_area.widgetResizable() is True
+    assert window.session_assembly_dialog._workspace_tabs.usesScrollButtons() is True
+    assert window.session_assembly_dialog._workspace_splitter.childrenCollapsible() is True
+
+    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    qapp.processEvents()
+    window._toggle_log_viewer_action.trigger()
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.package_dialog
+
+    window.workspace_tabs.setCurrentWidget(window.settings_dialog)
+    qapp.processEvents()
+    shell.set_status_bar(main_window_module.StatusBarState(stage_key="ui:test", message="Settings still focused."))
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.settings_dialog
+
+    window.settings_dialog.reject()
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.conversion_widget
 
     window.close()
 
@@ -681,7 +723,7 @@ def test_conversion_widget_submits_review(qapp, tmp_path: Path) -> None:
     assert window.conversion_widget._issue_list.count() == 1
     assert "Manual review is required." in window.conversion_widget._review_guidance_label.text()
     assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 0 of 1 issues."
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 1
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     window.conversion_widget._reviewer_edit.setText("alice")
     issue_item = window.conversion_widget._issue_list.item(0)
     issue_item.setCheckState(Qt.CheckState.Checked)
@@ -1506,7 +1548,7 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
     assert window.conversion_widget._artifact_list.count() == 1
     assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
     assert window.conversion_widget._artifact_count_value_label.text() == "1 artifacts"
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 3
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     window.close()
 
 
@@ -1714,7 +1756,7 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     qapp.processEvents()
 
     assert window.conversion_widget._disagreement_list.count() == 1
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 2
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()

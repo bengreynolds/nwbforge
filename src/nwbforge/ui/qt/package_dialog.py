@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -96,11 +97,20 @@ class PackageInstallerDialog(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(14)
-        layout.addWidget(self._header_frame)
-        layout.addWidget(options_group)
-        layout.addWidget(route_group, stretch=1)
-        layout.addWidget(summary_group)
-        layout.addWidget(buttons)
+        content = QWidget(self)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(14)
+        content_layout.addWidget(self._header_frame)
+        content_layout.addWidget(options_group)
+        content_layout.addWidget(route_group, stretch=1)
+        content_layout.addWidget(summary_group)
+        content_layout.addWidget(buttons)
+
+        self._scroll_area = QScrollArea(self)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setWidget(content)
+        layout.addWidget(self._scroll_area)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)

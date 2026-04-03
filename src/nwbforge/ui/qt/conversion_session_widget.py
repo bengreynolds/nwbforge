@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -163,6 +164,7 @@ class ConversionSessionWidget(QWidget):
         self._diagnostics_group = QGroupBox("Runtime Diagnostics", self)
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
+        self._workspace_tabs.setUsesScrollButtons(True)
 
         self._source_list.setAlternatingRowColors(True)
         self._issue_list.setAlternatingRowColors(True)
@@ -342,7 +344,7 @@ class ConversionSessionWidget(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(self._session_summary_group)
         splitter.addWidget(right_column)
-        splitter.setChildrenCollapsible(False)
+        splitter.setChildrenCollapsible(True)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
         self._splitter = splitter
@@ -357,8 +359,17 @@ class ConversionSessionWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
-        layout.addLayout(metric_row)
-        layout.addWidget(splitter)
+        content = QWidget(self)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(12)
+        content_layout.addLayout(metric_row)
+        content_layout.addWidget(splitter)
+
+        self._scroll_area = QScrollArea(self)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setWidget(content)
+        layout.addWidget(self._scroll_area)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
@@ -453,7 +464,6 @@ class ConversionSessionWidget(QWidget):
         self._refresh_metadata_resolution_actions()
         self._refresh_artifact_actions()
         self._refresh_snapshot_actions()
-        self._sync_workspace_tab(state)
 
     def _sync_sources(self, state: ConversionSessionScreenState) -> None:
         self._source_list.clear()
@@ -974,27 +984,6 @@ class ConversionSessionWidget(QWidget):
 
     def _refresh_snapshot_actions(self) -> None:
         self._restore_snapshot_button.setEnabled(self._selected_snapshot_id() is not None)
-
-    def _sync_workspace_tab(self, state: ConversionSessionScreenState) -> None:
-        if state.execution is None:
-            if state.metadata_disagreements:
-                self._workspace_tabs.setCurrentIndex(2)
-                return
-            self._workspace_tabs.setCurrentIndex(0)
-            return
-        if state.validation_issues:
-            self._workspace_tabs.setCurrentIndex(1)
-            return
-        if state.metadata_disagreements:
-            self._workspace_tabs.setCurrentIndex(2)
-            return
-        if state.generated_artifacts:
-            self._workspace_tabs.setCurrentIndex(3)
-            return
-        if state.snapshot_history:
-            self._workspace_tabs.setCurrentIndex(4)
-            return
-        self._workspace_tabs.setCurrentIndex(0)
 
     def _selected_snapshot_id(self) -> str | None:
         item = self._snapshot_history_list.currentItem()

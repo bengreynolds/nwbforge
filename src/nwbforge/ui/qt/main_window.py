@@ -103,11 +103,11 @@ class MainWindow(QMainWindow):
             self,
             session_created=self._load_built_session,
         )
-        self._session_assembly_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._session_assembly_dialog.dismissed.connect(self._dismiss_embedded_workspace_panel)
         self._package_dialog = PackageInstallerDialog(self._package_screen_model, self)
-        self._package_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._package_dialog.dismissed.connect(self._dismiss_embedded_workspace_panel)
         self._settings_dialog = SettingsDialog(self._settings_screen_model, self)
-        self._settings_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._settings_dialog.dismissed.connect(self._dismiss_embedded_workspace_panel)
         self._nwb_viewer_widget = NwbViewerWidget(parent=self)
         self._nwb_viewer_widget.status_message_changed.connect(self.statusBar().showMessage)
 
@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
 
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
+        self._workspace_tabs.setUsesScrollButtons(True)
         self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
         self._workspace_tabs.addTab(self._session_assembly_dialog, "New Session")
         self._workspace_tabs.addTab(self._package_dialog, "Packages")
@@ -718,6 +719,15 @@ class MainWindow(QMainWindow):
 
         return load_desktop_session(session_path)
 
+    def _dismiss_embedded_workspace_panel(self) -> None:
+        self._shell_model.close_active_dialog()
+        if self._workspace_tabs.currentWidget() in {
+            self._settings_dialog,
+            self._session_assembly_dialog,
+            self._package_dialog,
+        }:
+            self._workspace_tabs.setCurrentWidget(self._conversion_widget)
+
     def _apply_shell_state(self, state) -> None:
         self._status_label.setText(state.status_bar.message)
         self._progress_bar.setValue(state.status_bar.percent_complete)
@@ -730,12 +740,6 @@ class MainWindow(QMainWindow):
             self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
         elif state.active_dialog == "install_packages":
             self._workspace_tabs.setCurrentWidget(self._package_dialog)
-        elif state.active_dialog is None and self._workspace_tabs.currentWidget() in {
-            self._settings_dialog,
-            self._session_assembly_dialog,
-            self._package_dialog,
-        }:
-            self._workspace_tabs.setCurrentWidget(self._conversion_widget)
 
     def _show_user_error_if_needed(self, error: UserFacingError | None) -> None:
         if error is None:

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -287,6 +288,7 @@ class SessionAssemblyDialog(QWidget):
 
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
+        self._workspace_tabs.setUsesScrollButtons(True)
         self._workspace_tabs.addTab(grouping_page, "Grouping")
         self._workspace_tabs.addTab(session_metadata_page, "Session Metadata")
         self._workspace_tabs.addTab(source_metadata_page, "Selected Source Metadata")
@@ -305,7 +307,7 @@ class SessionAssemblyDialog(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(left_column_widget)
         splitter.addWidget(right_column_widget)
-        splitter.setChildrenCollapsible(False)
+        splitter.setChildrenCollapsible(True)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         self._workspace_splitter = splitter
@@ -318,10 +320,19 @@ class SessionAssemblyDialog(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(14)
-        layout.addWidget(self._header_frame)
-        layout.addWidget(summary_group)
-        layout.addWidget(splitter, stretch=1)
-        layout.addLayout(action_row)
+        content = QWidget(self)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(14)
+        content_layout.addWidget(self._header_frame)
+        content_layout.addWidget(summary_group)
+        content_layout.addWidget(splitter, stretch=1)
+        content_layout.addLayout(action_row)
+
+        self._scroll_area = QScrollArea(self)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setWidget(content)
+        layout.addWidget(self._scroll_area)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
