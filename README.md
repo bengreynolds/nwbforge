@@ -235,6 +235,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Temporary `scripts/run_app.py` launcher for manual desktop testing during development, now wired through the real desktop service composition
 - Desktop reopen flow that recovers the latest saved snapshot state for artifacts, validation, review status, and NWB output location
 - Desktop history flow that lists saved snapshot versions in the conversion workspace and can restore an earlier saved state
+- Snapshot history now also shows selected-snapshot restore context in the desktop workspace, including saved status, artifact count, issue count, and review state before restore
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
