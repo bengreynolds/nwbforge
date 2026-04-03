@@ -25,7 +25,8 @@ Typical local-app flow:
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
 5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them.
-6. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
+6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, and what still blocks `Write NWB`.
+7. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
 
@@ -211,6 +212,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Run-overview and review-guidance summaries in the conversion panel so stage, output target, issue counts, artifact counts, and expected review actions are visible at a glance
 - A tabbed conversion workspace for run overview, review work, metadata review, and artifacts
 - Additional runtime session tabs inside the Conversion workspace so users can switch between loaded sessions without leaving the main Conversion surface
+- Researcher-facing workflow messaging in the Conversion workspace that now surfaces the current step, recommended next action, and `ready to write` criteria
 - Actionable metadata-review controls that can promote a selected source value into a session-wide override and then require a preview rebuild
 - Actionable metadata-review controls that can also apply and clear source-specific overrides before the next preview rebuild
 - Manual metadata-review controls that can apply typed session overrides, use selected source values as source-specific overrides, and summarize pending versus resolved override state
