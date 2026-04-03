@@ -136,6 +136,11 @@ class ConversionSessionWidget(QWidget):
         self._selected_disagreement_source_list.currentItemChanged.connect(self._sync_selected_disagreement_source)
         self._selected_disagreement_notes_label = QLabel("No comparison notes.", self)
         self._selected_disagreement_notes_label.setWordWrap(True)
+        self._recommended_resolution_label = QLabel(
+            "Recommended action: select a metadata review item to see the default resolution path.",
+            self,
+        )
+        self._recommended_resolution_label.setWordWrap(True)
         self._selected_override_status_label = QLabel("No session override applied.", self)
         self._selected_override_status_label.setWordWrap(True)
         self._selected_resolution_status_label = QLabel("Resolution status: not available.", self)
@@ -315,6 +320,7 @@ class ConversionSessionWidget(QWidget):
         metadata_detail_group = QGroupBox("Selected Metadata Review Item", self)
         metadata_detail_layout = QVBoxLayout(metadata_detail_group)
         metadata_detail_layout.addWidget(self._selected_disagreement_value_label)
+        metadata_detail_layout.addWidget(self._recommended_resolution_label)
         metadata_detail_layout.addWidget(self._selected_resolution_status_label)
         metadata_detail_layout.addWidget(self._selected_override_status_label)
         metadata_detail_layout.addWidget(QLabel("Source comparison", self))
@@ -663,6 +669,9 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_value_label.setText("No metadata disagreement selected.")
             self._selected_disagreement_source_list.clear()
             self._selected_disagreement_notes_label.setText("No comparison notes.")
+            self._recommended_resolution_label.setText(
+                "Recommended action: select a metadata review item to see the default resolution path."
+            )
             self._selected_override_status_label.setText("No session override applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
             with QSignalBlocker(self._manual_session_override_edit):
@@ -684,6 +693,9 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_value_label.setText("No metadata disagreement selected.")
             self._selected_disagreement_source_list.clear()
             self._selected_disagreement_notes_label.setText("No comparison notes.")
+            self._recommended_resolution_label.setText(
+                "Recommended action: select a metadata review item to see the default resolution path."
+            )
             self._selected_override_status_label.setText("No session override applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
             with QSignalBlocker(self._manual_session_override_edit):
@@ -756,6 +768,10 @@ class ConversionSessionWidget(QWidget):
             self._selected_source_override_edit.setText(
                 selected_source.override_value if selected_source is not None and selected_source.override_value is not None else ""
             )
+        disagreement = self._selected_disagreement()
+        self._recommended_resolution_label.setText(
+            self._recommended_resolution_text(disagreement, selected_source)
+        )
         self._refresh_metadata_resolution_actions()
 
     @staticmethod
@@ -967,6 +983,52 @@ class ConversionSessionWidget(QWidget):
             selected_source is not None and selected_source.override_value is not None
         )
         self._clear_all_field_overrides_button.setEnabled(disagreement is not None)
+
+    @staticmethod
+    def _recommended_resolution_text(disagreement, selected_source) -> str:
+        if disagreement is None:
+            return "Recommended action: select a metadata review item to see the default resolution path."
+        if disagreement.session_override_value is not None:
+            return (
+                "Recommended action: keep the current preferred session value unless you need a different session-wide "
+                f"override. Current preferred session value: {disagreement.session_override_value}."
+            )
+        selected_source_match = (
+            selected_source is not None and selected_source.value == disagreement.resolved_value
+        )
+        if selected_source_match:
+            return (
+                "Recommended action: use the selected source value as the preferred session value. "
+                f"It matches the current resolved value from {disagreement.resolved_origin}."
+            )
+        matching_source = next(
+            (
+                source_value
+                for source_value in disagreement.source_values
+                if source_value.value == disagreement.resolved_value
+            ),
+            None,
+        )
+        if matching_source is not None:
+            return (
+                "Recommended action: select "
+                f"{matching_source.source_label} and use its value as the preferred session value. "
+                f"The current resolved value comes from that {matching_source.role} source."
+            )
+        if disagreement.resolution_status == "source_override":
+            return (
+                "Recommended action: verify whether the current source-specific override should stay scoped to that "
+                "source or be promoted to the preferred session value."
+            )
+        if disagreement.pending_resolution:
+            return (
+                "Recommended action: compare the source values and set a preferred session value before writing NWB. "
+                "No source currently matches the resolved value exactly."
+            )
+        return (
+            "Recommended action: verify the current resolved value, then continue if the field reflects the intended "
+            "session-level metadata."
+        )
 
     def _selected_disagreement(self):
         selected_item = self._disagreement_list.currentItem()

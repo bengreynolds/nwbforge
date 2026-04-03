@@ -1906,6 +1906,10 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
+    assert (
+        "use the selected source value as the preferred session value"
+        in window.conversion_widget._recommended_resolution_label.text().lower()
+    )
     window.close()
 
 
@@ -1993,6 +1997,11 @@ def test_conversion_widget_can_apply_session_override_from_metadata_review(qapp,
     qapp.processEvents()
     window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
     qapp.processEvents()
+
+    recommendation_text = window.conversion_widget._recommended_resolution_label.text()
+    assert "Structured session manifest" in recommendation_text
+    assert "preferred session value" in recommendation_text
+
     window.conversion_widget._use_source_value_button.click()
     qapp.processEvents()
 
