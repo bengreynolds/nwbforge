@@ -113,6 +113,9 @@ class SessionAssemblySourceItem:
     location: Path
     source_type: str
     suggested_pathway: str
+    entry_path_kind: str | None = None
+    entry_role_label: str | None = None
+    entry_validation_status: str | None = None
     role: str = "primary"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None

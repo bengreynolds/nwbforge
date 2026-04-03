@@ -284,6 +284,45 @@ def test_session_assembly_service_blocks_mismatched_selected_supported_route(tmp
     assert any(issue.code == "session-assembly-selected-route-mismatch" for issue in draft.issues)
 
 
+def test_session_assembly_service_accepts_valid_supported_entry_and_records_entry_metadata(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+    draft = service.assemble_draft(accepted, source_intents=intents)
+
+    assert accepted == (manifest_path.resolve(),)
+    assert rejected == ()
+    assert intents[str(manifest_path.resolve())]["entry_role_label"] == "manifest file or session directory"
+    assert intents[str(manifest_path.resolve())]["entry_validation_status"] == "validated"
+    assert draft.sources[0].entry_path_kind == "file"
+    assert draft.sources[0].entry_role_label == "manifest file or session directory"
+    assert draft.sources[0].entry_validation_status == "validated"
+
+
+def test_session_assembly_service_rejects_obviously_wrong_supported_entry_path(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (manifest_path,),
+        route_name="deeplabcut",
+        route_display_name="DeepLabCut",
+    )
+
+    assert accepted == ()
+    assert intents == {}
+    assert len(rejected) == 1
+    assert "DeepLabCut" in rejected[0]
+    assert ".csv, .h5" in rejected[0]
+
+
 def test_session_assembly_service_preserves_selected_source_context_in_draft(tmp_path: Path) -> None:
     notes_path = tmp_path / "notes.txt"
     notes_path.write_text("operator notes", encoding="utf-8")

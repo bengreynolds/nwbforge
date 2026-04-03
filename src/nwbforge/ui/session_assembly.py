@@ -171,23 +171,42 @@ class SessionAssemblyScreenModel:
         route_name: str,
         route_display_name: str,
     ) -> SessionAssemblyState:
+        accepted_paths, accepted_intents, rejected_messages = self._assembly_service.validate_supported_selected_paths(
+            paths,
+            route_name=route_name,
+            route_display_name=route_display_name,
+        )
         log_event(
             self._logger,
             logging.INFO,
             "Adding NeuroConv-supported paths to direct-ingest workspace.",
-            added_path_count=len(paths),
+            added_path_count=len(accepted_paths),
+            rejected_path_count=len(rejected_messages),
             route_name=route_name,
         )
-        resolved_paths = tuple(path.resolve() for path in paths)
+        if not accepted_paths and rejected_messages:
+            return self._set_state(
+                replace(
+                    self._state,
+                    error_message=" ".join(rejected_messages),
+                    user_error=None,
+                )
+            )
+        resolved_paths = tuple(path.resolve() for path in accepted_paths)
         combined = self._state.selected_paths + resolved_paths
         next_source_intents = dict(self._state.source_intents)
-        for path in resolved_paths:
-            next_source_intents[str(path)] = {
-                "ingest_kind": "supported",
-                "route_name": route_name,
-                "route_display_name": route_display_name,
-            }
-        return self._refresh(selected_paths=combined, source_intents=next_source_intents)
+        for path_text, intent in accepted_intents.items():
+            next_source_intents[str(path_text)] = dict(intent)
+        state = self._refresh(selected_paths=combined, source_intents=next_source_intents)
+        if rejected_messages:
+            return self._set_state(
+                replace(
+                    state,
+                    error_message=" ".join(rejected_messages),
+                    user_error=None,
+                )
+            )
+        return state
 
     def remove_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
         log_event(
@@ -508,6 +527,9 @@ class SessionAssemblyScreenModel:
                         location=source.location,
                         source_type=source.source_type.value,
                         suggested_pathway=source.suggested_pathway.value,
+                        entry_path_kind=source.entry_path_kind,
+                        entry_role_label=source.entry_role_label,
+                        entry_validation_status=source.entry_validation_status,
                         role=source.role,
                         metadata_overrides=dict(source.metadata_overrides or {}),
                         sidecar_for_source_id=source.sidecar_for_source_id,
@@ -671,7 +693,10 @@ class SessionAssemblyScreenModel:
                 ingest_kind="supported",
                 label=spec.display_name,
                 route_name=spec.route_name,
-                description=spec.description,
+                description=(
+                    f"{spec.description} Select the package's project file, main file, or root directory "
+                    "as the canonical dataset entry."
+                ),
             )
             for spec in installed_routes
         )

@@ -294,7 +294,7 @@ def test_session_assembly_screen_model_exposes_custom_source_option() -> None:
     assert screen.state.source_type_options[0].label == "Custom"
 
 
-def test_session_assembly_screen_model_tracks_supported_source_intent_and_blocks_route_mismatch(
+def test_session_assembly_screen_model_rejects_invalid_supported_entry_selection(
     tmp_path: Path,
 ) -> None:
     manifest_path = tmp_path / "session_manifest.json"
@@ -307,10 +307,29 @@ def test_session_assembly_screen_model_tracks_supported_source_intent_and_blocks
         route_display_name="DeepLabCut",
     )
 
-    assert state.source_intents[str(manifest_path.resolve())]["route_name"] == "deeplabcut"
-    assert state.sources[0].selection_label == "DeepLabCut"
-    assert state.can_create_session is False
-    assert any(issue.code == "session-assembly-selected-route-mismatch" for issue in state.issues)
+    assert state.selected_paths == ()
+    assert state.sources == ()
+    assert state.error_message is not None
+    assert "DeepLabCut" in state.error_message
+
+
+def test_session_assembly_screen_model_tracks_supported_entry_metadata_for_valid_selection(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_supported_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+
+    assert state.source_intents[str(manifest_path.resolve())]["route_name"] == "session_manifest"
+    assert state.source_intents[str(manifest_path.resolve())]["entry_validation_status"] == "validated"
+    assert state.sources[0].selection_label == "Session Manifest"
+    assert state.sources[0].entry_role_label == "manifest file or session directory"
+    assert state.sources[0].entry_validation_status == "validated"
+    assert state.can_create_session is True
 
 
 def test_session_assembly_screen_model_persists_supported_source_intent_in_workspace(tmp_path: Path) -> None:
@@ -324,8 +343,8 @@ def test_session_assembly_screen_model_persists_supported_source_intent_in_works
     )
     first_screen.add_supported_paths(
         (manifest_path,),
-        route_name="deeplabcut",
-        route_display_name="DeepLabCut",
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
     )
 
     restored_screen = SessionAssemblyScreenModel(
@@ -333,8 +352,8 @@ def test_session_assembly_screen_model_persists_supported_source_intent_in_works
         workspace_store=workspace_store,
     )
 
-    assert restored_screen.state.source_intents[str(manifest_path.resolve())]["route_name"] == "deeplabcut"
-    assert restored_screen.state.sources[0].selection_label == "DeepLabCut"
+    assert restored_screen.state.source_intents[str(manifest_path.resolve())]["route_name"] == "session_manifest"
+    assert restored_screen.state.sources[0].selection_label == "Session Manifest"
 
 
 def test_session_assembly_screen_model_rejects_unsupported_custom_file_type(tmp_path: Path) -> None:

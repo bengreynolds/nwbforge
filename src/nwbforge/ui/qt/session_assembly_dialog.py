@@ -90,6 +90,8 @@ class SessionAssemblyDialog(QWidget):
         self._error_label.setWordWrap(True)
         self._selected_source_label = QLabel("No source selected.", self)
         self._selected_source_label.setWordWrap(True)
+        self._selected_entry_label = QLabel("Not available.", self)
+        self._selected_entry_label.setWordWrap(True)
         self._selected_adapter_label = QLabel("No adapter match", self)
         self._selected_adapter_label.setWordWrap(True)
         self._selected_sidecar_label = QLabel("None", self)
@@ -193,6 +195,7 @@ class SessionAssemblyDialog(QWidget):
         source_layout.addWidget(self._source_list)
         source_details = QFormLayout()
         source_details.addRow("Selected Source", self._selected_source_label)
+        source_details.addRow("Structured Entry", self._selected_entry_label)
         source_details.addRow("Role", self._role_combo)
         source_details.addRow("Group", self._group_edit)
         source_details.addRow("Sidecar Association", self._selected_sidecar_label)
@@ -511,6 +514,7 @@ class SessionAssemblyDialog(QWidget):
         selected_item = self._source_list.currentItem()
         if selected_item is None:
             self._selected_source_label.setText("No source selected.")
+            self._selected_entry_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
@@ -532,6 +536,7 @@ class SessionAssemblyDialog(QWidget):
         source = next((item for item in self._screen_model.state.sources if item.source_id == source_id), None)
         if source is None:
             self._selected_source_label.setText("No source selected.")
+            self._selected_entry_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
@@ -550,6 +555,18 @@ class SessionAssemblyDialog(QWidget):
             return
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
+        entry_text = "Custom or unstructured input."
+        if source.ingest_kind == "supported":
+            entry_role_label = source.entry_role_label or (
+                "root directory" if source.entry_path_kind == "directory" else "main file"
+            )
+            validation_status = source.entry_validation_status or "review"
+            entry_text = (
+                f"{source.selection_label} {entry_role_label}\n"
+                f"Entry type: {source.entry_path_kind or source.source_type.lower()}\n"
+                f"Validation: {validation_status}"
+            )
+        self._selected_entry_label.setText(entry_text)
         adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "No adapter match"
         self._selected_adapter_label.setText(adapter_summary)
         self._selected_sidecar_label.setText(source.sidecar_for_label or "None")

@@ -41,6 +41,9 @@ class SessionAssemblySource:
     matching_adapter_ids: tuple[str, ...]
     suggested_adapter_id: str | None
     suggested_pathway: ConversionPathway
+    entry_path_kind: str | None = None
+    entry_role_label: str | None = None
+    entry_validation_status: str | None = None
     role: str = "primary"
     metadata_overrides: dict[str, str] | None = None
     sidecar_for_source_id: str | None = None
@@ -105,6 +108,17 @@ class SessionAssemblyWorkspace:
     confirmed_group_keys: tuple[str, ...] | None = None
     metadata_overrides: dict[str, str] | None = None
     source_metadata_overrides: dict[str, dict[str, str]] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SupportedRouteEntryProfile:
+    """First-pass expectations for one structured supported-route entry path."""
+
+    entry_kind: str
+    entry_role_label: str
+    file_suffixes: tuple[str, ...] = ()
+    file_names: tuple[str, ...] = ()
+    directory_markers: tuple[str, ...] = ()
 
 
 class JsonSessionAssemblyWorkspaceStore:
@@ -296,6 +310,97 @@ class SessionAssemblyService:
         "tiff": ("neuroconv_tiff_imaging",),
         "videos": ("neuroconv_video",),
         "whitematter": ("neuroconv_whitematter",),
+        "session_manifest": ("session_manifest",),
+        "custom_session": ("custom_json_session",),
+    }
+    _ROUTE_ENTRY_PROFILES: dict[str, SupportedRouteEntryProfile] = {
+        "audio": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="audio file",
+            file_suffixes=(".wav", ".mp3", ".flac", ".ogg", ".aif", ".aiff"),
+        ),
+        "deeplabcut": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="project or result file",
+            file_suffixes=(".csv", ".h5"),
+        ),
+        "excel": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="spreadsheet",
+            file_suffixes=(".xlsx", ".xlsm", ".xls"),
+        ),
+        "hdf5": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="main imaging file",
+            file_suffixes=(".h5", ".hdf5"),
+        ),
+        "image": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="image file",
+            file_suffixes=(".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tiff"),
+        ),
+        "lightningpose": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="result file",
+            file_suffixes=(".csv",),
+        ),
+        "micromanager": SupportedRouteEntryProfile(
+            entry_kind="either",
+            entry_role_label="main imaging file or root directory",
+            file_suffixes=(".tif", ".tiff"),
+        ),
+        "scanbox": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="main imaging file",
+            file_suffixes=(".sbx",),
+        ),
+        "scanimage": SupportedRouteEntryProfile(
+            entry_kind="either",
+            entry_role_label="main imaging file or root directory",
+            file_suffixes=(".tif", ".tiff"),
+        ),
+        "scanimage_legacy": SupportedRouteEntryProfile(
+            entry_kind="either",
+            entry_role_label="main imaging file or root directory",
+            file_suffixes=(".tif", ".tiff"),
+        ),
+        "session_manifest": SupportedRouteEntryProfile(
+            entry_kind="either",
+            entry_role_label="manifest file or session directory",
+            file_names=("session_manifest.json",),
+            directory_markers=("session_manifest.json",),
+        ),
+        "sleap": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="project or result file",
+            file_suffixes=(".csv", ".h5", ".slp"),
+        ),
+        "suite2p": SupportedRouteEntryProfile(
+            entry_kind="directory",
+            entry_role_label="root directory",
+        ),
+        "tdt": SupportedRouteEntryProfile(
+            entry_kind="directory",
+            entry_role_label="block directory",
+        ),
+        "tdt_fiber_photometry": SupportedRouteEntryProfile(
+            entry_kind="directory",
+            entry_role_label="block directory",
+        ),
+        "thor": SupportedRouteEntryProfile(
+            entry_kind="directory",
+            entry_role_label="root directory",
+        ),
+        "tiff": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="main imaging file",
+            file_suffixes=(".tif", ".tiff"),
+        ),
+        "videos": SupportedRouteEntryProfile(
+            entry_kind="file",
+            entry_role_label="video file",
+            file_suffixes=(".avi", ".flv", ".mkv", ".mov", ".mp4", ".wmv"),
+        ),
     }
 
     def __init__(self, registry: AdapterRegistry) -> None:
@@ -317,6 +422,31 @@ class SessionAssemblyService:
                 f"Ignored custom input '{path.name}' because its file type is not currently accepted for direct ingest."
             )
         return tuple(accepted), tuple(rejected_messages)
+
+    def validate_supported_selected_paths(
+        self,
+        selected_paths: tuple[Path, ...],
+        *,
+        route_name: str,
+        route_display_name: str,
+    ) -> tuple[tuple[Path, ...], dict[str, dict[str, str]], tuple[str, ...]]:
+        """Validate supported-route entry selections and return accepted intents plus rejections."""
+
+        accepted_paths: list[Path] = []
+        accepted_intents: dict[str, dict[str, str]] = {}
+        rejected_messages: list[str] = []
+        for path in self._normalize_paths(selected_paths):
+            intent, rejection_message = self._validate_supported_selected_path(
+                path,
+                route_name=route_name,
+                route_display_name=route_display_name,
+            )
+            if rejection_message is not None:
+                rejected_messages.append(rejection_message)
+                continue
+            accepted_paths.append(path)
+            accepted_intents[str(path.resolve())] = intent
+        return tuple(accepted_paths), accepted_intents, tuple(rejected_messages)
 
     def assemble_draft(
         self,
@@ -415,21 +545,22 @@ class SessionAssemblyService:
             if override_group:
                 group_key = f"manual:{override_group.lower()}"
                 group_label = override_group
-            source_reference = SourceReference(
-                source_id=source_id,
-                location=path,
-                source_type=SourceType.DIRECTORY if path.is_dir() else SourceType.FILE,
-                label=path.name,
-            )
             source_intent = normalized_source_intents.get(str(path.resolve()), {})
             ingest_kind = (
                 "supported" if source_intent.get("ingest_kind") == "supported" else "custom"
             )
             route_name = source_intent.get("route_name") or None
             route_display_name = source_intent.get("route_display_name") or None
+            entry_path_kind = source_intent.get("entry_path_kind") or None
+            entry_role_label = source_intent.get("entry_role_label") or None
+            entry_validation_status = source_intent.get("entry_validation_status") or None
             selection_label = route_display_name or ("Custom" if ingest_kind == "custom" else "NeuroConv")
-            matches = self._registry.matching_adapters(source_reference)
-            matches = self._filter_matches_for_route(route_name, matches)
+            source_reference = self._build_matching_source_reference(
+                source_id=source_id,
+                path=path,
+                route_name=route_name,
+            )
+            matches = self._matching_adapters_for_route(source_reference, route_name)
             matching_ids = tuple(adapter.adapter_id for adapter in matches)
             suggested_pathway = (
                 ConversionPathway.SUPPORTED
@@ -534,6 +665,9 @@ class SessionAssemblyService:
                     matching_adapter_ids=matching_ids,
                     suggested_adapter_id=suggested_adapter_id,
                     suggested_pathway=suggested_pathway,
+                    entry_path_kind=entry_path_kind,
+                    entry_role_label=entry_role_label,
+                    entry_validation_status=entry_validation_status,
                     role=role,
                     metadata_overrides=dict(normalized_source_metadata_overrides.get(source_id, {})),
                     sidecar_for_source_id=source_ids_by_path.get(sidecar_anchor) if sidecar_anchor is not None else None,
@@ -702,6 +836,9 @@ class SessionAssemblyService:
                     "session_assembly.route_name": source.route_name or "",
                     "session_assembly.group_key": source.group_key,
                     "session_assembly.group_label": source.group_label,
+                    "session_assembly.entry_path_kind": source.entry_path_kind or "",
+                    "session_assembly.entry_role_label": source.entry_role_label or "",
+                    "session_assembly.entry_validation_status": source.entry_validation_status or "",
                     "session_assembly.group_confirmed": str(
                         next(
                             (
@@ -782,6 +919,123 @@ class SessionAssemblyService:
         if len(normalized_paths) == 1:
             return f"Conversion for {first.name}"
         return f"Conversion for {first.name} and {len(normalized_paths) - 1} more sources"
+
+    def _validate_supported_selected_path(
+        self,
+        path: Path,
+        *,
+        route_name: str,
+        route_display_name: str,
+    ) -> tuple[dict[str, str], str | None]:
+        profile = self._ROUTE_ENTRY_PROFILES.get(route_name)
+        if profile is not None:
+            rejection = self._validate_supported_path_against_profile(
+                path,
+                route_display_name=route_display_name,
+                profile=profile,
+            )
+            if rejection is not None:
+                return {}, rejection
+        source_reference = self._build_matching_source_reference(
+            source_id="supported-selection",
+            path=path,
+            route_name=route_name,
+        )
+        matches = self._matching_adapters_for_route(source_reference, route_name)
+        return (
+            {
+                "ingest_kind": "supported",
+                "route_name": route_name,
+                "route_display_name": route_display_name,
+                "entry_path_kind": "directory" if path.is_dir() else "file",
+                "entry_role_label": (
+                    profile.entry_role_label
+                    if profile is not None
+                    else ("root directory" if path.is_dir() else "main file")
+                ),
+                "entry_validation_status": "validated" if matches else "review",
+            },
+            None,
+        )
+
+    @classmethod
+    def _validate_supported_path_against_profile(
+        cls,
+        path: Path,
+        *,
+        route_display_name: str,
+        profile: SupportedRouteEntryProfile,
+    ) -> str | None:
+        if profile.entry_kind == "file" and path.is_dir():
+            return (
+                f"Ignored '{path.name}' for {route_display_name} because this route expects a "
+                f"{profile.entry_role_label}, not a folder."
+            )
+        if profile.entry_kind == "directory" and path.is_file():
+            return (
+                f"Ignored '{path.name}' for {route_display_name} because this route expects a "
+                f"{profile.entry_role_label}, not a standalone file."
+            )
+        if path.is_file():
+            lowered_name = path.name.lower()
+            if profile.file_names and lowered_name not in profile.file_names:
+                expected_names = ", ".join(profile.file_names)
+                return (
+                    f"Ignored '{path.name}' for {route_display_name} because the selected entry should be one of: "
+                    f"{expected_names}."
+                )
+            if profile.file_suffixes and not cls._path_has_supported_suffix(path, profile.file_suffixes):
+                expected_suffixes = ", ".join(profile.file_suffixes)
+                return (
+                    f"Ignored '{path.name}' for {route_display_name} because the selected entry should use one of: "
+                    f"{expected_suffixes}."
+                )
+        if path.is_dir() and profile.directory_markers:
+            if not any((path / marker).exists() for marker in profile.directory_markers):
+                expected_markers = ", ".join(profile.directory_markers)
+                return (
+                    f"Ignored '{path.name}' for {route_display_name} because the selected directory does not contain "
+                    f"the expected entry marker(s): {expected_markers}."
+                )
+        return None
+
+    @classmethod
+    def _build_matching_source_reference(
+        cls,
+        *,
+        source_id: str,
+        path: Path,
+        route_name: str | None,
+    ) -> SourceReference:
+        allowed_adapter_ids = cls._ROUTE_ADAPTER_IDS.get(route_name or "")
+        adapter_hint = allowed_adapter_ids[0] if allowed_adapter_ids and len(allowed_adapter_ids) == 1 else None
+        return SourceReference(
+            source_id=source_id,
+            location=path,
+            source_type=SourceType.DIRECTORY if path.is_dir() else SourceType.FILE,
+            label=path.name,
+            adapter_hint=adapter_hint,
+        )
+
+    def _matching_adapters_for_route(
+        self,
+        source_reference: SourceReference,
+        route_name: str | None,
+    ) -> tuple[SourceAdapter, ...]:
+        matches = self._registry.matching_adapters(source_reference)
+        return self._filter_matches_for_route(route_name, matches)
+
+    @staticmethod
+    def _path_has_supported_suffix(path: Path, suffixes: tuple[str, ...]) -> bool:
+        lowered_suffixes = tuple(suffix.lower() for suffix in path.suffixes)
+        if not lowered_suffixes:
+            return False
+        if lowered_suffixes[-1] in suffixes:
+            return True
+        for width in range(2, len(lowered_suffixes) + 1):
+            if "".join(lowered_suffixes[-width:]) in suffixes:
+                return True
+        return False
 
     def _group_assignments(
         self,
@@ -944,11 +1198,12 @@ class SessionAssemblyService:
         supported_sources = [source for source in sources if source.ingest_kind == "supported"]
         if group_key.startswith("supported-anchor:") and supported_sources:
             anchor_label = supported_sources[0].selection_label
+            entry_role_label = supported_sources[0].entry_role_label or "dataset entry path"
             if len(sources) > 1:
                 return (
-                    f"Grouped around the selected {anchor_label} dataset entry path with nearby custom or supplemental inputs."
+                    f"Grouped around the selected {anchor_label} {entry_role_label} with nearby custom or supplemental inputs."
                 )
-            return f"Selected {anchor_label} dataset entry path treated as one structured source bundle."
+            return f"Selected {anchor_label} {entry_role_label} treated as one structured source bundle."
         if group_key.startswith("descriptor-parent:"):
             return "Grouped under a recognized session-descriptor parent directory."
         if len(group_pathways) > 1:
