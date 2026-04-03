@@ -373,6 +373,9 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
     assert window.conversion_widget._workflow_steps_label.text().startswith("Workflow:")
+    assert window.conversion_widget._session_details_toggle.isChecked() is False
+    assert window.conversion_widget._session_summary_group.isHidden() is True
+    assert "sess-qt | supported workflow | 1 data source" in window.conversion_widget._session_context_label.text()
     assert window.conversion_widget._advanced_toggle.isChecked() is False
     assert window.conversion_widget._advanced_resolution_group.isHidden() is True
     assert window.conversion_widget._workspace_tabs.isTabVisible(4) is False
@@ -396,6 +399,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._pathway_metric_value.text() == "supported"
     assert window.conversion_widget._stage_metric_value.text() == "sources added"
     assert window._close_current_session_action.isEnabled() is False
+
+    window.conversion_widget._session_details_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._session_summary_group.isHidden() is False
 
     window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
@@ -494,6 +501,15 @@ def test_conversion_widget_uses_split_session_and_review_layout(qapp, tmp_path: 
     assert window.conversion_widget._scroll_area.widgetResizable() is True
     assert window.conversion_widget._workspace_tabs.usesScrollButtons() is True
     assert splitter.childrenCollapsible() is True
+    assert window.conversion_widget._session_summary_group.isHidden() is True
+
+    window.conversion_widget._session_details_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._session_summary_group.isHidden() is False
+
+    window.conversion_widget._session_details_toggle.setChecked(False)
+    qapp.processEvents()
+    assert window.conversion_widget._session_summary_group.isHidden() is True
 
     window.close()
 

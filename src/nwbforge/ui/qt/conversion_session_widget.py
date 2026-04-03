@@ -80,6 +80,13 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._workflow_steps_label.setWordWrap(True)
+        self._session_context_label = QLabel(
+            "Session focus: no session loaded. Open Session Details only when you need source inspection.",
+            self,
+        )
+        self._session_context_label.setWordWrap(True)
+        self._session_details_toggle = QCheckBox("Show Session Details", self)
+        self._session_details_toggle.toggled.connect(self._set_session_summary_visible)
         self._advanced_toggle = QCheckBox("Show Advanced Tools", self)
         self._advanced_toggle.toggled.connect(self._set_advanced_ui_visible)
         self._readiness_summary_label = QLabel("Readiness: blocked until a session is loaded.", self)
@@ -287,6 +294,8 @@ class ConversionSessionWidget(QWidget):
         execution_layout = QVBoxLayout()
         execution_layout.addLayout(run_overview_layout)
         execution_layout.addWidget(self._workflow_steps_label)
+        execution_layout.addWidget(self._session_context_label)
+        execution_layout.addWidget(self._session_details_toggle)
         execution_layout.addWidget(self._advanced_toggle)
         execution_layout.addWidget(self._readiness_summary_label)
         execution_layout.addWidget(self._next_action_label)
@@ -408,6 +417,7 @@ class ConversionSessionWidget(QWidget):
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
         self._splitter = splitter
+        self._set_session_summary_visible(False)
 
         metric_row = QHBoxLayout()
         metric_row.setSpacing(10)
@@ -500,6 +510,7 @@ class ConversionSessionWidget(QWidget):
         self._readiness_summary_label.setText(self._readiness_summary_text(state))
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
+        self._session_context_label.setText(self._session_context_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
         self._diagnostics_summary_label.setText(self._diagnostics_summary_text(state))
@@ -1006,9 +1017,27 @@ class ConversionSessionWidget(QWidget):
         acknowledged = len(state.acknowledged_issue_refs)
         return f"Acknowledged {acknowledged} of {total_issues} issues."
 
+    @staticmethod
+    def _session_context_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Session focus: no session loaded. Open Session Details only when you need source inspection."
+        source_count = len(state.sources)
+        source_suffix = "data source" if source_count == 1 else "data sources"
+        return (
+            f"Session focus: {state.session.session_id} | {state.session.pathway.value} workflow | "
+            f"{source_count} {source_suffix}. Open Session Details for per-source inspection and output setup."
+        )
+
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state
         self._execute_button.setEnabled(state.can_run_execution and bool(self._output_path_edit.text().strip()))
+
+    def _set_session_summary_visible(self, visible: bool) -> None:
+        self._session_summary_group.setVisible(visible)
+        if visible:
+            self._splitter.setSizes([1, 2])
+        else:
+            self._splitter.setSizes([0, 1])
 
     def _set_advanced_ui_visible(self, visible: bool) -> None:
         self._advanced_resolution_group.setVisible(visible)
