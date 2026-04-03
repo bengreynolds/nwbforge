@@ -88,6 +88,28 @@ class FakeConversionExecutor:
         return future
 
 
+class SessionAwarePreviewExecutor:
+    def __init__(self, preview_factory) -> None:
+        self._preview_factory = preview_factory
+
+    def submit_preview(self, session, *, progress_callback=None):
+        future: Future[ConversionPreview] = Future()
+        if progress_callback is not None:
+            progress_callback(
+                PipelineProgressEvent(
+                    session_id=session.session_id,
+                    stage=PipelineStage.INSPECTING,
+                    percent_complete=10,
+                    message="Inspecting sources.",
+                )
+            )
+        future.set_result(self._preview_factory(session))
+        return future
+
+    def submit_execute(self, preview, output_path: Path, *, progress_callback=None):
+        raise AssertionError("Execution was not configured for this test.")
+
+
 def make_session() -> ConversionSession:
     return ConversionSession(
         session_id="session-ui-01",
@@ -506,6 +528,194 @@ def test_conversion_session_screen_model_can_clear_all_field_overrides() -> None
     assert state.session.metadata_overrides == {}
     assert state.session.source_metadata_overrides == {}
     assert "Cleared all overrides" in (state.review_message or "")
+
+
+def test_conversion_session_screen_model_rebuilds_session_override_history_for_metadata_review() -> None:
+    session = ConversionSession(
+        session_id="session-ui-05",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=Path("C:/tmp/session_manifest.json"),
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=Path("C:/tmp/custom_session.json"),
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+
+    def preview_factory(current_session: ConversionSession) -> ConversionPreview:
+        return make_preview(
+            current_session,
+            extraction_results=(
+                ExtractionResult(
+                    source_id="manifest",
+                    adapter_id="session_manifest",
+                    record_type="session_manifest",
+                    fields={
+                        "subject.subject_id": ExtractedField(
+                            key="subject.subject_id",
+                            value="primary-mouse-01",
+                            source_id="manifest",
+                        )
+                    },
+                ),
+                ExtractionResult(
+                    source_id="custom",
+                    adapter_id="custom_json_session",
+                    record_type="custom_session",
+                    fields={
+                        "subject.subject_id": ExtractedField(
+                            key="subject.subject_id",
+                            value="custom-mouse-01",
+                            source_id="custom",
+                        )
+                    },
+                ),
+            ),
+            normalized_metadata=NormalizedMetadataBundle(
+                subject=NormalizedSubject(
+                    subject_id=NormalizedValue(
+                        "primary-mouse-01",
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                        source_ids=("manifest", "custom"),
+                        review_status=ReviewStatus.NEEDS_REVIEW,
+                    )
+                ),
+                session=NormalizedSessionMetadata(),
+            ),
+        )
+
+    screen = ConversionSessionScreenModel(SessionAwarePreviewExecutor(preview_factory))
+    screen.load_session(session)
+    screen.start_preview().result(timeout=5)
+
+    overridden = screen.apply_session_override("subject.subject_id", "custom-mouse-01")
+    assert overridden.preview is None
+    assert overridden.metadata_disagreements == ()
+
+    rebuilt = screen.start_preview().result(timeout=5)
+    assert len(screen.state.metadata_disagreements) == 1
+    disagreement = screen.state.metadata_disagreements[0]
+    assert rebuilt.session.metadata_overrides["subject.subject_id"] == "custom-mouse-01"
+    assert disagreement.session_override_value == "custom-mouse-01"
+    assert disagreement.resolution_status == "session_override"
+    assert disagreement.pending_resolution is False
+    assert disagreement.resolution_history == (
+        "Session override currently resolves subject.subject_id to 'custom-mouse-01'.",
+    )
+
+    cleared = screen.clear_session_override("subject.subject_id")
+    assert cleared.preview is None
+
+    screen.start_preview().result(timeout=5)
+    cleared_disagreement = screen.state.metadata_disagreements[0]
+    assert cleared_disagreement.session_override_value is None
+    assert cleared_disagreement.resolution_status == "pending"
+    assert cleared_disagreement.pending_resolution is True
+    assert cleared_disagreement.resolution_history == ("No override history recorded for this field yet.",)
+
+
+def test_conversion_session_screen_model_rebuilds_source_override_history_for_metadata_review() -> None:
+    session = ConversionSession(
+        session_id="session-ui-06",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=Path("C:/tmp/session_manifest.json"),
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=Path("C:/tmp/custom_session.json"),
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+
+    def preview_factory(current_session: ConversionSession) -> ConversionPreview:
+        return make_preview(
+            current_session,
+            extraction_results=(
+                ExtractionResult(
+                    source_id="manifest",
+                    adapter_id="session_manifest",
+                    record_type="session_manifest",
+                    fields={
+                        "subject.subject_id": ExtractedField(
+                            key="subject.subject_id",
+                            value="primary-mouse-01",
+                            source_id="manifest",
+                        )
+                    },
+                ),
+                ExtractionResult(
+                    source_id="custom",
+                    adapter_id="custom_json_session",
+                    record_type="custom_session",
+                    fields={
+                        "subject.subject_id": ExtractedField(
+                            key="subject.subject_id",
+                            value="custom-mouse-01",
+                            source_id="custom",
+                        )
+                    },
+                ),
+            ),
+            normalized_metadata=NormalizedMetadataBundle(
+                subject=NormalizedSubject(
+                    subject_id=NormalizedValue(
+                        "primary-mouse-01",
+                        origin=ValueOrigin.ADAPTER_EXTRACTED,
+                        source_ids=("manifest", "custom"),
+                        review_status=ReviewStatus.NEEDS_REVIEW,
+                    )
+                ),
+                session=NormalizedSessionMetadata(),
+            ),
+        )
+
+    screen = ConversionSessionScreenModel(SessionAwarePreviewExecutor(preview_factory))
+    screen.load_session(session)
+    screen.start_preview().result(timeout=5)
+
+    overridden = screen.apply_source_override("custom", "subject.subject_id", "source-specific-mouse-01")
+    assert overridden.preview is None
+    assert overridden.metadata_disagreements == ()
+
+    rebuilt = screen.start_preview().result(timeout=5)
+    assert len(screen.state.metadata_disagreements) == 1
+    disagreement = screen.state.metadata_disagreements[0]
+    assert rebuilt.session.source_metadata_overrides["custom"]["subject.subject_id"] == "source-specific-mouse-01"
+    assert disagreement.resolution_status == "source_override"
+    assert disagreement.pending_resolution is False
+    assert disagreement.resolution_history == (
+        "Source overrides: Custom session JSON -> 'source-specific-mouse-01'",
+    )
+
+    cleared = screen.clear_source_override("custom", "subject.subject_id")
+    assert cleared.preview is None
+
+    screen.start_preview().result(timeout=5)
+    cleared_disagreement = screen.state.metadata_disagreements[0]
+    assert cleared_disagreement.resolution_status == "pending"
+    assert cleared_disagreement.pending_resolution is True
+    assert cleared_disagreement.resolution_history == ("No override history recorded for this field yet.",)
 
 
 def test_conversion_session_screen_model_surfaces_runtime_errors() -> None:

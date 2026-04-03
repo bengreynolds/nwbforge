@@ -141,8 +141,16 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._recommended_resolution_label.setWordWrap(True)
-        self._selected_override_status_label = QLabel("No session override applied.", self)
-        self._selected_override_status_label.setWordWrap(True)
+        self._selected_session_override_status_label = QLabel(
+            "Preferred session value: no session-wide override applied.",
+            self,
+        )
+        self._selected_session_override_status_label.setWordWrap(True)
+        self._selected_source_override_status_label = QLabel(
+            "Source-specific overrides: none applied.",
+            self,
+        )
+        self._selected_source_override_status_label.setWordWrap(True)
         self._selected_resolution_status_label = QLabel("Resolution status: not available.", self)
         self._selected_resolution_status_label.setWordWrap(True)
         self._metadata_resolution_summary_label = QLabel("No metadata conflicts loaded.", self)
@@ -325,7 +333,8 @@ class ConversionSessionWidget(QWidget):
         metadata_detail_layout.addWidget(self._selected_disagreement_value_label)
         metadata_detail_layout.addWidget(self._recommended_resolution_label)
         metadata_detail_layout.addWidget(self._selected_resolution_status_label)
-        metadata_detail_layout.addWidget(self._selected_override_status_label)
+        metadata_detail_layout.addWidget(self._selected_session_override_status_label)
+        metadata_detail_layout.addWidget(self._selected_source_override_status_label)
         metadata_detail_layout.addWidget(QLabel("Source comparison", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_source_list, stretch=1)
         metadata_detail_layout.addWidget(QLabel("Resolution notes", self))
@@ -677,7 +686,10 @@ class ConversionSessionWidget(QWidget):
             self._recommended_resolution_label.setText(
                 "Recommended action: select a metadata review item to see the default resolution path."
             )
-            self._selected_override_status_label.setText("No session override applied.")
+            self._selected_session_override_status_label.setText(
+                "Preferred session value: no session-wide override applied."
+            )
+            self._selected_source_override_status_label.setText("Source-specific overrides: none applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
             with QSignalBlocker(self._custom_session_override_toggle):
                 self._custom_session_override_toggle.setChecked(False)
@@ -703,7 +715,10 @@ class ConversionSessionWidget(QWidget):
             self._recommended_resolution_label.setText(
                 "Recommended action: select a metadata review item to see the default resolution path."
             )
-            self._selected_override_status_label.setText("No session override applied.")
+            self._selected_session_override_status_label.setText(
+                "Preferred session value: no session-wide override applied."
+            )
+            self._selected_source_override_status_label.setText("Source-specific overrides: none applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
             with QSignalBlocker(self._custom_session_override_toggle):
                 self._custom_session_override_toggle.setChecked(False)
@@ -753,18 +768,24 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_notes_label.setText("\n".join(note_lines))
         else:
             self._selected_disagreement_notes_label.setText("No comparison notes.")
-        override_lines = []
-        if disagreement.session_override_value is not None:
-            override_lines.append(f"Session override: {disagreement.session_override_value}")
         source_override_lines = [
             f"{source_value.source_label}: {source_value.override_value}"
             for source_value in disagreement.source_values
             if source_value.override_value is not None
         ]
-        if source_override_lines:
-            override_lines.append("Source overrides: " + "; ".join(source_override_lines))
-        self._selected_override_status_label.setText(
-            "\n".join(override_lines) if override_lines else "No session or source overrides applied."
+        self._selected_session_override_status_label.setText(
+            (
+                f"Preferred session value: {disagreement.session_override_value}"
+                if disagreement.session_override_value is not None
+                else "Preferred session value: no session-wide override applied."
+            )
+        )
+        self._selected_source_override_status_label.setText(
+            (
+                "Source-specific overrides: " + "; ".join(source_override_lines)
+                if source_override_lines
+                else "Source-specific overrides: none applied."
+            )
         )
         should_show_custom_override = disagreement.session_override_value is not None
         with QSignalBlocker(self._custom_session_override_toggle):

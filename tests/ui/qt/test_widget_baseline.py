@@ -2496,6 +2496,14 @@ def test_conversion_widget_can_clear_all_overrides_for_selected_field(qapp, tmp_
     window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
     qapp.processEvents()
     assert window.conversion_widget._custom_session_override_toggle.isChecked()
+    assert (
+        window.conversion_widget._selected_session_override_status_label.text()
+        == "Preferred session value: session-value"
+    )
+    assert (
+        window.conversion_widget._selected_source_override_status_label.text()
+        == "Source-specific overrides: Custom session JSON: source-value"
+    )
     assert "session override" in window.conversion_widget._selected_resolution_status_label.text().lower()
     window.conversion_widget._clear_all_field_overrides_button.click()
     qapp.processEvents()
