@@ -322,7 +322,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     labels = [action.text() for action in file_actions]
     assert "New Session" in labels
     assert "Import / Compatibility" in labels
-    assert "Install Extensions / Packages" in labels
+    assert "Optional Workflow Support" in labels
     compatibility_labels = [action.text() for action in window._import_compatibility_menu.actions()]
     assert "Import Session JSON (Compatibility)..." in compatibility_labels
     assert "Reopen Last Imported Session" in compatibility_labels
@@ -435,7 +435,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
 
     window.workspace_tabs.setCurrentWidget(window.package_dialog)
     qapp.processEvents()
-    assert window.package_dialog._header_title_label.text() == "Install Extensions / Packages"
+    assert window.package_dialog._header_title_label.text() == "Optional Workflow Support"
+    assert window.package_dialog._route_group.isHidden() is True
     assert window.package_dialog._route_list.count() > 0
     assert window.package_dialog._install_button.isEnabled() is True
 
@@ -469,6 +470,7 @@ def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_p
     qapp.processEvents()
     assert package_screen.state.install_mode is InstallMode.SELECTED
     assert package_screen.state.install_preset is InstallPreset.CUSTOM
+    assert window.package_dialog._route_group.isHidden() is False
     assert window.package_dialog._route_list.isEnabled() is True
 
     first_item = window.package_dialog._route_list.item(0)

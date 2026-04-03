@@ -144,7 +144,7 @@ class MainWindow(QMainWindow):
         self._workspace_tabs.setUsesScrollButtons(True)
         self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
         self._workspace_tabs.addTab(self._session_assembly_dialog, "New Session")
-        self._workspace_tabs.addTab(self._package_dialog, "Packages")
+        self._workspace_tabs.addTab(self._package_dialog, "Optional Support")
         self._workspace_tabs.addTab(self._settings_dialog, "Settings")
         self._workspace_tabs.addTab(self._nwb_viewer_widget, "NWB Viewer")
         self._workspace_tabs.currentChanged.connect(self._sync_tab_header)
@@ -306,7 +306,7 @@ class MainWindow(QMainWindow):
         )
         self._file_menu.addAction(self._settings_action)
 
-        self._install_packages_action = QAction("Install Extensions / Packages", self)
+        self._install_packages_action = QAction("Optional Workflow Support", self)
         self._install_packages_action.triggered.connect(
             lambda: self._shell_model.invoke_file_menu_action(FileMenuAction.INSTALL_PACKAGES)
         )
@@ -1016,12 +1016,12 @@ class MainWindow(QMainWindow):
                 self._workspace_badge_label.setText("Direct Ingest")
             return
         if widget is self._package_dialog:
-            self._workspace_title_label.setText("Extensions / Packages")
+            self._workspace_title_label.setText("Optional Workflow Support")
             self._workspace_subtitle_label.setText(
-                "Manage route-based optional dependencies in the current development environment without leaving the main window."
+                "Add optional route support only when a representative dataset needs it; direct ingest remains the primary workflow."
             )
             if self._workspace_badge_label is not None:
-                self._workspace_badge_label.setText("Environment")
+                self._workspace_badge_label.setText("Secondary Setup")
             return
         if widget is self._settings_dialog:
             self._workspace_title_label.setText("Settings")
