@@ -1088,6 +1088,10 @@ def test_session_assembly_dialog_absorbs_selected_structured_bundle_member(qapp,
     assert dialog._input_list.count() == 2
     assert dialog._source_list.count() == 1
     assert "2 resolved members" in dialog._selected_bundle_label.text()
+    assert dialog._summary_label.text().startswith("1 sources in 1 groups, 2 selected inputs")
+    assert "1 input absorbed into structured bundles." in dialog._summary_label.text()
+    assert dialog._input_list.item(1).text().endswith("(inside structured bundle)")
+    assert "Already represented by a selected structured source bundle." in dialog._input_list.item(1).toolTip()
 
     dialog.close()
 

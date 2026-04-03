@@ -430,8 +430,9 @@ class SessionAssemblyDialog(QWidget):
         self._project_label.setText(project_text)
         unique_groups = sorted({source.group_label for source in state.sources})
         self._grouping_label.setText(", ".join(unique_groups) if unique_groups else "No grouping suggestions yet.")
+        absorbed_input_paths = self._absorbed_input_paths(state)
         self._summary_label.setText(
-            f"{len(state.sources)} sources in {len(state.groups)} groups, {len(state.issues)} issues."
+            self._build_summary_text(state, absorbed_input_paths)
             if state.selected_paths
             else "Add files or folders to build a conversion session."
         )
@@ -441,8 +442,12 @@ class SessionAssemblyDialog(QWidget):
         for path in state.selected_paths:
             source_item = next((item for item in state.sources if item.location == path), None)
             selection_prefix = f"[{source_item.selection_label}] " if source_item is not None else ""
-            item = QListWidgetItem(f"{selection_prefix}{path.name}")
-            item.setToolTip(str(path))
+            absorbed_suffix = " (inside structured bundle)" if path in absorbed_input_paths else ""
+            item = QListWidgetItem(f"{selection_prefix}{path.name}{absorbed_suffix}")
+            tooltip = str(path)
+            if path in absorbed_input_paths:
+                tooltip += "\nAlready represented by a selected structured source bundle."
+            item.setToolTip(tooltip)
             item.setData(Qt.ItemDataRole.UserRole, str(path))
             self._input_list.addItem(item)
 
@@ -518,6 +523,24 @@ class SessionAssemblyDialog(QWidget):
             else "Conversion Project"
         )
         self._update_add_controls()
+
+    @staticmethod
+    def _absorbed_input_paths(state: SessionAssemblyState) -> set[Path]:
+        return {
+            issue.location.resolve()
+            for issue in state.issues
+            if issue.code == "session-assembly-structured-member-absorbed" and issue.location is not None
+        }
+
+    @staticmethod
+    def _build_summary_text(state: SessionAssemblyState, absorbed_input_paths: set[Path]) -> str:
+        summary = (
+            f"{len(state.sources)} sources in {len(state.groups)} groups, "
+            f"{len(state.selected_paths)} selected inputs, {len(state.issues)} issues."
+        )
+        if absorbed_input_paths:
+            summary += f" {len(absorbed_input_paths)} input{'s' if len(absorbed_input_paths) != 1 else ''} absorbed into structured bundles."
+        return summary
 
     def _sync_selected_source(self, *_args) -> None:
         selected_item = self._source_list.currentItem()
