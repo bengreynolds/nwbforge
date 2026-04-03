@@ -24,7 +24,8 @@ Typical local-app flow:
 2. Add one or more NeuroConv-supported sources, custom files/folders, or a mixture of both.
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
-5. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
+5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them.
+6. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
 
@@ -177,6 +178,8 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - First concrete PySide6 widget layer with a main window, File menu, status bar, log dock, package-install dialog, and conversion-session widget
 - PySide6 `New Session` workspace tab for structured proprietary-plus-custom source ingest, pathway suggestion, source-role assignment, session-wide metadata overrides, and draft session creation
 - Explicit direct-ingest project workflow with `Open Project...`, `Save Project`, `Save Project As...`, recent-project history, and project-aware draft recovery
+- Explicit direct-ingest project lifecycle actions with `New Project` and confirmed `Delete Project...` behavior in the desktop shell
+- Runtime conversion-session tabs so multiple created/opened sessions can stay available inside the main Conversion workspace and be closed individually
 - Structured source-type selection in `New Session`, including a `Custom` option plus dynamically available installed NeuroConv route options, with per-path ingest intent persisted through draft state and saved projects
 - First-pass route-specific entry validation for structured supported selections, so obviously wrong project/main-file or root-directory choices are rejected before they enter the direct-ingest workspace
 - Follow-up direct-ingest hardening so supported entry validation now matches current Bruker, Thor, audio, image, TIFF, and video route semantics, optional adapter exports fail closed when package-gated symbols are absent, and shell/file logging paths tolerate re-entrant listener updates plus non-JSON context values
@@ -207,6 +210,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - A sectioned conversion-session desktop surface with clearer summary, execution, review, and artifact panes
 - Run-overview and review-guidance summaries in the conversion panel so stage, output target, issue counts, artifact counts, and expected review actions are visible at a glance
 - A tabbed conversion workspace for run overview, review work, metadata review, and artifacts
+- Additional runtime session tabs inside the Conversion workspace so users can switch between loaded sessions without leaving the main Conversion surface
 - Actionable metadata-review controls that can promote a selected source value into a session-wide override and then require a preview rebuild
 - Actionable metadata-review controls that can also apply and clear source-specific overrides before the next preview rebuild
 - Manual metadata-review controls that can apply typed session overrides, use selected source values as source-specific overrides, and summarize pending versus resolved override state
@@ -214,6 +218,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - An integrated read-only NWB viewer tab that can inspect arbitrary `.nwb` files through a lazy PyNWB-backed tree/detail browser
 - An optional `nwbwidgets + Panel` rich-preview layer for selected NWB viewer nodes, without making notebook/web tooling part of the base app path
 - A shared Qt visual system with reusable header cards, metric cards, restrained color treatment, and cleaner dialog/workspace hierarchy across the local desktop app
+- First-pass desktop hardening for smaller displays, including scrollable embedded panels, scrollable tab strips, collapsible split panes, and removal of forced tab jumps caused only by background state updates
 - A repo-owned `custom_session.json` custom-path workflow that runs through normalization, reviewable mapping, direct PyNWB assembly, validation, provenance, and desktop execution
 - A `hybrid_session.json` hybrid-path workflow that combines supported and custom inputs into one desktop conversion session
 - Richer source/session detail presentation in the desktop conversion panel, including pathway, source count, and selected-source details

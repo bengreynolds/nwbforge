@@ -236,6 +236,9 @@ Priority order:
 - Record findings as explicit blocking versus non-blocking local-app issues so testing-driven fixes can be prioritized without reopening broad architecture scope.
 
 #### Milestone D: Desktop Workspace Usability
+- First hardening slice is now in place: the desktop workspace no longer force-switches users between tabs during ordinary shell/session state updates, major embedded panels are scrollable on smaller displays, and the main split panes are collapsible/resizable instead of acting like fixed layouts.
+- The conversion workspace now keeps multiple loaded or created sessions open in runtime tabs so users can switch between idle sessions and close individual session tabs without clearing the whole workspace.
+- The desktop shell now exposes explicit `New Project` and `Delete Project` actions for the active direct-ingest draft/file instead of relying only on open/save flows.
 - Treat major workspace panels as scrollable and resizable on smaller displays instead of assuming one large monitor baseline.
 - Remove automatic tab-focus changes triggered only by state updates when they interfere with package selection, settings edits, file-menu flows, or metadata review work.
 - Keep package, settings, direct-ingest, and conversion controls user-driven and actionable while the surrounding runtime state changes.
