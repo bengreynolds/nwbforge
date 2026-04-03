@@ -654,13 +654,15 @@ class ConversionSessionWidget(QWidget):
         selected_snapshot_id = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
         self._snapshot_history_list.clear()
         for snapshot in state.snapshot_history:
+            snapshot_kind = "preview state" if snapshot.artifact_count == 0 else "results state"
+            review_state = "reviewed" if snapshot.has_review_record else "pending review record"
             label = (
                 f"{snapshot.saved_at_text} | {snapshot.status}"
+                f" | {snapshot_kind}"
                 f" | {snapshot.artifact_count} artifacts"
                 f" | {snapshot.issue_count} issues"
             )
-            if snapshot.has_review_record:
-                label += " | reviewed"
+            label += f" | {review_state}"
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, snapshot.snapshot_id)
             item.setToolTip(snapshot.snapshot_id)

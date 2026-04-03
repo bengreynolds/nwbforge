@@ -728,6 +728,8 @@ def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) 
     window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
     assert window.conversion_widget._snapshot_history_list.count() >= 1
+    assert "results state" in window.conversion_widget._snapshot_history_list.item(0).text()
+    assert "pending review record" in window.conversion_widget._snapshot_history_list.item(0).text()
     assert "2 artifacts" in window.conversion_widget._selected_snapshot_summary_label.text()
     assert "1 issues" in window.conversion_widget._selected_snapshot_summary_label.text()
     assert "not reviewed" in window.conversion_widget._selected_snapshot_summary_label.text()
