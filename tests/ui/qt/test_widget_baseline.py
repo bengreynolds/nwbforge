@@ -8,7 +8,7 @@ from subprocess import CompletedProcess
 from PySide6.QtCore import Qt
 import nwbforge.ui.qt.main_window as main_window_module
 
-from nwbforge.app.packages import PackageInstallationService, PackageManagementService
+from nwbforge.app.packages import InstallMode, InstallPreset, PackageInstallationService, PackageManagementService
 from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
 from nwbforge.app.services import (
@@ -346,6 +346,48 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.package_dialog._install_button.isEnabled() is True
 
     window.close()
+
+
+def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_path: Path) -> None:
+    package_screen = make_package_screen(tmp_path)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        package_screen,
+        ConversionSessionScreenModel(FakeConversionExecutor(*make_preview_and_execution(make_session(tmp_path)))),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    qapp.processEvents()
+
+    full_index = window.package_dialog._mode_combo.findData(InstallMode.FULL.value)
+    window.package_dialog._mode_combo.setCurrentIndex(full_index)
+    qapp.processEvents()
+    assert package_screen.state.install_mode is InstallMode.FULL
+    assert package_screen.state.install_preset is InstallPreset.FULL
+
+    selected_index = window.package_dialog._mode_combo.findData(InstallMode.SELECTED.value)
+    custom_index = window.package_dialog._preset_combo.findData(InstallPreset.CUSTOM.value)
+    window.package_dialog._mode_combo.setCurrentIndex(selected_index)
+    window.package_dialog._preset_combo.setCurrentIndex(custom_index)
+    qapp.processEvents()
+    assert package_screen.state.install_mode is InstallMode.SELECTED
+    assert package_screen.state.install_preset is InstallPreset.CUSTOM
+    assert window.package_dialog._route_list.isEnabled() is True
+
+    first_item = window.package_dialog._route_list.item(0)
+    first_item.setCheckState(Qt.CheckState.Checked)
+    qapp.processEvents()
+    assert first_item.data(Qt.ItemDataRole.UserRole) in package_screen.state.selected_routes
+
+    window.package_dialog._install_button.click()
+    qapp.processEvents()
+    assert package_screen.state.progress_event is not None
+
+    window.close()
+    package_screen.shutdown()
 
 
 def test_conversion_widget_uses_split_session_and_review_layout(qapp, tmp_path: Path) -> None:
