@@ -15,6 +15,24 @@ The system is planned around three conversion pathways:
 - Custom mapping pathway: unsupported or weakly structured inputs that require explicit mapping
 - Hybrid pathway: sessions that merge supported and custom inputs into one NWB output
 
+## End-user workflow
+
+This application is intended for neuroscience researchers who are already comfortable with experimental data structure, acquisition modalities, and metadata interpretation. The UI uses NWB and NeuroConv terminology directly rather than hiding the scientific model behind generic file-import language.
+
+Typical local-app flow:
+1. Start a new session from the integrated desktop workspace.
+2. Add one or more NeuroConv-supported sources, custom files/folders, or a mixture of both.
+3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
+4. Review the detected dataset bundles, source roles, metadata overrides, and mixed-source conflicts before preview or write.
+5. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
+
+Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
+
+## Contributing and license
+
+- Contribution workflow, issue expectations, and maintainer review rules are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+- The repository is licensed under the [MIT License](LICENSE).
+
 ## Current repository state
 
 This repository is now in a first-pass local desktop-app stage. The current work has moved beyond pure backend scaffolding: the repo has a real PySide6 shell, supported/custom/hybrid conversion flows, direct-ingest `New Session` behavior, explicit saved-project support, an integrated single-window workspace, and an internal-testing baseline. It is still not packaged or deployment-ready.
