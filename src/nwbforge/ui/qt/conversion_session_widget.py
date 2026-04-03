@@ -1125,8 +1125,16 @@ class ConversionSessionWidget(QWidget):
         for source in session.sources:
             project_name = source.metadata.get("session_assembly.project_name", "").strip()
             if project_name:
-                return Path(project_name).stem
+                return ConversionSessionWidget._display_project_name(Path(project_name))
         return None
+
+    @staticmethod
+    def _display_project_name(project_path: Path) -> str:
+        name = project_path.name
+        suffix = ".nwbforge-project.json"
+        if name.lower().endswith(suffix):
+            return name[: -len(suffix)]
+        return project_path.stem
 
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state
