@@ -1000,6 +1000,23 @@ All final application releases must use this deployment model:
 
 This is the required release baseline, not an open packaging evaluation.
 
+### Release branch policy
+
+Before any formal release steps begin, create a dedicated `release/*` branch from the intended shipping baseline.
+
+Release-branch rules:
+- the release branch is for final product shipping only, not day-to-day development
+- it should contain only functional product code plus user-facing and developer-facing documentation needed to ship, support, or repackage the release
+- remove debug artifacts, internal-only testing artifacts, temporary fixtures, excessive repo-only notes, and other content that does not help end users or release maintainers
+- keep release-preparation cleanup explicit so the packaged product is not bloated with unnecessary files, data, or implementation scaffolding
+- release-support code, packaging helpers, and workflow logic may continue to live on `main` for ongoing development and repackaging work, but final release execution must happen from the dedicated release branch
+
+Release automation rules:
+- all future releases should be triggered through GitHub Actions or equivalent repository workflows
+- release workflows should run only from the release branch
+- the release branch is the only branch allowed to publish final shipping artifacts
+- release automation should validate that the branch contents already match the intended trimmed shipping set before packaging begins
+
 ### PyInstaller as the primary packaging layer
 
 PyInstaller is the required first-stage packaging tool because it aligns with the intended product shape:
@@ -1069,12 +1086,15 @@ Updater architecture requirements:
 - Track compatibility notes for config, plugin, and local-state changes
 
 ### Release pipeline
-1. Build the Python desktop application for the target platform
-2. Package the application with PyInstaller into a self-contained application payload
-3. Validate bundled runtime and scientific dependencies in the packaged output
-4. Wrap the PyInstaller payload in a platform-native installer or installable package
-5. Publish GitHub release assets and notes
-6. Application updater consumes published release metadata and launches the correct update artifact
+1. Create and review a dedicated `release/*` branch from the intended shipping baseline
+2. Remove non-shipping artifacts and confirm the branch contains only functional code plus user/developer documentation needed for release and support
+3. Trigger the release workflow from the release branch through GitHub Actions
+4. Build the Python desktop application for the target platform
+5. Package the application with PyInstaller into a self-contained application payload
+6. Validate bundled runtime and scientific dependencies in the packaged output
+7. Wrap the PyInstaller payload in a platform-native installer or installable package
+8. Publish GitHub release assets and notes
+9. Application updater consumes published release metadata and launches the correct update artifact
 
 ### Rollback and failure considerations
 - Failed updates must not corrupt user settings or session data
