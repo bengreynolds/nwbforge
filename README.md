@@ -28,7 +28,8 @@ Typical local-app flow:
 6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, what still blocks `Write NWB`, and the recommended resolution path for the currently selected metadata conflict. Session/source inspection remains available, but it now stays behind an opt-in `Show Session Details` control so the default screen reading order stays workflow-first.
 7. Use the pre-write checklist in the Conversion workspace to confirm whether the current session, preview, metadata review, and output-path requirements are complete before writing NWB.
 8. Set the output file directly from the run overview and enter reviewer information from the review stage instead of opening session details for those stage-specific tasks.
-9. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
+9. After conversion finishes, use the review checklist to confirm whether acknowledgements, reviewer identity, and a review decision are still required.
+10. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
 
