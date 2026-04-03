@@ -82,6 +82,8 @@ class ConversionSessionWidget(QWidget):
         self._workflow_steps_label.setWordWrap(True)
         self._advanced_toggle = QCheckBox("Show Advanced Tools", self)
         self._advanced_toggle.toggled.connect(self._set_advanced_ui_visible)
+        self._readiness_summary_label = QLabel("Readiness: blocked until a session is loaded.", self)
+        self._readiness_summary_label.setWordWrap(True)
         self._next_action_label = QLabel("Next action: start with New Session and add data sources.", self)
         self._next_action_label.setWordWrap(True)
         self._ready_to_write_label = QLabel(
@@ -213,6 +215,7 @@ class ConversionSessionWidget(QWidget):
         self._stage_metric_card, self._stage_metric_value = build_metric_card("Stage", "idle", parent=self)
         self._validation_metric_card, self._validation_metric_value = build_metric_card("Validation", "Not available", parent=self)
         self._artifact_metric_card, self._artifact_metric_value = build_metric_card("Artifacts", "0 artifacts", parent=self)
+        self._readiness_metric_card, self._readiness_metric_value = build_metric_card("Readiness", "Blocked", parent=self)
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
@@ -263,6 +266,7 @@ class ConversionSessionWidget(QWidget):
         execution_layout.addLayout(run_overview_layout)
         execution_layout.addWidget(self._workflow_steps_label)
         execution_layout.addWidget(self._advanced_toggle)
+        execution_layout.addWidget(self._readiness_summary_label)
         execution_layout.addWidget(self._next_action_label)
         execution_layout.addWidget(self._ready_to_write_label)
         execution_layout.addWidget(self._status_label)
@@ -384,6 +388,7 @@ class ConversionSessionWidget(QWidget):
         metric_row.addWidget(self._stage_metric_card, 1)
         metric_row.addWidget(self._validation_metric_card, 1)
         metric_row.addWidget(self._artifact_metric_card, 1)
+        metric_row.addWidget(self._readiness_metric_card, 1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -463,7 +468,9 @@ class ConversionSessionWidget(QWidget):
         self._stage_metric_value.setText(self._stage_value_label.text().replace("_", " "))
         self._validation_metric_value.setText(self._issue_count_value_label.text())
         self._artifact_metric_value.setText(self._artifact_count_value_label.text())
+        self._readiness_metric_value.setText(self._readiness_state_text(state))
         self._review_guidance_label.setText(self._review_guidance_text(state))
+        self._readiness_summary_label.setText(self._readiness_summary_text(state))
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
@@ -855,7 +862,7 @@ class ConversionSessionWidget(QWidget):
         return "Current step: Review Results. Next action: inspect validation issues and artifacts, then complete review if required."
 
     @staticmethod
-    def _ready_to_write_text(state: ConversionSessionScreenState) -> str:
+    def _write_blockers(state: ConversionSessionScreenState) -> list[str]:
         blockers: list[str] = []
         if state.session is None:
             blockers.append("load or create a session")
@@ -865,9 +872,58 @@ class ConversionSessionWidget(QWidget):
             blockers.append("review metadata conflicts")
         if state.output_path is None:
             blockers.append("choose output path")
+        return blockers
+
+    @staticmethod
+    def _ready_to_write_text(state: ConversionSessionScreenState) -> str:
+        blockers = ConversionSessionWidget._write_blockers(state)
         if blockers:
             return "Ready to write when: " + ", ".join(blockers) + "."
         return "Ready to write when: the current preview looks correct and you want to generate NWB plus validation artifacts."
+
+    @staticmethod
+    def _readiness_state_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Blocked"
+        if state.is_preview_running:
+            return "Building Preview"
+        if state.is_execution_running:
+            return "Writing NWB"
+        if state.execution is not None:
+            outcome = state.execution.review_outcome
+            if outcome.blocks_completion:
+                return "Blocked by Review"
+            if outcome.requires_manual_review or state.validation_issues:
+                return "Needs Review"
+            return "Completed"
+        blockers = ConversionSessionWidget._write_blockers(state)
+        if not blockers:
+            return "Ready to Write"
+        if state.preview is not None and any(item.pending_resolution for item in state.metadata_disagreements):
+            return "Needs Review"
+        return "Blocked"
+
+    @staticmethod
+    def _readiness_summary_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Readiness: blocked until a session is loaded."
+        if state.is_preview_running:
+            return "Readiness: building preview so the app can check grouping, metadata, and conversion readiness."
+        if state.is_execution_running:
+            return "Readiness: writing NWB now. Review results after conversion finishes."
+        if state.execution is not None:
+            outcome = state.execution.review_outcome
+            if outcome.blocks_completion:
+                return "Readiness: blocked by review findings. Add rationale and override only if the result is acceptable."
+            if outcome.requires_manual_review or state.validation_issues:
+                return (
+                    "Readiness: needs review. Inspect validation findings and artifacts before treating the result as complete."
+                )
+            return "Readiness: complete. Output and generated artifacts are ready for inspection or archival."
+        blockers = ConversionSessionWidget._write_blockers(state)
+        if blockers:
+            return "Readiness: blocked by " + ", ".join(blockers) + "."
+        return "Readiness: ready to write. Preview is built, main conflicts are cleared, and output is selected."
 
     @staticmethod
     def _acknowledgement_summary_text(state: ConversionSessionScreenState) -> str:

@@ -377,6 +377,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._advanced_resolution_group.isHidden() is True
     assert window.conversion_widget._workspace_tabs.isTabVisible(4) is False
     assert window.conversion_widget._workspace_tabs.isTabVisible(5) is False
+    assert window.conversion_widget._readiness_metric_value.text() == "Blocked"
+    assert "blocked by build preview" in window.conversion_widget._readiness_summary_label.text().lower()
     assert "Build Preview" in window.conversion_widget._next_action_label.text()
     assert "build preview" in window.conversion_widget._ready_to_write_label.text()
     assert (
@@ -408,6 +410,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert "choose output path" in window.conversion_widget._ready_to_write_label.text()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.statusBar().findChild(type(window._progress_bar)) is not None
+    assert window.conversion_widget._readiness_metric_value.text() == "Blocked"
+    assert "blocked by choose output path" in window.conversion_widget._readiness_summary_label.text().lower()
 
     window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
     window.conversion_widget._execute_button.click()
@@ -415,6 +419,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._result_label.text() == "Execution status: completed"
     assert window.conversion_widget._artifact_list.count() == 0
     assert window.conversion_widget._artifact_count_value_label.text() == "0 artifacts"
+    assert window.conversion_widget._readiness_metric_value.text() == "Completed"
+    assert "output and generated artifacts are ready" in window.conversion_widget._readiness_summary_label.text().lower()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
     window.workspace_tabs.setCurrentWidget(window.package_dialog)
