@@ -330,6 +330,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
     assert window.workspace_tabs.tabText(0) == "New Session"
     assert window.workspace_tabs.tabText(1) == "Conversion"
+    assert window.workspace_tabs.isTabVisible(2) is False
     assert window._workspace_title_label.text() == "New Conversion Session"
     assert "Add files or folders" in window._workspace_subtitle_label.text()
 
@@ -347,6 +348,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     window._install_packages_action.trigger()
     qapp.processEvents()
     assert window.workspace_tabs.currentWidget() is window.package_dialog
+    assert window.workspace_tabs.isTabVisible(window.workspace_tabs.indexOf(window.package_dialog)) is True
 
     window.close()
 
@@ -460,7 +462,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert "output and generated artifacts are ready" in window.conversion_widget._readiness_summary_label.text().lower()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
-    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    window._install_packages_action.trigger()
     qapp.processEvents()
     assert window.package_dialog._header_title_label.text() == "Optional Workflow Support"
     assert window.package_dialog._route_group.isHidden() is True
@@ -481,7 +483,7 @@ def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_p
     window.show()
     qapp.processEvents()
 
-    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    window._install_packages_action.trigger()
     qapp.processEvents()
 
     full_index = window.package_dialog._mode_combo.findData(InstallMode.FULL.value)
@@ -565,7 +567,7 @@ def test_embedded_workspace_panels_are_scrollable_and_keep_manual_tab_selection(
     assert window.session_assembly_dialog._workspace_tabs.usesScrollButtons() is True
     assert window.session_assembly_dialog._workspace_splitter.childrenCollapsible() is True
 
-    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    window._install_packages_action.trigger()
     qapp.processEvents()
     window._toggle_log_viewer_action.trigger()
     qapp.processEvents()
@@ -576,6 +578,7 @@ def test_embedded_workspace_panels_are_scrollable_and_keep_manual_tab_selection(
     shell.set_status_bar(main_window_module.StatusBarState(stage_key="ui:test", message="Settings still focused."))
     qapp.processEvents()
     assert window.workspace_tabs.currentWidget() is window.settings_dialog
+    assert window.workspace_tabs.isTabVisible(window.workspace_tabs.indexOf(window.package_dialog)) is False
 
     window.settings_dialog.reject()
     qapp.processEvents()

@@ -148,6 +148,7 @@ class MainWindow(QMainWindow):
         self._workspace_tabs.addTab(self._settings_dialog, "Settings")
         self._workspace_tabs.addTab(self._nwb_viewer_widget, "NWB Viewer")
         self._workspace_tabs.currentChanged.connect(self._sync_tab_header)
+        self._set_package_workspace_visible(False)
         self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
 
         central = QWidget(self)
@@ -858,6 +859,11 @@ class MainWindow(QMainWindow):
             return self._conversion_widget
         return self._session_assembly_dialog
 
+    def _set_package_workspace_visible(self, visible: bool) -> None:
+        index = self._workspace_tabs.indexOf(self._package_dialog)
+        if index >= 0:
+            self._workspace_tabs.setTabVisible(index, visible)
+
     def _apply_shell_state(self, state) -> None:
         self._status_label.setText(state.status_bar.message)
         self._progress_bar.setValue(state.status_bar.percent_complete)
@@ -869,6 +875,7 @@ class MainWindow(QMainWindow):
         elif state.active_dialog == "new_session":
             self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
         elif state.active_dialog == "install_packages":
+            self._set_package_workspace_visible(True)
             self._workspace_tabs.setCurrentWidget(self._package_dialog)
 
     def _show_user_error_if_needed(self, error: UserFacingError | None) -> None:
@@ -1010,6 +1017,7 @@ class MainWindow(QMainWindow):
 
     def _sync_tab_header(self, index: int) -> None:
         widget = self._workspace_tabs.widget(index)
+        self._set_package_workspace_visible(widget is self._package_dialog)
         if widget is self._conversion_widget:
             self._sync_workspace_header(self._conversion_screen_model.state)
             return
