@@ -1079,11 +1079,13 @@ def test_main_window_keeps_multiple_sessions_in_conversion_tabs(qapp, tmp_path: 
     assert window.conversion_widget._session_tabs.tabText(0) == "sess-qt"
     assert window.conversion_widget._session_tabs.tabText(1) == "custom-qt"
     assert window._close_current_session_action.isEnabled() is True
+    assert window._close_current_session_action.text() == "Close Current Session (custom-qt)"
     assert "custom-qt" in window.conversion_widget._session_label.text()
 
     window.conversion_widget._session_tabs.setCurrentIndex(0)
     qapp.processEvents()
     assert "sess-qt" in window.conversion_widget._session_label.text()
+    assert window._close_current_session_action.text() == "Close Current Session (sess-qt)"
 
     window._close_current_session_action.trigger()
     qapp.processEvents()
@@ -1134,6 +1136,7 @@ def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_
     assert str(project_path.resolve()) in tooltip
     assert "Project: saved-project" in window._workspace_subtitle_label.text()
     assert window._workspace_badge_label.text() == "saved-project | Sources Added"
+    assert window._close_current_session_action.text() == "Close Current Session (saved-project | sess-qt)"
     assert "Project: saved-project | sess-qt" in window.conversion_widget._session_context_label.text()
     window.conversion_widget._session_details_toggle.setChecked(True)
     qapp.processEvents()

@@ -961,7 +961,7 @@ class MainWindow(QMainWindow):
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
         if not self._restoring_conversion_tab and self._loading_conversion_tab_id is None:
             self._sync_active_conversion_tab_from_state(state)
-        self._close_current_session_action.setEnabled(bool(self._conversion_workspace_tabs))
+        self._refresh_close_current_session_action()
         self._sync_workspace_header(state)
         if state.output_path is not None:
             candidate_directory = state.output_path.parent.resolve()
@@ -1182,7 +1182,7 @@ class MainWindow(QMainWindow):
             index = self._conversion_widget._session_tabs.addTab(self._conversion_tab_label(state))
             self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
         self._conversion_widget._session_tabs.show()
-        self._close_current_session_action.setEnabled(True)
+        self._refresh_close_current_session_action()
 
     def _set_current_conversion_tab(self, tab_id: str) -> None:
         index = self._conversion_tab_index(tab_id)
@@ -1192,6 +1192,7 @@ class MainWindow(QMainWindow):
         with QSignalBlocker(self._conversion_widget._session_tabs):
             self._conversion_widget._session_tabs.setCurrentIndex(index)
         self._conversion_widget._session_tabs.show()
+        self._refresh_close_current_session_action()
 
     def _on_conversion_tab_changed(self, index: int) -> None:
         if index < 0 or index >= len(self._conversion_workspace_tabs):
@@ -1224,6 +1225,7 @@ class MainWindow(QMainWindow):
             self._restoring_conversion_tab = False
         if self._workspace_tabs.currentWidget() is self._conversion_widget:
             self._sync_workspace_header(next_tab.state)
+        self._refresh_close_current_session_action()
 
     def _on_conversion_tab_close_requested(self, index: int) -> None:
         if index < 0 or index >= len(self._conversion_workspace_tabs):
@@ -1249,10 +1251,10 @@ class MainWindow(QMainWindow):
         if not self._conversion_workspace_tabs:
             self._active_conversion_tab_id = None
             self._conversion_widget._session_tabs.hide()
-            self._close_current_session_action.setEnabled(False)
+            self._refresh_close_current_session_action()
             self._conversion_screen_model.clear_session()
             return
-        self._close_current_session_action.setEnabled(True)
+        self._refresh_close_current_session_action()
         if closing_active:
             next_index = min(index, len(self._conversion_workspace_tabs) - 1)
             next_tab = self._conversion_workspace_tabs[next_index]
@@ -1263,3 +1265,27 @@ class MainWindow(QMainWindow):
                 self._conversion_screen_model.restore_state(next_tab.state)
             finally:
                 self._restoring_conversion_tab = False
+            self._refresh_close_current_session_action()
+
+    def _refresh_close_current_session_action(self) -> None:
+        if not self._conversion_workspace_tabs:
+            self._close_current_session_action.setText("Close Current Session")
+            self._close_current_session_action.setEnabled(False)
+            return
+        self._close_current_session_action.setEnabled(True)
+        active_tab: _ConversionWorkspaceTab | None = None
+        if self._active_conversion_tab_id is not None:
+            index = self._conversion_tab_index(self._active_conversion_tab_id)
+            if index >= 0:
+                active_tab = self._conversion_workspace_tabs[index]
+        if active_tab is None:
+            active_tab = self._conversion_workspace_tabs[0]
+        session = active_tab.state.session
+        if session is None:
+            self._close_current_session_action.setText("Close Current Session")
+            return
+        project_name = self._session_project_name(session)
+        if project_name:
+            self._close_current_session_action.setText(f"Close Current Session ({project_name} | {session.session_id})")
+            return
+        self._close_current_session_action.setText(f"Close Current Session ({session.session_id})")
