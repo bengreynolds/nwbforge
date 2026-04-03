@@ -184,6 +184,7 @@ In progress:
 Next:
 - Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth.
 - Define and run the internal-testing matrix in the dedicated Conda environment: smoke baseline, focused route/workflow checks, and at least 3 representative local datasets that stress supported, custom, or hybrid ingest paths.
+- The internal-testing matrix is now defined explicitly in `docs/testing/internal-local-checklist.md` as three layers: smoke baseline, focused workflow checks, and representative local datasets, each with a standard blocking/non-blocking/follow-up triage format.
 - Capture internal-testing findings in a repeatable triage loop and convert them into prioritized UI, workflow, performance, and operational fixes instead of reopening broad architecture work.
 - Continue Milestone A by improving ambiguous multi-file dataset handling now that saved direct-ingest project origin survives into created sessions and downstream workspace context.
 - Continue Milestone B by broadening field-level metadata review beyond the current canonical-field cycle coverage now that pending/resolved state, override scope, and default sort order are easier to scan in the conflict list.
