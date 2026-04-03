@@ -1084,22 +1084,48 @@ class MainWindow(QMainWindow):
             return str(session_path.resolve())
         return f"runtime:{session.session_id}"
 
-    @staticmethod
-    def _conversion_tab_label(state: ConversionSessionScreenState) -> str:
+    @classmethod
+    def _conversion_tab_label(cls, state: ConversionSessionScreenState) -> str:
         session = state.session
         if session is None:
             return "Untitled Session"
+        project_name = cls._session_project_name(session)
+        if project_name:
+            return f"{project_name} | {session.session_id}"
         return session.session_id
 
-    @staticmethod
-    def _conversion_tab_tooltip(tab: _ConversionWorkspaceTab) -> str:
+    @classmethod
+    def _conversion_tab_tooltip(cls, tab: _ConversionWorkspaceTab) -> str:
         session = tab.state.session
         if session is None:
             return "No session loaded."
         parts = [session.session_id, f"pathway={session.pathway.value}", f"status={session.status.value}"]
+        project_path = cls._session_project_path(session)
+        if project_path is not None:
+            parts.append(f"project={project_path.name}")
+            parts.append(str(project_path))
         if tab.session_path is not None:
             parts.append(str(tab.session_path))
         return "\n".join(parts)
+
+    @staticmethod
+    def _session_project_path(session: ConversionSession) -> Path | None:
+        for source in session.sources:
+            project_path_text = source.metadata.get("session_assembly.project_path", "").strip()
+            if project_path_text:
+                return Path(project_path_text)
+        return None
+
+    @classmethod
+    def _session_project_name(cls, session: ConversionSession) -> str | None:
+        for source in session.sources:
+            project_name = source.metadata.get("session_assembly.project_name", "").strip()
+            if project_name:
+                return Path(project_name).stem
+        project_path = cls._session_project_path(session)
+        if project_path is not None:
+            return project_path.stem
+        return None
 
     def _conversion_tab_index(self, tab_id: str) -> int:
         for index, tab in enumerate(self._conversion_workspace_tabs):

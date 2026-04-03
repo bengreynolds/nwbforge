@@ -1099,6 +1099,42 @@ def test_main_window_keeps_multiple_sessions_in_conversion_tabs(qapp, tmp_path: 
     window.close()
 
 
+def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_path: Path) -> None:
+    project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
+    session = make_session(tmp_path)
+    session = replace(
+        session,
+        sources=(
+            replace(
+                session.sources[0],
+                metadata={
+                    **session.sources[0].metadata,
+                    "session_assembly.project_path": str(project_path.resolve()),
+                    "session_assembly.project_name": project_path.name,
+                },
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._load_built_session(session)
+    qapp.processEvents()
+
+    assert window.conversion_widget._session_tabs.tabText(0) == "saved-project.nwbforge-project | sess-qt"
+    tooltip = window.conversion_widget._session_tabs.tabToolTip(0)
+    assert "project=saved-project.nwbforge-project.json" in tooltip
+    assert str(project_path.resolve()) in tooltip
+    window.close()
+
+
 def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
