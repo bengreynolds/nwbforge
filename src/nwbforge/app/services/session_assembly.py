@@ -44,6 +44,8 @@ class SessionAssemblySource:
     entry_path_kind: str | None = None
     entry_role_label: str | None = None
     entry_validation_status: str | None = None
+    structured_bundle_member_count: int = 0
+    structured_bundle_member_labels: tuple[str, ...] = ()
     role: str = "primary"
     metadata_overrides: dict[str, str] | None = None
     sidecar_for_source_id: str | None = None
@@ -69,6 +71,8 @@ class SessionAssemblyGroup:
     canonical_source_path: Path | None = None
     canonical_entry_role_label: str | None = None
     canonical_selection_label: str | None = None
+    canonical_bundle_member_count: int = 0
+    canonical_bundle_member_labels: tuple[str, ...] = ()
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     primary_count: int = 0
@@ -124,6 +128,14 @@ class SupportedRouteEntryProfile:
     file_suffixes: tuple[str, ...] = ()
     file_names: tuple[str, ...] = ()
     directory_markers: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class StructuredBundlePreview:
+    """Conservative summary of files represented by one structured entry path."""
+
+    member_count: int = 0
+    member_labels: tuple[str, ...] = ()
 
 
 class JsonSessionAssemblyWorkspaceStore:
@@ -209,6 +221,7 @@ class SessionAssemblyService:
     _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
     _DESKTOP_SESSION_FILENAMES = {"session_manifest.json", "custom_session.json", "hybrid_session.json"}
     _METADATA_SIDECAR_SUFFIXES = {".json", ".yaml", ".yml", ".txt"}
+    _BUNDLE_PREVIEW_LIMIT = 5
     _CUSTOM_ALLOWED_FILE_SUFFIXES = {
         ".avi",
         ".bin",
@@ -566,6 +579,15 @@ class SessionAssemblyService:
                 path=path,
                 route_name=route_name,
             )
+            structured_bundle = (
+                self._structured_bundle_preview(
+                    path,
+                    route_name=route_name,
+                    entry_path_kind=entry_path_kind,
+                )
+                if ingest_kind == "supported"
+                else StructuredBundlePreview()
+            )
             matches = self._matching_adapters_for_route(source_reference, route_name)
             matching_ids = tuple(adapter.adapter_id for adapter in matches)
             suggested_pathway = (
@@ -674,6 +696,8 @@ class SessionAssemblyService:
                     entry_path_kind=entry_path_kind,
                     entry_role_label=entry_role_label,
                     entry_validation_status=entry_validation_status,
+                    structured_bundle_member_count=structured_bundle.member_count,
+                    structured_bundle_member_labels=structured_bundle.member_labels,
                     role=role,
                     metadata_overrides=dict(normalized_source_metadata_overrides.get(source_id, {})),
                     sidecar_for_source_id=source_ids_by_path.get(sidecar_anchor) if sidecar_anchor is not None else None,
@@ -779,6 +803,12 @@ class SessionAssemblyService:
                     canonical_selection_label=(
                         canonical_source.selection_label if canonical_source is not None else None
                     ),
+                    canonical_bundle_member_count=(
+                        canonical_source.structured_bundle_member_count if canonical_source is not None else 0
+                    ),
+                    canonical_bundle_member_labels=(
+                        canonical_source.structured_bundle_member_labels if canonical_source is not None else ()
+                    ),
                     grouping_reason=grouping_reason,
                     member_labels=tuple(source.label for source in sources),
                     primary_count=sum(1 for source in sources if source.role == "primary"),
@@ -855,6 +885,10 @@ class SessionAssemblyService:
                     "session_assembly.entry_path_kind": source.entry_path_kind or "",
                     "session_assembly.entry_role_label": source.entry_role_label or "",
                     "session_assembly.entry_validation_status": source.entry_validation_status or "",
+                    "session_assembly.structured_bundle_member_count": str(source.structured_bundle_member_count),
+                    "session_assembly.structured_bundle_member_labels_json": json.dumps(
+                        list(source.structured_bundle_member_labels)
+                    ),
                     "session_assembly.group_confirmed": str(
                         next(
                             (
@@ -1224,11 +1258,17 @@ class SessionAssemblyService:
         if group_key.startswith("supported-anchor:") and supported_sources:
             anchor_label = supported_sources[0].selection_label
             entry_role_label = supported_sources[0].entry_role_label or "dataset entry path"
+            bundle_count = supported_sources[0].structured_bundle_member_count
+            bundle_text = (
+                f" with {bundle_count} resolved bundle member{'s' if bundle_count != 1 else ''}"
+                if bundle_count
+                else ""
+            )
             if len(sources) > 1:
                 return (
-                    f"Grouped around the selected {anchor_label} {entry_role_label} with nearby custom or supplemental inputs."
+                    f"Grouped around the selected {anchor_label} {entry_role_label}{bundle_text} with nearby custom or supplemental inputs."
                 )
-            return f"Selected {anchor_label} {entry_role_label} treated as one structured source bundle."
+            return f"Selected {anchor_label} {entry_role_label} treated as one structured source bundle{bundle_text}."
         if group_key.startswith("descriptor-parent:"):
             return "Grouped under a recognized session-descriptor parent directory."
         if len(group_pathways) > 1:
@@ -1341,3 +1381,116 @@ class SessionAssemblyService:
         if has_supported:
             return ConversionPathway.SUPPORTED
         return ConversionPathway.CUSTOM
+
+    @classmethod
+    def _structured_bundle_preview(
+        cls,
+        path: Path,
+        *,
+        route_name: str | None,
+        entry_path_kind: str | None,
+    ) -> StructuredBundlePreview:
+        if route_name is None:
+            return StructuredBundlePreview(member_count=1, member_labels=(path.name,)) if path.is_file() else StructuredBundlePreview()
+
+        if path.is_file():
+            members = [path.name]
+            if route_name == "thor":
+                experiment_xml = path.parent / "Experiment.xml"
+                if experiment_xml.is_file():
+                    members.append(experiment_xml.name)
+            if route_name == "scanbox":
+                scanbox_sidecar = path.with_suffix(".mat")
+                if scanbox_sidecar.is_file():
+                    members.append(scanbox_sidecar.name)
+            return cls._bundle_preview_from_labels(members)
+
+        if not path.is_dir():
+            return StructuredBundlePreview()
+
+        try:
+            if route_name == "session_manifest":
+                members = [marker for marker in ("session_manifest.json",) if (path / marker).is_file()]
+                return cls._bundle_preview_from_labels(members)
+            if route_name == "miniscope":
+                members = cls._directory_member_names(
+                    path,
+                    suffixes=(".avi",),
+                    explicit_names=("metaData.json",),
+                )
+                return cls._bundle_preview_from_labels(members)
+            if route_name == "micromanager":
+                members = cls._directory_member_names(
+                    path,
+                    suffixes=(".ome.tif", ".ome.tiff", ".tif", ".tiff"),
+                    contains_tokens=("displaysettings",),
+                )
+                return cls._bundle_preview_from_labels(members)
+            if route_name == "brukertiff":
+                members = cls._directory_member_names(
+                    path,
+                    suffixes=(".tif", ".tiff", ".xml"),
+                )
+                return cls._bundle_preview_from_labels(members)
+            if route_name in {"audio", "image", "videos", "scanimage", "scanimage_legacy", "tiff"}:
+                profile = cls._ROUTE_ENTRY_PROFILES.get(route_name)
+                members = cls._directory_member_names(path, suffixes=profile.file_suffixes if profile is not None else ())
+                return cls._bundle_preview_from_labels(members)
+            if route_name in {"tdt", "tdt_fiber_photometry"}:
+                members = cls._directory_member_names(path, suffixes=(".tbk", ".tdx", ".tev", ".tsq"))
+                return cls._bundle_preview_from_labels(members)
+
+            members = cls._directory_member_names(path)
+            if members:
+                return cls._bundle_preview_from_labels(members)
+        except OSError:
+            return StructuredBundlePreview()
+
+        if entry_path_kind == "directory":
+            return StructuredBundlePreview()
+        return StructuredBundlePreview(member_count=1, member_labels=(path.name,))
+
+    @classmethod
+    def _bundle_preview_from_labels(cls, labels: list[str] | tuple[str, ...]) -> StructuredBundlePreview:
+        ordered = tuple(
+            label
+            for label in sorted(dict.fromkeys(str(label) for label in labels if str(label).strip()), key=str.lower)
+        )
+        if not ordered:
+            return StructuredBundlePreview()
+        return StructuredBundlePreview(
+            member_count=len(ordered),
+            member_labels=ordered[: cls._BUNDLE_PREVIEW_LIMIT],
+        )
+
+    @classmethod
+    def _directory_member_names(
+        cls,
+        path: Path,
+        *,
+        suffixes: tuple[str, ...] = (),
+        explicit_names: tuple[str, ...] = (),
+        contains_tokens: tuple[str, ...] = (),
+    ) -> list[str]:
+        lowered_explicit = {name.lower() for name in explicit_names}
+        lowered_tokens = tuple(token.lower() for token in contains_tokens)
+        normalized_suffixes = tuple(suffix.lower() for suffix in suffixes)
+        members: list[str] = []
+        for child in sorted(path.iterdir(), key=lambda item: item.name.lower()):
+            if child.is_dir():
+                if not normalized_suffixes and not lowered_explicit and not lowered_tokens:
+                    members.append(child.name + "/")
+                continue
+            lowered_name = child.name.lower()
+            if lowered_name in lowered_explicit:
+                members.append(child.name)
+                continue
+            if lowered_tokens and any(token in lowered_name for token in lowered_tokens):
+                members.append(child.name)
+                continue
+            if normalized_suffixes and cls._path_has_supported_suffix(child, normalized_suffixes):
+                members.append(child.name)
+                continue
+            if not normalized_suffixes and not lowered_explicit and not lowered_tokens:
+                members.append(child.name)
+        return members

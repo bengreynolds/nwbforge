@@ -116,6 +116,8 @@ class SessionAssemblySourceItem:
     entry_path_kind: str | None = None
     entry_role_label: str | None = None
     entry_validation_status: str | None = None
+    structured_bundle_member_count: int = 0
+    structured_bundle_member_labels: tuple[str, ...] = ()
     role: str = "primary"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None
@@ -151,6 +153,8 @@ class SessionAssemblyGroupItem:
     canonical_source_path: Path | None = None
     canonical_entry_role_label: str | None = None
     canonical_selection_label: str | None = None
+    canonical_bundle_member_count: int = 0
+    canonical_bundle_member_labels: tuple[str, ...] = ()
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()

@@ -332,6 +332,24 @@ def test_session_assembly_screen_model_tracks_supported_entry_metadata_for_valid
     assert state.can_create_session is True
 
 
+def test_session_assembly_screen_model_exposes_structured_bundle_summary(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    (tmp_path / "Experiment.xml").write_text("<Experiment />", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_supported_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+
+    assert state.sources[0].structured_bundle_member_count == 2
+    assert state.sources[0].structured_bundle_member_labels == ("Experiment.xml", "Image_0001_0001.tif")
+    assert state.groups[0].canonical_bundle_member_count == 2
+    assert state.groups[0].canonical_bundle_member_labels == ("Experiment.xml", "Image_0001_0001.tif")
+
+
 def test_session_assembly_screen_model_persists_supported_source_intent_in_workspace(tmp_path: Path) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")

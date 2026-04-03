@@ -402,6 +402,8 @@ def test_session_assembly_service_rejects_obviously_wrong_supported_entry_path(t
 def test_session_assembly_service_validates_thor_entries_as_tiff_files(tmp_path: Path) -> None:
     thor_file = tmp_path / "Image_0001_0001.tif"
     thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
     wrong_dir = tmp_path / "thor"
     wrong_dir.mkdir()
 
@@ -423,6 +425,53 @@ def test_session_assembly_service_validates_thor_entries_as_tiff_files(tmp_path:
     assert intents[str(thor_file.resolve())]["entry_role_label"] == "main imaging file"
     assert rejected_dir
     assert "main imaging file" in rejected_dir[0]
+
+
+def test_session_assembly_service_summarizes_resolved_structured_bundle_members(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+    draft = service.assemble_draft(accepted, source_intents=intents)
+    session = service.create_session(draft)
+
+    assert rejected == ()
+    assert draft.sources[0].structured_bundle_member_count == 2
+    assert draft.sources[0].structured_bundle_member_labels == ("Experiment.xml", "Image_0001_0001.tif")
+    assert draft.groups[0].canonical_bundle_member_count == 2
+    assert draft.groups[0].grouping_reason.endswith("with 2 resolved bundle members.")
+    assert session.sources[0].metadata["session_assembly.structured_bundle_member_count"] == "2"
+    assert json.loads(session.sources[0].metadata["session_assembly.structured_bundle_member_labels_json"]) == [
+        "Experiment.xml",
+        "Image_0001_0001.tif",
+    ]
+
+
+def test_session_assembly_service_summarizes_directory_supported_bundle_members(tmp_path: Path) -> None:
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    (image_dir / "frame-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    (image_dir / "frame-02.tif").write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (image_dir,),
+        route_name="image",
+        route_display_name="Images",
+    )
+    draft = service.assemble_draft(accepted, source_intents=intents)
+
+    assert rejected == ()
+    assert draft.sources[0].structured_bundle_member_count == 2
+    assert draft.sources[0].structured_bundle_member_labels == ("frame-01.tif", "frame-02.tif")
+    assert draft.groups[0].canonical_bundle_member_count == 2
 
 
 def test_session_assembly_service_filters_bruker_route_matches_with_current_adapter_ids(tmp_path: Path) -> None:

@@ -92,6 +92,8 @@ class SessionAssemblyDialog(QWidget):
         self._selected_source_label.setWordWrap(True)
         self._selected_entry_label = QLabel("Not available.", self)
         self._selected_entry_label.setWordWrap(True)
+        self._selected_bundle_label = QLabel("Not available.", self)
+        self._selected_bundle_label.setWordWrap(True)
         self._selected_adapter_label = QLabel("No adapter match", self)
         self._selected_adapter_label.setWordWrap(True)
         self._selected_sidecar_label = QLabel("None", self)
@@ -198,6 +200,7 @@ class SessionAssemblyDialog(QWidget):
         source_details = QFormLayout()
         source_details.addRow("Selected Source", self._selected_source_label)
         source_details.addRow("Structured Entry", self._selected_entry_label)
+        source_details.addRow("Resolved Bundle", self._selected_bundle_label)
         source_details.addRow("Role", self._role_combo)
         source_details.addRow("Group", self._group_edit)
         source_details.addRow("Sidecar Association", self._selected_sidecar_label)
@@ -518,6 +521,7 @@ class SessionAssemblyDialog(QWidget):
         if selected_item is None:
             self._selected_source_label.setText("No source selected.")
             self._selected_entry_label.setText("Not available.")
+            self._selected_bundle_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
@@ -540,6 +544,7 @@ class SessionAssemblyDialog(QWidget):
         if source is None:
             self._selected_source_label.setText("No source selected.")
             self._selected_entry_label.setText("Not available.")
+            self._selected_bundle_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
@@ -559,6 +564,7 @@ class SessionAssemblyDialog(QWidget):
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
         entry_text = "Custom or unstructured input."
+        bundle_text = "Custom or unstructured input."
         if source.ingest_kind == "supported":
             entry_role_label = source.entry_role_label or (
                 "root directory" if source.entry_path_kind == "directory" else "main file"
@@ -569,7 +575,17 @@ class SessionAssemblyDialog(QWidget):
                 f"Entry type: {source.entry_path_kind or source.source_type.lower()}\n"
                 f"Validation: {validation_status}"
             )
+            if source.structured_bundle_member_count:
+                bundle_examples = ", ".join(source.structured_bundle_member_labels)
+                bundle_text = (
+                    f"{source.structured_bundle_member_count} resolved member"
+                    f"{'' if source.structured_bundle_member_count == 1 else 's'}\n"
+                    f"{bundle_examples}"
+                )
+            else:
+                bundle_text = "No additional bundle members detected."
         self._selected_entry_label.setText(entry_text)
+        self._selected_bundle_label.setText(bundle_text)
         adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "No adapter match"
         self._selected_adapter_label.setText(adapter_summary)
         self._selected_sidecar_label.setText(source.sidecar_for_label or "None")
@@ -650,11 +666,19 @@ class SessionAssemblyDialog(QWidget):
         self._selected_group_anchor_label.setText(str(group.anchor_path) if group.anchor_path is not None else "Not available.")
         canonical_text = "Not available."
         if group.canonical_source_label is not None:
+            bundle_summary = ""
+            if group.canonical_bundle_member_count:
+                bundle_examples = ", ".join(group.canonical_bundle_member_labels)
+                bundle_summary = (
+                    f"\nResolved bundle members: {group.canonical_bundle_member_count}"
+                    f"\n{bundle_examples}"
+                )
             canonical_text = (
                 f"{group.canonical_source_label}\n"
                 f"{group.canonical_selection_label or 'Structured source'} "
                 f"{group.canonical_entry_role_label or 'entry'}\n"
                 f"{group.canonical_source_path}"
+                f"{bundle_summary}"
             )
         self._selected_group_canonical_label.setText(canonical_text)
         self._selected_group_reason_label.setText(group.grouping_reason or "No grouping reason available.")

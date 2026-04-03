@@ -1231,6 +1231,43 @@ def test_session_assembly_dialog_shows_canonical_entry_for_structured_group(qapp
     window.close()
 
 
+def test_session_assembly_dialog_shows_resolved_bundle_summary_for_supported_source(qapp, tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    (tmp_path / "Experiment.xml").write_text("<Experiment />", encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    session_assembly_screen.add_supported_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+    qapp.processEvents()
+
+    dialog = window.session_assembly_dialog
+    dialog._source_list.setCurrentRow(0)
+    qapp.processEvents()
+
+    assert "2 resolved members" in dialog._selected_bundle_label.text()
+    assert "Experiment.xml" in dialog._selected_bundle_label.text()
+    assert "Image_0001_0001.tif" in dialog._selected_bundle_label.text()
+
+    window.close()
+
+
 def test_main_window_applies_last_output_directory_default(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)
