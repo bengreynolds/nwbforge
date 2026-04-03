@@ -132,18 +132,37 @@ class SessionAssemblyScreenModel:
         return self.add_custom_paths(paths)
 
     def add_custom_paths(self, paths: tuple[Path, ...]) -> SessionAssemblyState:
+        accepted_paths, rejected_messages = self._assembly_service.filter_custom_selected_paths(paths)
         log_event(
             self._logger,
             logging.INFO,
             "Adding custom paths to direct-ingest workspace.",
-            added_path_count=len(paths),
+            added_path_count=len(accepted_paths),
+            rejected_path_count=len(rejected_messages),
         )
-        resolved_paths = tuple(path.resolve() for path in paths)
+        if not accepted_paths and rejected_messages:
+            return self._set_state(
+                replace(
+                    self._state,
+                    error_message=" ".join(rejected_messages),
+                    user_error=None,
+                )
+            )
+        resolved_paths = tuple(path.resolve() for path in accepted_paths)
         combined = self._state.selected_paths + resolved_paths
         next_source_intents = dict(self._state.source_intents)
         for path in resolved_paths:
             next_source_intents[str(path)] = {"ingest_kind": "custom"}
-        return self._refresh(selected_paths=combined, source_intents=next_source_intents)
+        state = self._refresh(selected_paths=combined, source_intents=next_source_intents)
+        if rejected_messages:
+            return self._set_state(
+                replace(
+                    state,
+                    error_message=" ".join(rejected_messages),
+                    user_error=None,
+                )
+            )
+        return state
 
     def add_supported_paths(
         self,
@@ -493,6 +512,8 @@ class SessionAssemblyScreenModel:
                         metadata_overrides=dict(source.metadata_overrides or {}),
                         sidecar_for_source_id=source.sidecar_for_source_id,
                         sidecar_for_label=source.sidecar_for_label,
+                        context_source_id=source.context_source_id,
+                        context_label=source.context_label,
                         matching_adapter_ids=source.matching_adapter_ids,
                         suggested_adapter_id=source.suggested_adapter_id,
                         needs_review=source.needs_review,

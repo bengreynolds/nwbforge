@@ -45,6 +45,8 @@ class SessionAssemblySource:
     metadata_overrides: dict[str, str] | None = None
     sidecar_for_source_id: str | None = None
     sidecar_for_label: str | None = None
+    context_source_id: str | None = None
+    context_label: str | None = None
     needs_review: bool = False
 
 
@@ -188,6 +190,59 @@ class SessionAssemblyService:
     _VALID_SOURCE_ROLES = {"primary", "supplemental", "metadata"}
     _DESKTOP_SESSION_FILENAMES = {"session_manifest.json", "custom_session.json", "hybrid_session.json"}
     _METADATA_SIDECAR_SUFFIXES = {".json", ".yaml", ".yml", ".txt"}
+    _CUSTOM_ALLOWED_FILE_SUFFIXES = {
+        ".avi",
+        ".bin",
+        ".bmp",
+        ".continuous",
+        ".csv",
+        ".dat",
+        ".env",
+        ".flv",
+        ".gif",
+        ".h5",
+        ".hdf5",
+        ".isxd",
+        ".jpeg",
+        ".jpg",
+        ".json",
+        ".mat",
+        ".mesc",
+        ".mkv",
+        ".mov",
+        ".mp4",
+        ".nev",
+        ".nse",
+        ".ntt",
+        ".oebin",
+        ".pl2",
+        ".plx",
+        ".png",
+        ".raw",
+        ".rec",
+        ".rhd",
+        ".rhs",
+        ".sbx",
+        ".set",
+        ".smr",
+        ".smrx",
+        ".tbk",
+        ".tdx",
+        ".tev",
+        ".tif",
+        ".tiff",
+        ".tin",
+        ".tsq",
+        ".tsv",
+        ".txt",
+        ".wav",
+        ".wmv",
+        ".xlsm",
+        ".xlsx",
+        ".xml",
+        ".yaml",
+        ".yml",
+    }
     _ROUTE_ADAPTER_IDS: dict[str, tuple[str, ...]] = {
         "audio": ("neuroconv_audio",),
         "alphaomega": ("neuroconv_alphaomega",),
@@ -246,6 +301,23 @@ class SessionAssemblyService:
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
 
+    def filter_custom_selected_paths(
+        self,
+        selected_paths: tuple[Path, ...],
+    ) -> tuple[tuple[Path, ...], tuple[str, ...]]:
+        """Return accepted custom paths plus rejection messages for unsupported selections."""
+
+        accepted: list[Path] = []
+        rejected_messages: list[str] = []
+        for path in self._normalize_paths(selected_paths):
+            if self._is_supported_custom_path(path):
+                accepted.append(path)
+                continue
+            rejected_messages.append(
+                f"Ignored custom input '{path.name}' because its file type is not currently accepted for direct ingest."
+            )
+        return tuple(accepted), tuple(rejected_messages)
+
     def assemble_draft(
         self,
         selected_paths: tuple[Path, ...],
@@ -263,15 +335,6 @@ class SessionAssemblyService:
 
         normalized_paths = self._normalize_paths(selected_paths)
         sidecar_links = self._detect_sidecar_links(normalized_paths)
-        log_event(
-            self._logger,
-            logging.INFO,
-            "Assembling direct-ingest session draft.",
-            selected_path_count=len(normalized_paths),
-            group_count=len(self._grouped_paths(normalized_paths, sidecar_links)),
-            sidecar_link_count=len(sidecar_links),
-            requested_session_id=session_id or "",
-        )
         source_ids_by_path: dict[Path, str] = {}
         existing_ids: list[str] = []
         for path in normalized_paths:
@@ -318,11 +381,36 @@ class SessionAssemblyService:
             for source_id, overrides in (source_metadata_overrides or {}).items()
             if overrides
         }
-        group_assignments = self._group_assignments(normalized_paths, sidecar_links)
+        group_assignments = self._group_assignments(
+            normalized_paths,
+            sidecar_links,
+            normalized_source_intents,
+            source_ids_by_path,
+        )
+        supported_anchor_details = self._supported_anchor_details(
+            normalized_paths,
+            normalized_source_intents,
+            source_ids_by_path,
+        )
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Assembling direct-ingest session draft.",
+            selected_path_count=len(normalized_paths),
+            group_count=len(self._grouped_paths(
+                normalized_paths,
+                sidecar_links,
+                normalized_source_intents,
+                source_ids_by_path,
+            )),
+            sidecar_link_count=len(sidecar_links),
+            structured_anchor_count=len(supported_anchor_details),
+            requested_session_id=session_id or "",
+        )
 
         for index, path in enumerate(normalized_paths, start=1):
             source_id = source_ids_by_path[path.resolve()]
-            group_key, group_label = group_assignments[path.resolve()]
+            group_key, group_label, context_source_id, context_label = group_assignments[path.resolve()]
             override_group = normalized_group_overrides.get(source_id)
             if override_group:
                 group_key = f"manual:{override_group.lower()}"
@@ -351,6 +439,11 @@ class SessionAssemblyService:
             suggested_adapter_id = matching_ids[0] if len(matching_ids) == 1 else None
             needs_review = len(matching_ids) != 1
             sidecar_anchor = sidecar_links.get(path.resolve())
+            nearby_anchor_candidates = (
+                self._supported_anchor_candidates_for_path(path, supported_anchor_details)
+                if ingest_kind == "custom" and sidecar_anchor is None and context_source_id is None
+                else ()
+            )
             role = normalized_source_roles.get(source_id, self._default_role_for_index(index, sidecar_anchor is not None))
 
             if ingest_kind == "supported" and route_name and not matching_ids:
@@ -402,6 +495,30 @@ class SessionAssemblyService:
                         location=path,
                     )
                 )
+            elif context_source_id is not None and ingest_kind == "custom":
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-custom-context-association",
+                        message=(
+                            f"Associated custom input '{path.name}' with structured source '{context_label}'. "
+                            "Review the bundle and role before preview."
+                        ),
+                        severity=IssueSeverity.INFO,
+                        location=path,
+                    )
+                )
+            elif len(nearby_anchor_candidates) > 1:
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-ambiguous-custom-context",
+                        message=(
+                            f"Custom input '{path.name}' is near multiple structured dataset selections. "
+                            "It remains separate until you review the grouping."
+                        ),
+                        severity=IssueSeverity.WARNING,
+                        location=path,
+                    )
+                )
 
             draft_sources.append(
                 SessionAssemblySource(
@@ -421,6 +538,8 @@ class SessionAssemblyService:
                     metadata_overrides=dict(normalized_source_metadata_overrides.get(source_id, {})),
                     sidecar_for_source_id=source_ids_by_path.get(sidecar_anchor) if sidecar_anchor is not None else None,
                     sidecar_for_label=sidecar_anchor.name if sidecar_anchor is not None else None,
+                    context_source_id=context_source_id,
+                    context_label=context_label,
                     needs_review=needs_review,
                 )
             )
@@ -595,6 +714,8 @@ class SessionAssemblyService:
                     ).lower(),
                     "session_assembly.sidecar_for_source_id": source.sidecar_for_source_id or "",
                     "session_assembly.sidecar_for_label": source.sidecar_for_label or "",
+                    "session_assembly.context_source_id": source.context_source_id or "",
+                    "session_assembly.context_label": source.context_label or "",
                 },
                 sidecar_ids=sidecar_ids_by_anchor.get(source.source_id, ()),
             )
@@ -666,13 +787,23 @@ class SessionAssemblyService:
         self,
         normalized_paths: tuple[Path, ...],
         sidecar_links: dict[Path, Path],
-    ) -> dict[Path, tuple[str, str]]:
+        source_intents: dict[str, dict[str, str]],
+        source_ids_by_path: dict[Path, str],
+    ) -> dict[Path, tuple[str, str, str | None, str | None]]:
         descriptor_directories = {
             path.parent.resolve(): path
             for path in normalized_paths
             if path.is_file() and path.name.lower() in self._DESKTOP_SESSION_FILENAMES
         }
-        assignments: dict[Path, tuple[str, str]] = {}
+        assignments: dict[Path, tuple[str, str, str | None, str | None]] = {}
+        supported_anchor_details = self._supported_anchor_details(
+            normalized_paths,
+            source_intents,
+            source_ids_by_path,
+        )
+
+        for resolved, assignment in supported_anchor_details.items():
+            assignments[resolved] = assignment
 
         for path in normalized_paths:
             resolved = path.resolve()
@@ -685,6 +816,8 @@ class SessionAssemblyService:
                 anchor_assignment = (
                     f"sidecar-bundle:{anchor.parent.resolve().as_posix().lower()}:{anchor.stem.lower()}",
                     anchor.stem or anchor.parent.name or "Session",
+                    source_ids_by_path.get(anchor_resolved),
+                    anchor.name,
                 )
                 assignments[anchor_resolved] = anchor_assignment
             assignments[resolved] = anchor_assignment
@@ -693,34 +826,92 @@ class SessionAssemblyService:
             resolved = path.resolve()
             if resolved in assignments:
                 continue
+            anchor_candidates = self._supported_anchor_candidates_for_path(path, supported_anchor_details)
+            if len(anchor_candidates) == 1:
+                anchor_path = anchor_candidates[0]
+                assignments[resolved] = supported_anchor_details[anchor_path]
+                continue
             assignments[resolved] = self._base_group_for_path(path, descriptor_directories)
         return assignments
+
+    def _supported_anchor_details(
+        self,
+        normalized_paths: tuple[Path, ...],
+        source_intents: dict[str, dict[str, str]],
+        source_ids_by_path: dict[Path, str],
+    ) -> dict[Path, tuple[str, str, str | None, str | None]]:
+        details: dict[Path, tuple[str, str, str | None, str | None]] = {}
+        for path in normalized_paths:
+            intent = source_intents.get(str(path.resolve()), {})
+            if intent.get("ingest_kind") != "supported":
+                continue
+            resolved = path.resolve()
+            route_display_name = intent.get("route_display_name") or "NeuroConv"
+            group_label = resolved.stem if resolved.is_file() else resolved.name or route_display_name
+            context_label = route_display_name or group_label
+            details[resolved] = (
+                f"supported-anchor:{route_display_name.lower()}:{resolved.as_posix().lower()}",
+                group_label,
+                source_ids_by_path[resolved],
+                context_label,
+            )
+        return details
+
+    @staticmethod
+    def _supported_anchor_candidates_for_path(
+        path: Path,
+        supported_anchor_details: dict[Path, tuple[str, str, str | None, str | None]],
+    ) -> tuple[Path, ...]:
+        resolved = path.resolve()
+        candidates: list[Path] = []
+        for anchor_path in supported_anchor_details:
+            if anchor_path == resolved:
+                continue
+            if anchor_path.is_dir():
+                if anchor_path in resolved.parents or resolved.parent == anchor_path.parent:
+                    candidates.append(anchor_path)
+                continue
+            if resolved.parent == anchor_path.parent:
+                candidates.append(anchor_path)
+        return tuple(sorted(dict.fromkeys(candidates), key=lambda candidate: candidate.as_posix().lower()))
 
     def _base_group_for_path(
         self,
         path: Path,
         descriptor_directories: dict[Path, Path],
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str | None, str | None]:
         if path.is_dir():
             resolved = path.resolve()
-            return str(resolved), resolved.name or "Session"
+            return str(resolved), resolved.name or "Session", None, None
         if path.name.lower() in self._DESKTOP_SESSION_FILENAMES:
             parent = path.parent.resolve()
-            return str(parent), parent.name or path.stem
+            return str(parent), parent.name or path.stem, None, None
         parent = path.parent.resolve()
         if parent in descriptor_directories:
-            return (f"descriptor-parent:{parent.as_posix().lower()}", parent.name or path.stem)
+            return (f"descriptor-parent:{parent.as_posix().lower()}", parent.name or path.stem, None, None)
         if path.suffix.lower() in self._METADATA_SIDECAR_SUFFIXES:
-            return (f"sidecar-stem:{parent.as_posix().lower()}:{path.stem.lower()}", path.stem or parent.name)
-        return (str(parent), parent.name or path.stem)
+            return (
+                f"sidecar-stem:{parent.as_posix().lower()}:{path.stem.lower()}",
+                path.stem or parent.name,
+                None,
+                None,
+            )
+        return (str(parent), parent.name or path.stem, None, None)
 
     def _grouped_paths(
         self,
         normalized_paths: tuple[Path, ...],
         sidecar_links: dict[Path, Path],
+        source_intents: dict[str, dict[str, str]],
+        source_ids_by_path: dict[Path, str],
     ) -> dict[str, list[Path]]:
         groups: dict[str, list[Path]] = {}
-        for path, (_, group_label) in self._group_assignments(normalized_paths, sidecar_links).items():
+        for path, (_, group_label, _, _) in self._group_assignments(
+            normalized_paths,
+            sidecar_links,
+            source_intents,
+            source_ids_by_path,
+        ).items():
             groups.setdefault(group_label, []).append(path)
         return groups
 
@@ -730,6 +921,8 @@ class SessionAssemblyService:
             return "manual"
         if group_key.startswith("sidecar-bundle:"):
             return "sidecar_bundle"
+        if group_key.startswith("supported-anchor:"):
+            return "supported_anchor"
         if group_key.startswith("descriptor-parent:"):
             return "descriptor_parent"
         if len(sources) == 1 and sources[0].location.is_dir():
@@ -748,6 +941,14 @@ class SessionAssemblyService:
             return "Created or corrected manually in the direct-ingest workspace."
         if group_key.startswith("sidecar-bundle:"):
             return "Grouped by same-stem metadata sidecar detection."
+        supported_sources = [source for source in sources if source.ingest_kind == "supported"]
+        if group_key.startswith("supported-anchor:") and supported_sources:
+            anchor_label = supported_sources[0].selection_label
+            if len(sources) > 1:
+                return (
+                    f"Grouped around the selected {anchor_label} dataset entry path with nearby custom or supplemental inputs."
+                )
+            return f"Selected {anchor_label} dataset entry path treated as one structured source bundle."
         if group_key.startswith("descriptor-parent:"):
             return "Grouped under a recognized session-descriptor parent directory."
         if len(group_pathways) > 1:
@@ -788,6 +989,26 @@ class SessionAssemblyService:
         if not allowed_adapter_ids:
             return matches
         return tuple(adapter for adapter in matches if adapter.adapter_id in allowed_adapter_ids)
+
+    def _is_supported_custom_path(self, path: Path) -> bool:
+        if path.is_dir():
+            return True
+        source_reference = SourceReference(
+            source_id="custom-selection",
+            location=path,
+            source_type=SourceType.FILE,
+            label=path.name,
+        )
+        if self._registry.matching_adapters(source_reference):
+            return True
+        suffixes = tuple(suffix.lower() for suffix in path.suffixes)
+        if not suffixes:
+            return False
+        if suffixes[-1] in self._CUSTOM_ALLOWED_FILE_SUFFIXES:
+            return True
+        if len(suffixes) >= 2 and "".join(suffixes[-2:]) in {".raw.h5"}:
+            return True
+        return False
 
     @staticmethod
     def _slugify(value: str) -> str:

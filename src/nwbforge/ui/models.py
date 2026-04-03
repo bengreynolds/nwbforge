@@ -117,6 +117,8 @@ class SessionAssemblySourceItem:
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None
     sidecar_for_label: str | None = None
+    context_source_id: str | None = None
+    context_label: str | None = None
     matching_adapter_ids: tuple[str, ...] = ()
     suggested_adapter_id: str | None = None
     needs_review: bool = False
