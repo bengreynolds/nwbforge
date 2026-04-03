@@ -173,7 +173,7 @@ Completed:
 - Added clearer field-level metadata-resolution state in the conversion workspace by separating preferred session-value status from source-specific override status and adding rebuild-cycle coverage for session/source override history
 - Added snapshot-history restore context in the desktop workspace so selected saved states show status, artifact count, issue count, and review state before restore
 - Added an explicit `Close Current Session` desktop action so session removal is available through the File menu and not only through the runtime tab strip
-- Completed the first UX-correction baseline from the mismatch audit: `New Session` now opens as the home workspace, imported-session loading is grouped under compatibility, optional route support is visually secondary, advanced review tools stay hidden by default, metadata review shows recommended actions first, and the conversion workspace now includes live readiness plus pre-write checklist guidance
+- Completed the mismatch A-D UX-correction pass for the current baseline: `New Session` now opens as the home workspace, secondary panels return to the right home surface, imported-session loading is grouped under compatibility, optional route support is visually secondary and hidden until invoked, advanced review tools stay hidden by default, metadata review shows recommended actions first, run-stage controls now live on the run page, and the conversion workspace includes both pre-write and post-write review checklists
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -261,7 +261,7 @@ Priority order:
 - Support explicit creation and deletion of both projects and sessions as first-class desktop actions rather than relying only on one transient conversion workspace.
 - Demote session JSON loading in product-facing navigation and copy so it reads as a compatibility/import path rather than the primary happy path.
 - Move diagnostics, history, and advanced conflict-resolution controls toward progressive disclosure after the main operator path is clearer.
-- The next Milestone D slice should focus on post-write review clarity and project-aware session workspaces rather than on the already-landed baseline mismatch-correction pass.
+- The next Milestone D slice should focus on project-aware session workspaces and internal-testing-driven polish rather than on the now-completed mismatch-correction pass.
 
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
 
@@ -489,8 +489,8 @@ Task consequences:
 #### Product-directed UX task list
 
 Current status:
-- The first UX-correction baseline is now materially implemented in the desktop app: guided conversion workflow messaging, progressive disclosure for advanced tools, recommended metadata-resolution actions, direct-ingest-first navigation framing, simpler workflow terminology, visible readiness summaries, and `New Session` as the home workspace are all in place.
-- Remaining UX work should now focus on deeper workflow polish rather than on finishing the initial mismatch checklist, especially post-write review clarity, project-aware session workspaces, and representative-dataset hardening.
+- The mismatch A-D correction pass is now materially implemented in the desktop app: guided conversion workflow messaging, progressive disclosure for advanced tools, recommended metadata-resolution actions, direct-ingest-first navigation framing, simpler workflow terminology, visible readiness summaries, `New Session` as the home workspace, stage-specific control placement, and post-write review checklist guidance are all in place.
+- Remaining UX work should now focus on deeper workflow polish rather than on finishing the mismatch checklist, especially project-aware session workspaces and representative-dataset hardening.
 
 Workflow simplification pass:
 - redesign the conversion panel as a guided stage flow rather than a dense all-at-once control surface
