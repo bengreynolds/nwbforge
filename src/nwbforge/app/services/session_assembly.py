@@ -100,6 +100,7 @@ class SessionAssemblyDraft:
     issues: tuple[SessionAssemblyIssue, ...]
     metadata_overrides: dict[str, str]
     source_metadata_overrides: dict[str, dict[str, str]]
+    project_path: Path | None = None
 
     @property
     def can_create_session(self) -> bool:
@@ -490,6 +491,7 @@ class SessionAssemblyService:
         selected_paths: tuple[Path, ...],
         *,
         source_intents: dict[str, dict[str, str]] | None = None,
+        project_path: Path | None = None,
         session_id: str | None = None,
         title: str | None = None,
         source_roles: dict[str, str] | None = None,
@@ -909,6 +911,7 @@ class SessionAssemblyService:
             issues=tuple(issues),
             metadata_overrides=normalized_metadata_overrides,
             source_metadata_overrides=normalized_source_metadata_overrides,
+            project_path=project_path.resolve() if project_path is not None else None,
         )
 
     def create_session(self, draft: SessionAssemblyDraft) -> ConversionSession:
@@ -974,6 +977,8 @@ class SessionAssemblyService:
                     "session_assembly.sidecar_for_label": source.sidecar_for_label or "",
                     "session_assembly.context_source_id": source.context_source_id or "",
                     "session_assembly.context_label": source.context_label or "",
+                    "session_assembly.project_path": str(draft.project_path) if draft.project_path is not None else "",
+                    "session_assembly.project_name": draft.project_path.name if draft.project_path is not None else "",
                 },
                 sidecar_ids=sidecar_ids_by_anchor.get(source.source_id, ()),
             )

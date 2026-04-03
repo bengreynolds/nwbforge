@@ -454,6 +454,7 @@ class SessionAssemblyScreenModel:
             draft = self._assembly_service.assemble_draft(
                 next_paths,
                 source_intents=next_source_intents,
+                project_path=self._state.project_path,
                 session_id=next_session_id,
                 title=next_title,
                 source_roles=next_source_roles,

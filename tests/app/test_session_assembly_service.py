@@ -750,6 +750,20 @@ def test_session_assembly_service_groups_supported_sources_as_combined_workflow(
     assert session.sources[1].metadata["session_assembly.workflow_display_name"] == "TIFF + Suite2p Workflow"
 
 
+def test_session_assembly_service_preserves_project_origin_in_created_session(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
+    project_path.parent.mkdir()
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft((manifest_path,), project_path=project_path)
+    session = service.create_session(draft)
+
+    assert session.sources[0].metadata["session_assembly.project_path"] == str(project_path.resolve())
+    assert session.sources[0].metadata["session_assembly.project_name"] == "saved-project.nwbforge-project.json"
+
+
 def test_session_assembly_service_attaches_custom_input_to_matched_workflow_group(tmp_path: Path) -> None:
     imaging_dir = tmp_path / "imaging"
     imaging_dir.mkdir()
