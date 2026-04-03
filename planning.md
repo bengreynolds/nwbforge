@@ -166,6 +166,7 @@ Completed:
 - Expanded the conversion workspace with a dedicated diagnostics view over runtime progress history for manual-testing triage
 - Expanded custom/hybrid repository-owned assembly beyond behavior-only streams so inline imaging streams now write to `ImageSeries` and inline ecephys streams now write to `ElectricalSeries`
 - Expanded combined NeuroConv workflows from inspection/composition only into direct supported execution for workflow-matched sessions backed entirely by direct NeuroConv delegates
+- Added explicit repo-facing governance docs for the current phase: a maintainer-reviewed contributor guide, end-user workflow guidance in `README.md`, and an MIT license baseline for community use and contribution
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -1231,6 +1232,7 @@ Current status:
 - The first toolkit-agnostic UI models now exist under `src/nwbforge/ui/`, which lets the repo start desktop-shell development before choosing a concrete widget toolkit
 - The first conversion-session UI model is now in place, so the next UI work can focus on shared log/error presentation and then a concrete widget layer rather than inventing session workflow state from scratch
 - Shared log/error presentation is now partially in place at the UI-model layer, so the next UI work can move toward file-backed/composite sinks and actual widget rendering rather than backend exception formatting
+- The repo now has explicit community-facing baseline docs for this phase: `README.md` carries end-user workflow expectations, `CONTRIBUTING.md` captures the maintainer-reviewed PR model and contribution expectations, and `LICENSE` establishes the MIT licensing baseline
 
 ### Phase 3: Supported-path MVP
 - Implement one end-to-end supported workflow using NeuroConv-backed adapters
