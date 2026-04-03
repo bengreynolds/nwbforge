@@ -181,6 +181,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Explicit direct-ingest project workflow with `Open Project...`, `Save Project`, `Save Project As...`, recent-project history, and project-aware draft recovery
 - Explicit direct-ingest project lifecycle actions with `New Project` and confirmed `Delete Project...` behavior in the desktop shell
 - Runtime conversion-session tabs so multiple created/opened sessions can stay available inside the main Conversion workspace and be closed individually
+- Explicit desktop session lifecycle actions now include `Close Current Session`, so session removal is available through the File menu and not only from the runtime tab strip
 - Structured source-type selection in `New Session`, including a `Custom` option plus dynamically available installed NeuroConv route options, with per-path ingest intent persisted through draft state and saved projects
 - First-pass route-specific entry validation for structured supported selections, so obviously wrong project/main-file or root-directory choices are rejected before they enter the direct-ingest workspace
 - Follow-up direct-ingest hardening so supported entry validation now matches current Bruker, Thor, audio, image, TIFF, and video route semantics, optional adapter exports fail closed when package-gated symbols are absent, and shell/file logging paths tolerate re-entrant listener updates plus non-JSON context values
