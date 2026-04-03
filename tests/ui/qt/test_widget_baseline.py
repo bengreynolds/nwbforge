@@ -1900,12 +1900,16 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
+    window.conversion_widget._workspace_tabs.setCurrentIndex(2)
+    qapp.processEvents()
 
     assert window.conversion_widget._disagreement_list.count() == 1
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 0
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 2
     assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
+    assert not window.conversion_widget._custom_session_override_toggle.isChecked()
+    assert not window.conversion_widget._manual_session_override_edit.isVisible()
     assert (
         "use the selected source value as the preferred session value"
         in window.conversion_widget._recommended_resolution_label.text().lower()
@@ -2195,6 +2199,8 @@ def test_conversion_widget_can_apply_manual_session_override_from_metadata_revie
 
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._custom_session_override_toggle.setChecked(True)
     qapp.processEvents()
     window.conversion_widget._manual_session_override_edit.setText("manual-session-01")
     qapp.processEvents()
@@ -2489,6 +2495,7 @@ def test_conversion_widget_can_clear_all_overrides_for_selected_field(qapp, tmp_
     qapp.processEvents()
     window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
     qapp.processEvents()
+    assert window.conversion_widget._custom_session_override_toggle.isChecked()
     assert "session override" in window.conversion_widget._selected_resolution_status_label.text().lower()
     window.conversion_widget._clear_all_field_overrides_button.click()
     qapp.processEvents()

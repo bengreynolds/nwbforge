@@ -147,6 +147,9 @@ class ConversionSessionWidget(QWidget):
         self._selected_resolution_status_label.setWordWrap(True)
         self._metadata_resolution_summary_label = QLabel("No metadata conflicts loaded.", self)
         self._metadata_resolution_summary_label.setWordWrap(True)
+        self._custom_session_override_toggle = QCheckBox("Use a custom preferred session value", self)
+        self._custom_session_override_toggle.toggled.connect(self._set_custom_session_override_visible)
+        self._manual_session_override_label = QLabel("Custom preferred session value", self)
         self._manual_session_override_edit = QLineEdit(self)
         self._manual_session_override_edit.setPlaceholderText("Manual session override value for selected field")
         self._manual_session_override_edit.textChanged.connect(self._refresh_metadata_resolution_actions)
@@ -325,15 +328,16 @@ class ConversionSessionWidget(QWidget):
         metadata_detail_layout.addWidget(self._selected_override_status_label)
         metadata_detail_layout.addWidget(QLabel("Source comparison", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_source_list, stretch=1)
-        metadata_detail_layout.addWidget(QLabel("Preferred session value", self))
-        metadata_detail_layout.addWidget(self._manual_session_override_edit)
         metadata_detail_layout.addWidget(QLabel("Resolution notes", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_notes_label)
         metadata_resolution_row = QHBoxLayout()
         metadata_resolution_row.addWidget(self._use_source_value_button)
-        metadata_resolution_row.addWidget(self._apply_manual_session_override_button)
         metadata_resolution_row.addWidget(self._clear_override_button)
         metadata_detail_layout.addLayout(metadata_resolution_row)
+        metadata_detail_layout.addWidget(self._custom_session_override_toggle)
+        metadata_detail_layout.addWidget(self._manual_session_override_label)
+        metadata_detail_layout.addWidget(self._manual_session_override_edit)
+        metadata_detail_layout.addWidget(self._apply_manual_session_override_button)
         self._advanced_resolution_group = QGroupBox("Advanced Resolution Tools", self)
         advanced_resolution_layout = QVBoxLayout(self._advanced_resolution_group)
         advanced_resolution_layout.addWidget(QLabel("Preferred value for selected source", self))
@@ -375,6 +379,7 @@ class ConversionSessionWidget(QWidget):
         self._workspace_tabs.addTab(history_page, "History")
         self._workspace_tabs.addTab(diagnostics_page, "Diagnostics")
         self._set_advanced_ui_visible(False)
+        self._set_custom_session_override_visible(False)
 
         right_column = QWidget(self)
         right_column_layout = QVBoxLayout(right_column)
@@ -674,6 +679,8 @@ class ConversionSessionWidget(QWidget):
             )
             self._selected_override_status_label.setText("No session override applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
+            with QSignalBlocker(self._custom_session_override_toggle):
+                self._custom_session_override_toggle.setChecked(False)
             with QSignalBlocker(self._manual_session_override_edit):
                 self._manual_session_override_edit.setText("")
             with QSignalBlocker(self._selected_source_override_edit):
@@ -698,6 +705,8 @@ class ConversionSessionWidget(QWidget):
             )
             self._selected_override_status_label.setText("No session override applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
+            with QSignalBlocker(self._custom_session_override_toggle):
+                self._custom_session_override_toggle.setChecked(False)
             with QSignalBlocker(self._manual_session_override_edit):
                 self._manual_session_override_edit.setText("")
             with QSignalBlocker(self._selected_source_override_edit):
@@ -757,8 +766,12 @@ class ConversionSessionWidget(QWidget):
         self._selected_override_status_label.setText(
             "\n".join(override_lines) if override_lines else "No session or source overrides applied."
         )
+        should_show_custom_override = disagreement.session_override_value is not None
+        with QSignalBlocker(self._custom_session_override_toggle):
+            self._custom_session_override_toggle.setChecked(should_show_custom_override)
         with QSignalBlocker(self._manual_session_override_edit):
             self._manual_session_override_edit.setText(disagreement.session_override_value or "")
+        self._set_custom_session_override_visible(should_show_custom_override)
         self._sync_selected_disagreement_source()
         self._refresh_metadata_resolution_actions()
 
@@ -958,14 +971,20 @@ class ConversionSessionWidget(QWidget):
         if not visible and self._workspace_tabs.currentIndex() in {4, 5}:
             self._workspace_tabs.setCurrentIndex(0)
 
+    def _set_custom_session_override_visible(self, visible: bool) -> None:
+        self._manual_session_override_label.setVisible(visible)
+        self._manual_session_override_edit.setVisible(visible)
+        self._apply_manual_session_override_button.setVisible(visible)
+
     def _refresh_metadata_resolution_actions(self, *_args) -> None:
         disagreement = self._selected_disagreement()
         selected_source_item = self._selected_disagreement_source_list.currentItem()
         selected_source = self._selected_disagreement_source()
         self._use_source_value_button.setEnabled(disagreement is not None and selected_source_item is not None)
-        self._manual_session_override_edit.setEnabled(disagreement is not None)
+        custom_override_enabled = disagreement is not None and self._custom_session_override_toggle.isChecked()
+        self._manual_session_override_edit.setEnabled(custom_override_enabled)
         self._apply_manual_session_override_button.setEnabled(
-            disagreement is not None and bool(self._manual_session_override_edit.text().strip())
+            custom_override_enabled and bool(self._manual_session_override_edit.text().strip())
         )
         self._clear_override_button.setEnabled(
             disagreement is not None and disagreement.session_override_value is not None
