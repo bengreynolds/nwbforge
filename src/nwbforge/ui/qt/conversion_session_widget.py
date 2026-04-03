@@ -1113,10 +1113,20 @@ class ConversionSessionWidget(QWidget):
             return "Session focus: no session loaded. Open Session Details only when you need source inspection."
         source_count = len(state.sources)
         source_suffix = "data source" if source_count == 1 else "data sources"
+        project_name = ConversionSessionWidget._session_project_name(state.session)
+        project_prefix = f"Project: {project_name} | " if project_name else ""
         return (
-            f"Session focus: {state.session.session_id} | {state.session.pathway.value} workflow | "
+            f"Session focus: {project_prefix}{state.session.session_id} | {state.session.pathway.value} workflow | "
             f"{source_count} {source_suffix}. Open Session Details for per-source inspection and output setup."
         )
+
+    @staticmethod
+    def _session_project_name(session: ConversionSession) -> str | None:
+        for source in session.sources:
+            project_name = source.metadata.get("session_assembly.project_name", "").strip()
+            if project_name:
+                return Path(project_name).stem
+        return None
 
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state
