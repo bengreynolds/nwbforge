@@ -169,6 +169,10 @@ Completed:
 - Added explicit repo-facing governance docs for the current phase: a maintainer-reviewed contributor guide, end-user workflow guidance in `README.md`, and an MIT license baseline for community use and contribution
 - Added workflow-aware direct-ingest grouping so known multi-source NeuroConv combinations such as `TIFF + Suite2p` can surface as one reviewable dataset bundle instead of remaining separate structured anchors when the match is unambiguous
 - Added first-pass structured-bundle member absorption so deterministically resolved dependent files selected alongside a supported canonical entry stay inside that structured bundle instead of becoming separate draft sources
+- Added persisted direct-ingest group identity on created conversion-session sources so bundle kind, pathway, canonical context, grouping reason, and member/source summaries survive beyond the draft workspace
+- Added clearer field-level metadata-resolution state in the conversion workspace by separating preferred session-value status from source-specific override status and adding rebuild-cycle coverage for session/source override history
+- Added snapshot-history restore context in the desktop workspace so selected saved states show status, artifact count, issue count, and review state before restore
+- Added an explicit `Close Current Session` desktop action so session removal is available through the File menu and not only through the runtime tab strip
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
@@ -180,10 +184,11 @@ Next:
 - Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth.
 - Define and run the internal-testing matrix in the dedicated Conda environment: smoke baseline, focused route/workflow checks, and at least 3 representative local datasets that stress supported, custom, or hybrid ingest paths.
 - Capture internal-testing findings in a repeatable triage loop and convert them into prioritized UI, workflow, performance, and operational fixes instead of reopening broad architecture work.
-- Deliver the next direct-ingest milestone as a richer dataset/session model: stronger bundle identity, clearer confirmation semantics, and better handling of ambiguous multi-file groups.
-- Deliver the next metadata-review milestone as fuller field-by-field disagreement resolution with clearer session-wide versus source-specific override history.
-- Continue hardening persistence, recovery, logging, review/report, and diagnostics flows until routine manual testing no longer depends on frequent developer intervention.
+- Continue Milestone A by improving ambiguous multi-file dataset handling and saved-project round trips now that stronger direct-ingest group identity survives into created sessions.
+- Continue Milestone B by broadening field-level metadata review beyond the current canonical-field cycle coverage and making resolved versus pending conflicts easier to scan at a glance.
+- Continue Milestone C by improving diagnostics triage clarity and repeated-run recovery/report behavior now that snapshot restore context is visible before restore.
 - Hardening the desktop UI itself is now explicit local-app work: scroll behavior, splitter/resize behavior, smaller-display usability, actionable controls, and removing unexpected tab focus changes should be treated as blocking polish rather than optional cleanup.
+- Continue Milestone D by making project-aware session workspaces clearer now that explicit session close is available through both the runtime tabs and the File menu.
 - Reduce reliance on `Open Session...` JSON/bootstrap fixtures during day-to-day testing by preferring direct-ingest plus explicit project reopen flows wherever practical.
 - Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps.
 - Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area only when a real testing scenario is blocked by the current baseline.
@@ -222,16 +227,22 @@ Priority order:
 - Push custom-input organization toward NWB-facing roles such as acquisition, behavior, metadata, and processed data whenever the evidence supports it, while preserving provenance and keeping uncertain mappings included but marked for review.
 - Keep UI language and issue text researcher-facing: use technically precise NWB and NeuroConv terminology without oversimplifying the workflow.
 - Preserve explicit provenance for bundle membership, grouping reasons, and user corrections so later review/report flows can explain how a session was assembled.
+- Stronger direct-ingest bundle identity is now partially in place: created conversion sessions retain group kind, pathway, canonical bundle context, grouping reason, and member/source summaries from the direct-ingest workspace.
+- The next Milestone A slice should deepen ambiguous bundle handling and saved-project round trips now that direct-ingest group identity survives past session creation.
 - Keep hardening custom ingest acceptance so supported scientific/media/metadata files remain eligible while obviously unrelated files are rejected with clear reviewable feedback.
 - Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, structured-source context propagation, and saved-project round trips over the richer dataset model.
 
 #### Milestone B: Metadata Review And Resolution
 - Expand the metadata-review workspace from the current override actions into a fuller field-by-field resolution workflow over the current canonical field set.
 - Make session-wide versus source-specific override history more explicit so users can tell which action resolved a disagreement and what still remains unresolved.
+- Session-wide versus source-specific resolution state is now clearer in the conversion workspace, and explicit preview -> override -> rebuild -> clear -> rebuild coverage exists for the current canonical mixed-source review path.
+- The next Milestone B slice should make resolved versus pending disagreement state easier to scan in the conflict list and continue expanding beyond the current canonical field coverage.
 - Add tests that cover repeated review/rebuild cycles, override clearing, and mixed-source disagreement resolution in supported, custom, and hybrid sessions.
 
 #### Milestone C: Recovery, Diagnostics, And Testing Triage
 - Finish hardening snapshot recovery, restore, report/review reopen behavior, and desktop error handling so repeated manual-testing runs are predictable.
+- Snapshot history now includes selected-snapshot restore context in the desktop workspace before restore, which reduces restore ambiguity during repeated local testing.
+- The next Milestone C slice should improve diagnostics triage readability and make failure-versus-recovery state easier to distinguish during manual runs.
 - Define and run the first internal-testing matrix: smoke baseline, focused route/workflow checks, and representative local datasets.
 - Record findings as explicit blocking versus non-blocking local-app issues so testing-driven fixes can be prioritized without reopening broad architecture scope.
 
@@ -239,6 +250,7 @@ Priority order:
 - First hardening slice is now in place: the desktop workspace no longer force-switches users between tabs during ordinary shell/session state updates, major embedded panels are scrollable on smaller displays, and the main split panes are collapsible/resizable instead of acting like fixed layouts.
 - The conversion workspace now keeps multiple loaded or created sessions open in runtime tabs so users can switch between idle sessions and close individual session tabs without clearing the whole workspace.
 - The desktop shell now exposes explicit `New Project` and `Delete Project` actions for the active direct-ingest draft/file instead of relying only on open/save flows.
+- The desktop shell now also exposes an explicit `Close Current Session` action, so session removal is a first-class shell control rather than only a tab-strip gesture.
 - Treat major workspace panels as scrollable and resizable on smaller displays instead of assuming one large monitor baseline.
 - Remove automatic tab-focus changes triggered only by state updates when they interfere with package selection, settings edits, file-menu flows, or metadata review work.
 - Keep package, settings, direct-ingest, and conversion controls user-driven and actionable while the surrounding runtime state changes.
