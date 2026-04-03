@@ -272,7 +272,7 @@ class MainWindow(QMainWindow):
         self._delete_project_action.triggered.connect(self._delete_project)
         self._file_menu.addAction(self._delete_project_action)
 
-        self._open_session_action = QAction("Open Session...", self)
+        self._open_session_action = QAction("Import Session JSON (Compatibility)...", self)
         self._open_session_action.triggered.connect(self._open_session_from_dialog)
         self._file_menu.addAction(self._open_session_action)
 
@@ -283,11 +283,11 @@ class MainWindow(QMainWindow):
         self._recent_projects_menu = self._file_menu.addMenu("Open Recent Project")
         self._recent_projects_menu.setEnabled(False)
 
-        self._reopen_last_session_action = QAction("Reopen Last Session", self)
+        self._reopen_last_session_action = QAction("Reopen Last Imported Session", self)
         self._reopen_last_session_action.triggered.connect(self._reopen_last_session)
         self._file_menu.addAction(self._reopen_last_session_action)
 
-        self._recent_sessions_menu = self._file_menu.addMenu("Open Recent")
+        self._recent_sessions_menu = self._file_menu.addMenu("Open Recent Imported Session")
         self._recent_sessions_menu.setEnabled(False)
 
         self._settings_action = QAction("Settings", self)
@@ -322,15 +322,20 @@ class MainWindow(QMainWindow):
     def _open_session_from_dialog(self) -> None:
         selected_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Conversion Session",
+            "Import Session JSON (Compatibility)",
             str(Path.cwd()),
-            "Conversion sessions (session_manifest.json custom_session.json hybrid_session.json);;JSON files (*.json)",
+            "Compatibility session JSON (session_manifest.json custom_session.json hybrid_session.json);;JSON files (*.json)",
         )
         if not selected_path:
-            log_event(self._logger, logging.DEBUG, "Open Session dialog canceled.")
+            log_event(self._logger, logging.DEBUG, "Compatibility session import dialog canceled.")
             return
 
-        log_event(self._logger, logging.INFO, "Selected session file from desktop dialog.", session_path=selected_path)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Selected compatibility session file from desktop dialog.",
+            session_path=selected_path,
+        )
         self._load_session(Path(selected_path))
 
     def _open_nwb_viewer_from_dialog(self) -> None:
@@ -480,7 +485,7 @@ class MainWindow(QMainWindow):
                     is_error=True,
                 ),
                 user_error=UserFacingError(
-                    title="Reopen Session Error",
+                    title="Reopen Imported Session Error",
                     message="No recent session is available to reopen.",
                     category="session",
                 ),
@@ -595,7 +600,7 @@ class MainWindow(QMainWindow):
                     is_error=True,
                 ),
                 user_error=UserFacingError(
-                    title="Open Session Error",
+                    title="Import Session Error",
                     message=str(exc),
                     detail=f"Could not load session from {session_path}.",
                     category="session",
@@ -1015,7 +1020,7 @@ class MainWindow(QMainWindow):
         if state.session is None:
             self._workspace_title_label.setText("Conversion Workspace")
             self._workspace_subtitle_label.setText(
-                "Start a new conversion session, review grouped inputs, and run preview or write workflows."
+                "Start with New Session for direct ingest. Use session JSON import only for compatibility, reopen, or testing support."
             )
             if self._workspace_badge_label is not None:
                 self._workspace_badge_label.setText("Awaiting Session")
