@@ -122,6 +122,7 @@ class ConversionSessionWidget(QWidget):
         self._artifact_list = QListWidget(self)
         self._artifact_list.itemSelectionChanged.connect(self._refresh_artifact_actions)
         self._snapshot_history_list = QListWidget(self)
+        self._snapshot_history_list.currentItemChanged.connect(self._sync_selected_snapshot_summary)
         self._snapshot_history_list.itemSelectionChanged.connect(self._refresh_snapshot_actions)
         self._progress_history_list = QListWidget(self)
         self._disagreement_list = QListWidget(self)
@@ -188,6 +189,11 @@ class ConversionSessionWidget(QWidget):
         self._open_review_artifact_button.clicked.connect(lambda: self._open_artifact_by_type("review_decision"))
         self._restore_snapshot_button = QPushButton("Restore Selected Snapshot", self)
         self._restore_snapshot_button.clicked.connect(self._restore_selected_snapshot)
+        self._selected_snapshot_summary_label = QLabel(
+            "Select a saved snapshot to review its restore impact.",
+            self,
+        )
+        self._selected_snapshot_summary_label.setWordWrap(True)
 
         self._session_summary_group = QGroupBox("Session Overview", self)
         self._execution_group = QGroupBox("Execution Status", self)
@@ -312,6 +318,7 @@ class ConversionSessionWidget(QWidget):
 
         history_layout = QVBoxLayout()
         history_layout.addWidget(self._snapshot_history_list, stretch=1)
+        history_layout.addWidget(self._selected_snapshot_summary_label)
         history_layout.addWidget(self._restore_snapshot_button)
         self._history_group.setLayout(history_layout)
 
@@ -630,6 +637,9 @@ class ConversionSessionWidget(QWidget):
             item.setToolTip(snapshot.snapshot_id)
             self._snapshot_history_list.addItem(item)
         if self._snapshot_history_list.count() == 0:
+            self._selected_snapshot_summary_label.setText(
+                "Select a saved snapshot to review its restore impact."
+            )
             self._refresh_snapshot_actions()
             return
         restored_row = 0
@@ -640,6 +650,21 @@ class ConversionSessionWidget(QWidget):
                     break
         self._snapshot_history_list.setCurrentRow(restored_row)
         self._refresh_snapshot_actions()
+
+    def _sync_selected_snapshot_summary(self, *_args) -> None:
+        snapshot = self._selected_snapshot_history_item()
+        if snapshot is None:
+            self._selected_snapshot_summary_label.setText(
+                "Select a saved snapshot to review its restore impact."
+            )
+            return
+        review_text = "reviewed" if snapshot.has_review_record else "not reviewed"
+        self._selected_snapshot_summary_label.setText(
+            "Selected snapshot: "
+            f"{snapshot.saved_at_text} | {snapshot.status} | "
+            f"{snapshot.artifact_count} artifacts | {snapshot.issue_count} issues | {review_text}. "
+            "Restoring replaces the current session view with this saved state."
+        )
 
     def _sync_progress_history(self, state: ConversionSessionScreenState) -> None:
         self._progress_history_list.clear()
@@ -1240,6 +1265,15 @@ class ConversionSessionWidget(QWidget):
             return None
         snapshot_id = item.data(Qt.ItemDataRole.UserRole)
         return str(snapshot_id) if snapshot_id else None
+
+    def _selected_snapshot_history_item(self):
+        snapshot_id = self._selected_snapshot_id()
+        if snapshot_id is None:
+            return None
+        for snapshot in self._screen_model.state.snapshot_history:
+            if snapshot.snapshot_id == snapshot_id:
+                return snapshot
+        return None
 
     def _selected_artifact_path(self) -> Path | None:
         item = self._artifact_list.currentItem()

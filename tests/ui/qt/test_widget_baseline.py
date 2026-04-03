@@ -650,6 +650,15 @@ def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) 
     assert "manual review=True" in window.conversion_widget._review_outcome_label.text()
     assert window.conversion_widget._artifact_count_value_label.text() == "2 artifacts"
     assert window.conversion_widget._output_path_edit.text().endswith("recovered-output.nwb")
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._snapshot_history_list.count() >= 1
+    assert "2 artifacts" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "1 issues" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "not reviewed" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "Restoring replaces the current session view with this saved state." in (
+        window.conversion_widget._selected_snapshot_summary_label.text()
+    )
 
     window.close()
 
