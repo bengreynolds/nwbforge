@@ -1071,6 +1071,27 @@ def test_session_assembly_dialog_shows_matched_workflow_group_details(qapp, tmp_
     dialog.close()
 
 
+def test_session_assembly_dialog_absorbs_selected_structured_bundle_member(qapp, tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+    screen.add_supported_paths((thor_file,), route_name="thor", route_display_name="Thor")
+    screen.add_custom_paths((experiment_xml,))
+
+    dialog = SessionAssemblyDialog(screen)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog._input_list.count() == 2
+    assert dialog._source_list.count() == 1
+    assert "2 resolved members" in dialog._selected_bundle_label.text()
+
+    dialog.close()
+
+
 def test_session_assembly_dialog_can_split_selected_group(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")

@@ -546,3 +546,23 @@ def test_session_assembly_screen_model_surfaces_matched_combined_workflow_group(
     assert state.sources[0].workflow_display_name == "TIFF + Suite2p Workflow"
     assert state.sources[1].workflow_display_name == "TIFF + Suite2p Workflow"
     assert state.sources[2].context_label == "TIFF + Suite2p Workflow"
+
+
+def test_session_assembly_screen_model_absorbs_selected_structured_bundle_member(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    screen.add_supported_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+    state = screen.add_custom_paths((experiment_xml,))
+
+    assert state.selected_paths == (thor_file.resolve(), experiment_xml.resolve())
+    assert len(state.sources) == 1
+    assert state.sources[0].structured_bundle_member_count == 2
+    assert any(issue.code == "session-assembly-structured-member-absorbed" for issue in state.issues)

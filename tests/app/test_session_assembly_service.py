@@ -742,3 +742,57 @@ def test_session_assembly_service_attaches_custom_input_to_matched_workflow_grou
     assert notes_source.context_label == "TIFF + Suite2p Workflow"
     assert draft.groups[0].workflow_display_name == "TIFF + Suite2p Workflow"
     assert "supplemental or custom inputs attached for review" in draft.groups[0].grouping_reason
+
+
+def test_session_assembly_service_absorbs_selected_thor_bundle_member(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (thor_file, experiment_xml),
+        source_intents={
+            str(thor_file.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "thor",
+                "route_display_name": "Thor",
+                "entry_path_kind": "file",
+                "entry_role_label": "main imaging file",
+                "entry_validation_status": "validated",
+            }
+        },
+    )
+
+    assert len(draft.sources) == 1
+    assert draft.sources[0].location == thor_file.resolve()
+    assert draft.sources[0].structured_bundle_member_count == 2
+    assert any(issue.code == "session-assembly-structured-member-absorbed" for issue in draft.issues)
+
+
+def test_session_assembly_service_absorbs_selected_file_inside_supported_directory_bundle(tmp_path: Path) -> None:
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    image_file = image_dir / "frame-01.tif"
+    image_file.write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (image_dir, image_file),
+        source_intents={
+            str(image_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "image",
+                "route_display_name": "Image",
+                "entry_path_kind": "directory",
+                "entry_role_label": "image file or root directory",
+                "entry_validation_status": "validated",
+            }
+        },
+    )
+
+    assert len(draft.sources) == 1
+    assert draft.sources[0].location == image_dir.resolve()
+    assert draft.groups[0].canonical_bundle_member_count == 1
+    assert any(issue.code == "session-assembly-structured-member-absorbed" for issue in draft.issues)
