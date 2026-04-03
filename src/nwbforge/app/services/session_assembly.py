@@ -46,6 +46,8 @@ class SessionAssemblySource:
     entry_validation_status: str | None = None
     structured_bundle_member_count: int = 0
     structured_bundle_member_labels: tuple[str, ...] = ()
+    workflow_adapter_id: str | None = None
+    workflow_display_name: str | None = None
     role: str = "primary"
     metadata_overrides: dict[str, str] | None = None
     sidecar_for_source_id: str | None = None
@@ -73,6 +75,8 @@ class SessionAssemblyGroup:
     canonical_selection_label: str | None = None
     canonical_bundle_member_count: int = 0
     canonical_bundle_member_labels: tuple[str, ...] = ()
+    workflow_adapter_id: str | None = None
+    workflow_display_name: str | None = None
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     primary_count: int = 0
@@ -136,6 +140,19 @@ class StructuredBundlePreview:
 
     member_count: int = 0
     member_labels: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class WorkflowGroupingMatch:
+    """One conservative direct-ingest grouping matched to a workflow adapter."""
+
+    workflow_adapter_id: str
+    workflow_display_name: str
+    member_paths: tuple[Path, ...]
+    group_key: str
+    group_label: str
+    context_source_id: str | None
+    context_label: str | None
 
 
 class JsonSessionAssemblyWorkspaceStore:
@@ -530,11 +547,18 @@ class SessionAssemblyService:
             for source_id, overrides in (source_metadata_overrides or {}).items()
             if overrides
         }
+        workflow_group_matches = self._detect_workflow_group_matches(
+            normalized_paths,
+            normalized_source_intents,
+            source_ids_by_path,
+            normalized_source_roles,
+        )
         group_assignments = self._group_assignments(
             normalized_paths,
             sidecar_links,
             normalized_source_intents,
             source_ids_by_path,
+            workflow_group_matches,
         )
         supported_anchor_details = self._supported_anchor_details(
             normalized_paths,
@@ -551,9 +575,11 @@ class SessionAssemblyService:
                 sidecar_links,
                 normalized_source_intents,
                 source_ids_by_path,
+                workflow_group_matches,
             )),
             sidecar_link_count=len(sidecar_links),
             structured_anchor_count=len(supported_anchor_details),
+            workflow_group_count=len(workflow_group_matches),
             requested_session_id=session_id or "",
         )
 
@@ -603,6 +629,7 @@ class SessionAssemblyService:
                 if ingest_kind == "custom" and sidecar_anchor is None and context_source_id is None
                 else ()
             )
+            workflow_match = workflow_group_matches.get(group_key)
             role = normalized_source_roles.get(source_id, self._default_role_for_index(index, sidecar_anchor is not None))
 
             if ingest_kind == "supported" and route_name and not matching_ids:
@@ -698,6 +725,8 @@ class SessionAssemblyService:
                     entry_validation_status=entry_validation_status,
                     structured_bundle_member_count=structured_bundle.member_count,
                     structured_bundle_member_labels=structured_bundle.member_labels,
+                    workflow_adapter_id=workflow_match.workflow_adapter_id if workflow_match is not None else None,
+                    workflow_display_name=workflow_match.workflow_display_name if workflow_match is not None else None,
                     role=role,
                     metadata_overrides=dict(normalized_source_metadata_overrides.get(source_id, {})),
                     sidecar_for_source_id=source_ids_by_path.get(sidecar_anchor) if sidecar_anchor is not None else None,
@@ -731,11 +760,13 @@ class SessionAssemblyService:
             )
             group_kind = self._group_kind_for_key(group_key, sources)
             canonical_source = self._canonical_source_for_group(group_key, sources)
+            workflow_match = workflow_group_matches.get(group_key)
             grouping_reason = self._group_reason_for(
                 group_key=group_key,
                 sources=sources,
                 group_kind=group_kind,
                 group_pathways=group_pathways,
+                workflow_display_name=workflow_match.workflow_display_name if workflow_match is not None else None,
             )
             review_issue_count = sum(1 for source in sources if source.needs_review)
 
@@ -809,6 +840,8 @@ class SessionAssemblyService:
                     canonical_bundle_member_labels=(
                         canonical_source.structured_bundle_member_labels if canonical_source is not None else ()
                     ),
+                    workflow_adapter_id=workflow_match.workflow_adapter_id if workflow_match is not None else None,
+                    workflow_display_name=workflow_match.workflow_display_name if workflow_match is not None else None,
                     grouping_reason=grouping_reason,
                     member_labels=tuple(source.label for source in sources),
                     primary_count=sum(1 for source in sources if source.role == "primary"),
@@ -889,6 +922,8 @@ class SessionAssemblyService:
                     "session_assembly.structured_bundle_member_labels_json": json.dumps(
                         list(source.structured_bundle_member_labels)
                     ),
+                    "session_assembly.workflow_adapter_id": source.workflow_adapter_id or "",
+                    "session_assembly.workflow_display_name": source.workflow_display_name or "",
                     "session_assembly.group_confirmed": str(
                         next(
                             (
@@ -1093,6 +1128,7 @@ class SessionAssemblyService:
         sidecar_links: dict[Path, Path],
         source_intents: dict[str, dict[str, str]],
         source_ids_by_path: dict[Path, str],
+        workflow_group_matches: dict[str, WorkflowGroupingMatch],
     ) -> dict[Path, tuple[str, str, str | None, str | None]]:
         descriptor_directories = {
             path.parent.resolve(): path
@@ -1106,8 +1142,16 @@ class SessionAssemblyService:
             source_ids_by_path,
         )
 
+        for workflow_match in workflow_group_matches.values():
+            for member_path in workflow_match.member_paths:
+                assignments[member_path.resolve()] = (
+                    workflow_match.group_key,
+                    workflow_match.group_label,
+                    workflow_match.context_source_id,
+                    workflow_match.context_label,
+                )
         for resolved, assignment in supported_anchor_details.items():
-            assignments[resolved] = assignment
+            assignments.setdefault(resolved, assignment)
 
         for path in normalized_paths:
             resolved = path.resolve()
@@ -1135,8 +1179,88 @@ class SessionAssemblyService:
                 anchor_path = anchor_candidates[0]
                 assignments[resolved] = supported_anchor_details[anchor_path]
                 continue
+            if len(anchor_candidates) > 1:
+                candidate_assignments = {
+                    assignments.get(anchor_path.resolve())
+                    for anchor_path in anchor_candidates
+                    if assignments.get(anchor_path.resolve()) is not None
+                }
+                if len(candidate_assignments) == 1:
+                    shared_assignment = next(iter(candidate_assignments))
+                    if shared_assignment is not None:
+                        assignments[resolved] = shared_assignment
+                        continue
             assignments[resolved] = self._base_group_for_path(path, descriptor_directories)
         return assignments
+
+    def _detect_workflow_group_matches(
+        self,
+        normalized_paths: tuple[Path, ...],
+        source_intents: dict[str, dict[str, str]],
+        source_ids_by_path: dict[Path, str],
+        source_roles: dict[str, str],
+    ) -> dict[str, WorkflowGroupingMatch]:
+        supported_paths = tuple(
+            path
+            for path in normalized_paths
+            if source_intents.get(str(path.resolve()), {}).get("ingest_kind") == "supported"
+        )
+        if len(supported_paths) < 2:
+            return {}
+
+        supported_by_parent: dict[Path, list[Path]] = {}
+        for path in supported_paths:
+            supported_by_parent.setdefault(path.parent.resolve(), []).append(path)
+
+        workflow_matches: dict[str, WorkflowGroupingMatch] = {}
+        for parent_path, parent_supported_paths in supported_by_parent.items():
+            if len(parent_supported_paths) < 2:
+                continue
+            candidate_sources = tuple(
+                self._build_workflow_candidate_source(
+                    path=path,
+                    route_name=source_intents.get(str(path.resolve()), {}).get("route_name") or None,
+                    source_id=source_ids_by_path[path.resolve()],
+                    role=source_roles.get(
+                        source_ids_by_path[path.resolve()],
+                        self._default_role_for_index(normalized_paths.index(path) + 1),
+                    ),
+                )
+                for path in parent_supported_paths
+            )
+            candidate_workflows = []
+            for workflow_adapter in self._registry.matching_workflow_adapters(candidate_sources):
+                match_sources = getattr(workflow_adapter, "match_sources", None)
+                if not callable(match_sources):
+                    continue
+                matched_sources = match_sources(candidate_sources)
+                if matched_sources is None or len(matched_sources) < 2:
+                    continue
+                matched_paths = tuple(
+                    sorted(
+                        {source.location.resolve() for source in matched_sources.values()},
+                        key=lambda item: item.as_posix().lower(),
+                    )
+                )
+                if len(matched_paths) < 2:
+                    continue
+                candidate_workflows.append((workflow_adapter, matched_paths, matched_sources))
+            if len(candidate_workflows) != 1:
+                continue
+            workflow_adapter, matched_paths, matched_sources = candidate_workflows[0]
+            canonical_source = self._workflow_canonical_source(matched_sources.values())
+            group_key = f"workflow:{workflow_adapter.adapter_id}:{parent_path.as_posix().lower()}"
+            group_label = parent_path.name or workflow_adapter.display_name
+            workflow_matches[group_key] = WorkflowGroupingMatch(
+                workflow_adapter_id=workflow_adapter.adapter_id,
+                workflow_display_name=workflow_adapter.display_name,
+                member_paths=matched_paths,
+                group_key=group_key,
+                group_label=group_label,
+                context_source_id=canonical_source.source_id if canonical_source is not None else None,
+                context_label=workflow_adapter.display_name,
+            )
+        return workflow_matches
 
     def _supported_anchor_details(
         self,
@@ -1208,6 +1332,7 @@ class SessionAssemblyService:
         sidecar_links: dict[Path, Path],
         source_intents: dict[str, dict[str, str]],
         source_ids_by_path: dict[Path, str],
+        workflow_group_matches: dict[str, WorkflowGroupingMatch],
     ) -> dict[str, list[Path]]:
         groups: dict[str, list[Path]] = {}
         for path, (_, group_label, _, _) in self._group_assignments(
@@ -1215,6 +1340,7 @@ class SessionAssemblyService:
             sidecar_links,
             source_intents,
             source_ids_by_path,
+            workflow_group_matches,
         ).items():
             groups.setdefault(group_label, []).append(path)
         return groups
@@ -1224,6 +1350,15 @@ class SessionAssemblyService:
         group_key: str,
         sources: list[SessionAssemblySource],
     ) -> SessionAssemblySource | None:
+        if group_key.startswith("workflow:"):
+            return next(
+                (
+                    source
+                    for source in sources
+                    if source.ingest_kind == "supported" and source.role == "primary"
+                ),
+                next((source for source in sources if source.ingest_kind == "supported"), None),
+            )
         if group_key.startswith("supported-anchor:"):
             return next((source for source in sources if source.ingest_kind == "supported"), None)
         return None
@@ -1232,6 +1367,8 @@ class SessionAssemblyService:
     def _group_kind_for_key(group_key: str, sources: list[SessionAssemblySource]) -> str:
         if group_key.startswith("manual:"):
             return "manual"
+        if group_key.startswith("workflow:"):
+            return "workflow_bundle"
         if group_key.startswith("sidecar-bundle:"):
             return "sidecar_bundle"
         if group_key.startswith("supported-anchor:"):
@@ -1249,9 +1386,20 @@ class SessionAssemblyService:
         sources: list[SessionAssemblySource],
         group_kind: str,
         group_pathways: set[ConversionPathway],
+        workflow_display_name: str | None = None,
     ) -> str:
         if group_key.startswith("manual:"):
             return "Created or corrected manually in the direct-ingest workspace."
+        if group_key.startswith("workflow:") and workflow_display_name:
+            supported_count = sum(1 for source in sources if source.ingest_kind == "supported")
+            if len(sources) > supported_count:
+                return (
+                    f"Grouped around supported sources matched as the '{workflow_display_name}' combined NeuroConv "
+                    "workflow, with nearby supplemental or custom inputs attached for review."
+                )
+            return (
+                f"Grouped matched supported sources as the '{workflow_display_name}' combined NeuroConv workflow."
+            )
         if group_key.startswith("sidecar-bundle:"):
             return "Grouped by same-stem metadata sidecar detection."
         supported_sources = [source for source in sources if source.ingest_kind == "supported"]
@@ -1278,6 +1426,40 @@ class SessionAssemblyService:
         if len(sources) > 1:
             return "Grouped automatically from the same selected folder."
         return "Single selected file treated as its own dataset bundle."
+
+    def _build_workflow_candidate_source(
+        self,
+        *,
+        path: Path,
+        route_name: str | None,
+        source_id: str,
+        role: str,
+    ) -> SourceReference:
+        source_reference = self._build_matching_source_reference(
+            source_id=source_id,
+            path=path,
+            route_name=route_name,
+        )
+        matches = self._matching_adapters_for_route(source_reference, route_name)
+        adapter_hint = matches[0].adapter_id if len(matches) == 1 else source_reference.adapter_hint
+        return SourceReference(
+            source_id=source_reference.source_id,
+            location=source_reference.location,
+            source_type=source_reference.source_type,
+            label=source_reference.label,
+            role=role,
+            adapter_hint=adapter_hint,
+        )
+
+    @staticmethod
+    def _workflow_canonical_source(
+        sources,
+    ) -> SourceReference | None:
+        source_items = tuple(sources)
+        return next(
+            (source for source in source_items if source.role == "primary"),
+            source_items[0] if source_items else None,
+        )
 
     def _detect_sidecar_links(self, normalized_paths: tuple[Path, ...]) -> dict[Path, Path]:
         primary_candidates = {

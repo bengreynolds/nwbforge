@@ -8,6 +8,8 @@ from subprocess import CompletedProcess
 from PySide6.QtCore import Qt
 import nwbforge.ui.qt.main_window as main_window_module
 
+from nwbforge.adapters.base import AdapterCapabilities
+from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.app.packages import InstallMode, InstallPreset, PackageInstallationService, PackageManagementService
 from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
@@ -48,6 +50,7 @@ from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SessionAssemblyScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.qt import MainWindow
+from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.validation import JsonExecutionReviewArtifactService
 from nwbforge.persistence import JsonSessionSnapshotStore
 
@@ -93,6 +96,61 @@ class FakeConversionExecutor:
             )
         future.set_result(self._execution_result)
         return future
+
+
+class _WorkflowRouteAdapter:
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(supported_pathways=(ConversionPathway.SUPPORTED,))
+
+    def __init__(self, adapter_id: str, *, source_type: SourceType) -> None:
+        self.adapter_id = adapter_id
+        self.display_name = adapter_id
+        self.source_types = (source_type,)
+
+    def can_handle(self, source: SourceReference) -> bool:
+        return source.adapter_hint == self.adapter_id
+
+    def inspect(self, source: SourceReference):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+
+class _TiffSuite2pWorkflowAdapter:
+    adapter_id = "workflow_tiff_suite2p"
+    display_name = "TIFF + Suite2p Workflow"
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(
+        supported_pathways=(ConversionPathway.SUPPORTED,),
+        supports_multi_source_sessions=True,
+    )
+
+    def can_handle_sources(self, sources: tuple[SourceReference, ...]) -> bool:
+        return self.match_sources(sources) is not None
+
+    def inspect_sources(self, sources: tuple[SourceReference, ...]):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+    def match_sources(self, sources: tuple[SourceReference, ...]) -> dict[str, SourceReference] | None:
+        imaging = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_tiff_imaging" and source.role == "primary"
+        ]
+        segmentation = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_suite2p_segmentation"
+        ]
+        if len(imaging) != 1 or len(segmentation) != 1:
+            return None
+        return {"imaging": imaging[0], "segmentation": segmentation[0]}
+
+
+def _build_workflow_registry() -> AdapterRegistry:
+    registry = AdapterRegistry()
+    registry.register(_WorkflowRouteAdapter("neuroconv_tiff_imaging", source_type=SourceType.DIRECTORY))
+    registry.register(_WorkflowRouteAdapter("neuroconv_suite2p_segmentation", source_type=SourceType.DIRECTORY))
+    registry.register_workflow(_TiffSuite2pWorkflowAdapter())
+    return registry
 
 
 def make_package_screen(tmp_path: Path) -> PackageInstallerScreenModel:
@@ -985,6 +1043,32 @@ def test_session_assembly_dialog_shows_detected_group_summary(qapp, tmp_path: Pa
     assert "custom_session.json" in dialog._selected_group_members_label.text()
     assert "confirmation required" in dialog._selected_group_counts_label.text()
     window.close()
+
+
+def test_session_assembly_dialog_shows_matched_workflow_group_details(qapp, tmp_path: Path) -> None:
+    imaging_dir = tmp_path / "imaging"
+    imaging_dir.mkdir()
+    (imaging_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    suite2p_dir = tmp_path / "suite2p"
+    suite2p_dir.mkdir()
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(_build_workflow_registry()))
+    screen.add_supported_paths((imaging_dir,), route_name="tiff", route_display_name="TIFF Imaging")
+    screen.add_supported_paths((suite2p_dir,), route_name="suite2p", route_display_name="Suite2p")
+    screen.add_custom_paths((notes_path,))
+
+    dialog = SessionAssemblyDialog(screen)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog._group_list.count() == 1
+    assert dialog._selected_group_kind_label.text() == "workflow bundle"
+    assert dialog._selected_group_workflow_label.text() == "TIFF + Suite2p Workflow"
+    assert "combined NeuroConv workflow" in dialog._selected_group_reason_label.text()
+
+    dialog.close()
 
 
 def test_session_assembly_dialog_can_split_selected_group(qapp, tmp_path: Path, monkeypatch) -> None:

@@ -118,6 +118,8 @@ class SessionAssemblySourceItem:
     entry_validation_status: str | None = None
     structured_bundle_member_count: int = 0
     structured_bundle_member_labels: tuple[str, ...] = ()
+    workflow_adapter_id: str | None = None
+    workflow_display_name: str | None = None
     role: str = "primary"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None
@@ -155,6 +157,8 @@ class SessionAssemblyGroupItem:
     canonical_selection_label: str | None = None
     canonical_bundle_member_count: int = 0
     canonical_bundle_member_labels: tuple[str, ...] = ()
+    workflow_adapter_id: str | None = None
+    workflow_display_name: str | None = None
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()

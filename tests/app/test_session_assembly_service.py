@@ -25,6 +25,64 @@ class _AlwaysMatchingAdapter:
         raise NotImplementedError
 
 
+class _WorkflowRouteAdapter:
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(supported_pathways=(ConversionPathway.SUPPORTED,))
+
+    def __init__(self, adapter_id: str, *, source_type: SourceType) -> None:
+        self.adapter_id = adapter_id
+        self.display_name = adapter_id
+        self.source_types = (source_type,)
+
+    def can_handle(self, source: SourceReference) -> bool:
+        return source.adapter_hint == self.adapter_id
+
+    def inspect(self, source: SourceReference):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+
+class _TiffSuite2pWorkflowAdapter:
+    adapter_id = "workflow_tiff_suite2p"
+    display_name = "TIFF + Suite2p Workflow"
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(
+        supported_pathways=(ConversionPathway.SUPPORTED,),
+        supports_multi_source_sessions=True,
+    )
+
+    def can_handle_sources(self, sources: tuple[SourceReference, ...]) -> bool:
+        return self.match_sources(sources) is not None
+
+    def inspect_sources(self, sources: tuple[SourceReference, ...]):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+    def match_sources(self, sources: tuple[SourceReference, ...]) -> dict[str, SourceReference] | None:
+        imaging = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_tiff_imaging" and source.role == "primary"
+        ]
+        segmentation = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_suite2p_segmentation"
+        ]
+        if len(imaging) != 1 or len(segmentation) != 1:
+            return None
+        return {
+            "imaging": imaging[0],
+            "segmentation": segmentation[0],
+        }
+
+
+def _build_workflow_registry() -> AdapterRegistry:
+    registry = AdapterRegistry()
+    registry.register(_WorkflowRouteAdapter("neuroconv_tiff_imaging", source_type=SourceType.DIRECTORY))
+    registry.register(_WorkflowRouteAdapter("neuroconv_suite2p_segmentation", source_type=SourceType.DIRECTORY))
+    registry.register_workflow(_TiffSuite2pWorkflowAdapter())
+    return registry
+
+
 def test_session_assembly_service_builds_supported_manifest_session(tmp_path: Path) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
@@ -599,3 +657,88 @@ def test_session_assembly_service_leaves_custom_input_separate_when_multiple_sup
     assert notes_source.context_source_id is None
     assert len(draft.groups) == 3
     assert any(issue.code == "session-assembly-ambiguous-custom-context" for issue in draft.issues)
+
+
+def test_session_assembly_service_groups_supported_sources_as_combined_workflow(tmp_path: Path) -> None:
+    imaging_dir = tmp_path / "imaging"
+    imaging_dir.mkdir()
+    (imaging_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    suite2p_dir = tmp_path / "suite2p"
+    suite2p_dir.mkdir()
+
+    service = SessionAssemblyService(_build_workflow_registry())
+    draft = service.assemble_draft(
+        (imaging_dir, suite2p_dir),
+        source_intents={
+            str(imaging_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "tiff",
+                "route_display_name": "TIFF Imaging",
+            },
+            str(suite2p_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "suite2p",
+                "route_display_name": "Suite2p",
+            },
+        },
+    )
+    confirmed = service.assemble_draft(
+        (imaging_dir, suite2p_dir),
+        source_intents={
+            str(imaging_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "tiff",
+                "route_display_name": "TIFF Imaging",
+            },
+            str(suite2p_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "suite2p",
+                "route_display_name": "Suite2p",
+            },
+        },
+        confirmed_group_keys=(draft.groups[0].group_key,),
+    )
+    session = service.create_session(confirmed)
+
+    assert len(draft.groups) == 1
+    assert draft.groups[0].group_kind == "workflow_bundle"
+    assert draft.groups[0].workflow_adapter_id == "workflow_tiff_suite2p"
+    assert draft.groups[0].workflow_display_name == "TIFF + Suite2p Workflow"
+    assert "combined NeuroConv workflow" in draft.groups[0].grouping_reason
+    assert {source.workflow_display_name for source in draft.sources} == {"TIFF + Suite2p Workflow"}
+    assert session.sources[0].metadata["session_assembly.workflow_adapter_id"] == "workflow_tiff_suite2p"
+    assert session.sources[1].metadata["session_assembly.workflow_display_name"] == "TIFF + Suite2p Workflow"
+
+
+def test_session_assembly_service_attaches_custom_input_to_matched_workflow_group(tmp_path: Path) -> None:
+    imaging_dir = tmp_path / "imaging"
+    imaging_dir.mkdir()
+    (imaging_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    suite2p_dir = tmp_path / "suite2p"
+    suite2p_dir.mkdir()
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    service = SessionAssemblyService(_build_workflow_registry())
+    draft = service.assemble_draft(
+        (imaging_dir, suite2p_dir, notes_path),
+        source_intents={
+            str(imaging_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "tiff",
+                "route_display_name": "TIFF Imaging",
+            },
+            str(suite2p_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "suite2p",
+                "route_display_name": "Suite2p",
+            },
+        },
+    )
+
+    notes_source = next(source for source in draft.sources if source.location == notes_path.resolve())
+
+    assert len(draft.groups) == 1
+    assert notes_source.context_label == "TIFF + Suite2p Workflow"
+    assert draft.groups[0].workflow_display_name == "TIFF + Suite2p Workflow"
+    assert "supplemental or custom inputs attached for review" in draft.groups[0].grouping_reason
