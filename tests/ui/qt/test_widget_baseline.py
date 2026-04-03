@@ -386,10 +386,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
         == "Data source priority during conflict review: primary sources take precedence over metadata sources, which take precedence over supplemental sources."
     )
     assert window.conversion_widget._workspace_tabs.count() == 6
-    assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
-    assert window.conversion_widget._workspace_tabs.tabText(1) == "Review Workspace"
-    assert window.conversion_widget._workspace_tabs.tabText(2) == "Metadata Review"
-    assert window.conversion_widget._workspace_tabs.tabText(3) == "Artifacts"
+    assert window.conversion_widget._workspace_tabs.tabText(0) == "1. Run Overview"
+    assert window.conversion_widget._workspace_tabs.tabText(1) == "2. Metadata Review"
+    assert window.conversion_widget._workspace_tabs.tabText(2) == "3. Quality Review"
+    assert window.conversion_widget._workspace_tabs.tabText(3) == "4. Artifacts"
     assert window.conversion_widget._workspace_tabs.tabText(4) == "History"
     assert window.conversion_widget._workspace_tabs.tabText(5) == "Diagnostics"
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
@@ -1900,11 +1900,11 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
-    window.conversion_widget._workspace_tabs.setCurrentIndex(2)
+    window.conversion_widget._workspace_tabs.setCurrentIndex(1)
     qapp.processEvents()
 
     assert window.conversion_widget._disagreement_list.count() == 1
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 2
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 1
     assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
