@@ -220,6 +220,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - A tabbed conversion workspace for run overview, review work, metadata review, and artifacts
 - Additional runtime session tabs inside the Conversion workspace so users can switch between loaded sessions without leaving the main Conversion surface
 - Project-aware conversion-session context so saved direct-ingest project origin can surface in runtime tab labels/tooltips, the conversion header, and the session-focus summary
+- Additional project-aware polish so the displayed project name is cleaner, session details show the saved-project path, the shell badge keeps project context, and close-session controls/status messages identify the active project-backed session more explicitly
 - Researcher-facing workflow messaging in the Conversion workspace that now surfaces the current step, recommended next action, and `ready to write` criteria
 - A staged Conversion workspace tab order so the default reading path now follows run overview, metadata review, quality review, and artifacts
 - Progressive disclosure in the Conversion workspace so advanced review tools plus history/diagnostics stay hidden by default until explicitly requested
@@ -245,6 +246,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Desktop history flow that lists saved snapshot versions in the conversion workspace and can restore an earlier saved state
 - Snapshot history now also shows selected-snapshot restore context in the desktop workspace, including saved status, artifact count, issue count, and review state before restore
 - Diagnostics summary and runtime history rows now distinguish ordinary progress from recovery/error context more explicitly, and snapshot rows now label preview-versus-results state plus review-record presence directly in the list
+- Internal smoke tooling now supports focused named cases and optional JSON summary output so testing results can be attached directly to local triage records
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar

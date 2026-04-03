@@ -267,6 +267,7 @@ Priority order:
 - Demote session JSON loading in product-facing navigation and copy so it reads as a compatibility/import path rather than the primary happy path.
 - Move diagnostics, history, and advanced conflict-resolution controls toward progressive disclosure after the main operator path is clearer.
 - Project-aware session workspace context is now partially in place: saved-project origin can surface in runtime session-tab labels/tooltips, the conversion header, and the session-focus summary when a session came from a saved direct-ingest project.
+- Project-aware session polish is now stronger: project names are displayed without internal file-suffix noise, session details show the saved-project path directly, the shell badge carries project context, the close-session action reflects the active session/project, and built-session status messages now acknowledge project-backed sessions explicitly.
 - The next Milestone D slice should focus on internal-testing-driven polish over that project-aware baseline rather than on the now-completed mismatch-correction pass.
 
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
