@@ -256,6 +256,7 @@ class MainWindow(QMainWindow):
         self._close_current_session_action.setEnabled(False)
         self._close_current_session_action.triggered.connect(self._close_current_session)
         self._file_menu.addAction(self._close_current_session_action)
+        self._file_menu.addSeparator()
 
         self._new_project_action = QAction("New Project", self)
         self._new_project_action.triggered.connect(self._new_project)
@@ -276,10 +277,7 @@ class MainWindow(QMainWindow):
         self._delete_project_action = QAction("Delete Project...", self)
         self._delete_project_action.triggered.connect(self._delete_project)
         self._file_menu.addAction(self._delete_project_action)
-
-        self._open_session_action = QAction("Import Session JSON (Compatibility)...", self)
-        self._open_session_action.triggered.connect(self._open_session_from_dialog)
-        self._file_menu.addAction(self._open_session_action)
+        self._file_menu.addSeparator()
 
         self._open_nwb_viewer_action = QAction("Open NWB...", self)
         self._open_nwb_viewer_action.triggered.connect(self._open_nwb_viewer_from_dialog)
@@ -288,12 +286,19 @@ class MainWindow(QMainWindow):
         self._recent_projects_menu = self._file_menu.addMenu("Open Recent Project")
         self._recent_projects_menu.setEnabled(False)
 
+        self._import_compatibility_menu = self._file_menu.addMenu("Import / Compatibility")
+
+        self._open_session_action = QAction("Import Session JSON (Compatibility)...", self)
+        self._open_session_action.triggered.connect(self._open_session_from_dialog)
+        self._import_compatibility_menu.addAction(self._open_session_action)
+
         self._reopen_last_session_action = QAction("Reopen Last Imported Session", self)
         self._reopen_last_session_action.triggered.connect(self._reopen_last_session)
-        self._file_menu.addAction(self._reopen_last_session_action)
+        self._import_compatibility_menu.addAction(self._reopen_last_session_action)
 
-        self._recent_sessions_menu = self._file_menu.addMenu("Open Recent Imported Session")
+        self._recent_sessions_menu = self._import_compatibility_menu.addMenu("Open Recent Imported Session")
         self._recent_sessions_menu.setEnabled(False)
+        self._file_menu.addSeparator()
 
         self._settings_action = QAction("Settings", self)
         self._settings_action.triggered.connect(

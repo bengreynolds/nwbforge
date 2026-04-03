@@ -321,9 +321,11 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     file_actions = window.file_menu.actions()
     labels = [action.text() for action in file_actions]
     assert "New Session" in labels
-    assert "Import Session JSON (Compatibility)..." in labels
-    assert "Reopen Last Imported Session" in labels
+    assert "Import / Compatibility" in labels
     assert "Install Extensions / Packages" in labels
+    compatibility_labels = [action.text() for action in window._import_compatibility_menu.actions()]
+    assert "Import Session JSON (Compatibility)..." in compatibility_labels
+    assert "Reopen Last Imported Session" in compatibility_labels
     assert window._recent_sessions_menu.title() == "Open Recent Imported Session"
     assert window._workspace_title_label.text() == "Conversion Workspace"
     assert "Start with New Session for direct ingest." in window._workspace_subtitle_label.text()
