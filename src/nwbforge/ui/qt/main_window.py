@@ -762,6 +762,12 @@ class MainWindow(QMainWindow):
         if state.applied_settings != self._applied_settings:
             self._applied_settings = state.applied_settings
             self._configure_logging(state.applied_settings)
+            self._conversion_screen_model.set_restore_latest_snapshot_on_load(
+                state.applied_settings.restore_latest_snapshot_on_load
+            )
+            self._conversion_screen_model.set_snapshot_history_limit(
+                state.applied_settings.snapshot_history_limit
+            )
 
         if state.user_error is not None:
             self._shell_model.set_status_bar(

@@ -136,3 +136,18 @@ def test_session_persistence_service_persists_review_submission_state(tmp_path: 
     assert snapshot.review_record == review_submission.review_record
     assert snapshot.provenance_record == review_submission.provenance_record
     assert snapshot.provenance_record.generated_artifacts[-1].artifact_type == "review_decision"
+
+
+def test_session_persistence_service_lists_history_and_loads_versions(tmp_path: Path) -> None:
+    store = JsonSessionSnapshotStore(tmp_path / "state", history_limit=5)
+    service = SessionPersistenceService(store)
+    execution = make_execution(tmp_path)
+
+    service.persist_preview(execution.preview)
+    service.persist_execution(execution)
+
+    history = service.list_history(execution.session.session_id)
+
+    assert len(history) == 2
+    restored = service.load_version(execution.session.session_id, history[0].snapshot_id)
+    assert restored is not None

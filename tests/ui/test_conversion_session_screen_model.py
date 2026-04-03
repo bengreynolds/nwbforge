@@ -194,6 +194,8 @@ def test_conversion_session_screen_model_loads_and_runs_preview() -> None:
     assert screen.state.session == preview.session
     assert screen.state.progress_event is not None
     assert screen.state.progress_event.stage is PipelineStage.INSPECTING
+    assert len(screen.state.progress_history) >= 1
+    assert screen.state.progress_history[-1].stage == PipelineStage.INSPECTING.value
     assert screen.state.is_preview_running is False
     assert screen.state.can_run_execution is True
 
@@ -228,6 +230,8 @@ def test_conversion_session_screen_model_runs_execution_after_preview() -> None:
     assert screen.state.output_path == Path("C:/tmp/output.nwb")
     assert screen.state.progress_event is not None
     assert screen.state.progress_event.stage is PipelineStage.WRITING
+    assert len(screen.state.progress_history) >= 2
+    assert screen.state.progress_history[-1].stage == PipelineStage.WRITING.value
     assert screen.state.is_execution_running is False
     assert screen.state.validation_issues == ()
 
@@ -689,3 +693,51 @@ def test_conversion_session_screen_model_recovers_latest_snapshot_on_load() -> N
         assert state.validation_issues[0].is_acknowledged is True
         assert state.reviewer_name == "alice"
         assert "Recovered review approved by alice." == state.review_message
+        assert len(state.snapshot_history) >= 2
+
+
+def test_conversion_session_screen_model_can_restore_selected_snapshot() -> None:
+    session = make_session()
+    preview = make_preview(session)
+    execution = make_execution(preview)
+
+    with TemporaryDirectory() as temp_dir:
+        persistence_service = SessionPersistenceService(
+            JsonSessionSnapshotStore(Path(temp_dir) / "session-state", history_limit=5)
+        )
+        persistence_service.persist_preview(preview)
+        persistence_service.persist_execution(execution)
+        screen = ConversionSessionScreenModel(
+            FakeConversionExecutor(preview_result=preview, execution_result=execution),
+            persistence_service=persistence_service,
+        )
+
+        state = screen.load_session(session)
+        preview_snapshot_id = state.snapshot_history[-1].snapshot_id
+        restored = screen.restore_snapshot(preview_snapshot_id)
+
+        assert restored.execution is None
+        assert restored.persisted_validation_summary is None
+        assert "Restored snapshot" in (restored.recovery_message or "")
+
+
+def test_conversion_session_screen_model_can_disable_snapshot_recovery_on_load() -> None:
+    session = make_session()
+    preview = make_preview(session)
+
+    with TemporaryDirectory() as temp_dir:
+        persistence_service = SessionPersistenceService(
+            JsonSessionSnapshotStore(Path(temp_dir) / "session-state")
+        )
+        persistence_service.persist_preview(preview)
+        screen = ConversionSessionScreenModel(
+            FakeConversionExecutor(preview_result=preview),
+            persistence_service=persistence_service,
+            restore_latest_snapshot_on_load=False,
+        )
+
+        state = screen.load_session(session)
+
+        assert state.preview is None
+        assert state.generated_artifacts == ()
+        assert state.recovery_message == "Saved snapshot recovery is disabled in settings."

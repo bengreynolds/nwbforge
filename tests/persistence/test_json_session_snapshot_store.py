@@ -90,7 +90,14 @@ def test_json_session_snapshot_store_round_trips_snapshot(tmp_path: Path) -> Non
     loaded = store.load(session.session_id)
 
     assert artifact.artifact_type == "session_snapshot"
-    assert loaded == snapshot
+    assert loaded is not None
+    assert loaded.session == snapshot.session
+    assert loaded.provenance_record == snapshot.provenance_record
+    assert loaded.validation_summary == snapshot.validation_summary
+    assert loaded.review_outcome == snapshot.review_outcome
+    assert loaded.review_record == snapshot.review_record
+    assert loaded.snapshot_id is not None
+    assert loaded.saved_at is not None
     assert artifact.location == tmp_path / "state" / session.session_id / "session-state.json"
 
 
@@ -98,3 +105,63 @@ def test_json_session_snapshot_store_returns_none_for_missing_session(tmp_path: 
     store = JsonSessionSnapshotStore(tmp_path / "state")
 
     assert store.load("missing-session") is None
+
+
+def test_json_session_snapshot_store_tracks_version_history(tmp_path: Path) -> None:
+    created_at = datetime(2026, 3, 31, 18, 30, tzinfo=UTC)
+    session = ConversionSession(
+        session_id="sess-001",
+        pathway=ConversionPathway.SUPPORTED,
+        status=SessionStatus.READY_TO_WRITE,
+        sources=(
+            SourceReference(
+                source_id="source-1",
+                location=Path("data") / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Session manifest",
+                adapter_hint="session_manifest",
+            ),
+        ),
+        created_at=created_at,
+        updated_at=created_at,
+    )
+    store = JsonSessionSnapshotStore(tmp_path / "state", history_limit=5)
+
+    first_artifact = store.save(SessionSnapshot(session=session))
+    second_artifact = store.save(
+        SessionSnapshot(
+            session=ConversionSession(
+                session_id=session.session_id,
+                pathway=session.pathway,
+                status=SessionStatus.COMPLETED,
+                sources=session.sources,
+                created_at=session.created_at,
+                updated_at=session.updated_at,
+            )
+        )
+    )
+
+    history = store.list_history(session.session_id)
+
+    assert len(history) == 2
+    assert history[0].status == SessionStatus.COMPLETED.value
+    assert history[1].status == SessionStatus.READY_TO_WRITE.value
+    assert store.load_version(session.session_id, history[0].snapshot_id) is not None
+    assert first_artifact.location == second_artifact.location
+
+
+def test_json_session_snapshot_store_trims_history_to_limit(tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="sess-001",
+        pathway=ConversionPathway.SUPPORTED,
+        status=SessionStatus.READY_TO_WRITE,
+    )
+    store = JsonSessionSnapshotStore(tmp_path / "state", history_limit=2)
+
+    store.save(SessionSnapshot(session=session))
+    store.save(SessionSnapshot(session=session.transition(SessionStatus.VALIDATING)))
+    store.save(SessionSnapshot(session=session.transition(SessionStatus.COMPLETED)))
+
+    history = store.list_history(session.session_id)
+
+    assert len(history) == 2

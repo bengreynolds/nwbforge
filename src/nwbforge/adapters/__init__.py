@@ -90,3 +90,6 @@ _try_import_optional("nwbforge.adapters.supported", "NeuroConvNeuroScopeSortingA
 _try_import_optional("nwbforge.adapters.supported", "NeuroConvPhySortingAdapter")
 _try_import_optional("nwbforge.adapters.supported", "NeuroConvPlexonSortingAdapter")
 _try_import_optional("nwbforge.adapters.supported", "NeuroConvTdtFiberPhotometryAdapter")
+_try_import_optional("nwbforge.adapters.supported", "NeuroConvSpikeGLXPhyWorkflowAdapter")
+_try_import_optional("nwbforge.adapters.supported", "NeuroConvTiffSuite2pWorkflowAdapter")
+_try_import_optional("nwbforge.adapters.supported", "NeuroConvOpenEphysDeepLabCutWorkflowAdapter")

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -41,6 +42,17 @@ class SettingsDialog(QWidget):
         self._log_path_edit = QLineEdit(self)
         self._log_path_edit.textChanged.connect(self._screen_model.set_log_file_path)
 
+        self._restore_snapshot_checkbox = QCheckBox("Restore latest snapshot when loading a session", self)
+        self._restore_snapshot_checkbox.toggled.connect(self._screen_model.set_restore_latest_snapshot_on_load)
+
+        self._recent_item_limit_spin = QSpinBox(self)
+        self._recent_item_limit_spin.setRange(1, 25)
+        self._recent_item_limit_spin.valueChanged.connect(self._screen_model.set_recent_item_limit)
+
+        self._snapshot_history_limit_spin = QSpinBox(self)
+        self._snapshot_history_limit_spin.setRange(1, 50)
+        self._snapshot_history_limit_spin.valueChanged.connect(self._screen_model.set_snapshot_history_limit)
+
         self._status_label = QLabel("Loading settings...", self)
         self._status_label.setWordWrap(True)
 
@@ -48,6 +60,11 @@ class SettingsDialog(QWidget):
         form_layout.addRow(self._verbose_checkbox)
         form_layout.addRow(self._file_logging_checkbox)
         form_layout.addRow("Log file path", self._log_path_edit)
+
+        recovery_layout = QFormLayout()
+        recovery_layout.addRow(self._restore_snapshot_checkbox)
+        recovery_layout.addRow("Recent history size", self._recent_item_limit_spin)
+        recovery_layout.addRow("Snapshot history size", self._snapshot_history_limit_spin)
 
         self._save_button = QPushButton("Save", self)
         self._save_button.clicked.connect(self._screen_model.save)
@@ -73,6 +90,9 @@ class SettingsDialog(QWidget):
         logging_group = QGroupBox("Logging", self)
         logging_group.setLayout(form_layout)
 
+        recovery_group = QGroupBox("Recovery and History", self)
+        recovery_group.setLayout(recovery_layout)
+
         button_row = QHBoxLayout()
         button_row.addWidget(self._save_button)
         button_row.addWidget(self._discard_button)
@@ -87,6 +107,7 @@ class SettingsDialog(QWidget):
         layout.setSpacing(14)
         layout.addWidget(self._header_frame)
         layout.addWidget(logging_group)
+        layout.addWidget(recovery_group)
         layout.addWidget(self._status_label)
         layout.addWidget(button_widget)
 
@@ -108,6 +129,15 @@ class SettingsDialog(QWidget):
         with QSignalBlocker(self._log_path_edit):
             if self._log_path_edit.text() != state.log_file_path:
                 self._log_path_edit.setText(state.log_file_path)
+
+        with QSignalBlocker(self._restore_snapshot_checkbox):
+            self._restore_snapshot_checkbox.setChecked(state.restore_latest_snapshot_on_load)
+
+        with QSignalBlocker(self._recent_item_limit_spin):
+            self._recent_item_limit_spin.setValue(state.recent_item_limit)
+
+        with QSignalBlocker(self._snapshot_history_limit_spin):
+            self._snapshot_history_limit_spin.setValue(state.snapshot_history_limit)
 
         self._log_path_edit.setEnabled(state.file_logging_enabled)
         self._discard_button.setEnabled(state.has_unsaved_changes)

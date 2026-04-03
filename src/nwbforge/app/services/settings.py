@@ -17,6 +17,9 @@ class UiSettings:
     verbose_logging_enabled: bool = False
     file_logging_enabled: bool = False
     log_file_path: Path = Path(".nwbforge/logs/nwbforge-ui.jsonl")
+    restore_latest_snapshot_on_load: bool = True
+    recent_item_limit: int = 5
+    snapshot_history_limit: int = 10
     last_open_project_path: Path | None = None
     recent_project_paths: tuple[Path, ...] = ()
     last_open_session_path: Path | None = None
@@ -55,6 +58,12 @@ class UiSettingsService:
             verbose_logging_enabled=bool(payload.get("verbose_logging_enabled", False)),
             file_logging_enabled=bool(payload.get("file_logging_enabled", False)),
             log_file_path=Path(payload.get("log_file_path", UiSettings().log_file_path)),
+            restore_latest_snapshot_on_load=bool(payload.get("restore_latest_snapshot_on_load", True)),
+            recent_item_limit=max(int(payload.get("recent_item_limit", UiSettings().recent_item_limit)), 1),
+            snapshot_history_limit=max(
+                int(payload.get("snapshot_history_limit", UiSettings().snapshot_history_limit)),
+                1,
+            ),
             last_open_project_path=Path(last_project_path) if last_project_path else None,
             recent_project_paths=recent_project_paths,
             last_open_session_path=Path(last_path) if last_path else None,
@@ -102,7 +111,7 @@ class UiSettingsService:
         )
         return settings
 
-    def record_recent_session(self, session_path: Path, *, limit: int = 5) -> UiSettings:
+    def record_recent_session(self, session_path: Path, *, limit: int | None = None) -> UiSettings:
         current = self.load()
         normalized = session_path.resolve()
         recent = [path for path in current.recent_session_paths if path != normalized]
@@ -112,15 +121,18 @@ class UiSettingsService:
                 verbose_logging_enabled=current.verbose_logging_enabled,
                 file_logging_enabled=current.file_logging_enabled,
                 log_file_path=current.log_file_path,
+                restore_latest_snapshot_on_load=current.restore_latest_snapshot_on_load,
+                recent_item_limit=current.recent_item_limit,
+                snapshot_history_limit=current.snapshot_history_limit,
                 last_open_project_path=current.last_open_project_path,
                 recent_project_paths=current.recent_project_paths,
                 last_open_session_path=normalized,
-                recent_session_paths=tuple(recent[:limit]),
+                recent_session_paths=tuple(recent[: (limit or current.recent_item_limit)]),
                 last_output_directory=current.last_output_directory,
             )
         )
 
-    def record_recent_project(self, project_path: Path, *, limit: int = 5) -> UiSettings:
+    def record_recent_project(self, project_path: Path, *, limit: int | None = None) -> UiSettings:
         current = self.load()
         normalized = project_path.resolve()
         recent = [path for path in current.recent_project_paths if path != normalized]
@@ -130,8 +142,11 @@ class UiSettingsService:
                 verbose_logging_enabled=current.verbose_logging_enabled,
                 file_logging_enabled=current.file_logging_enabled,
                 log_file_path=current.log_file_path,
+                restore_latest_snapshot_on_load=current.restore_latest_snapshot_on_load,
+                recent_item_limit=current.recent_item_limit,
+                snapshot_history_limit=current.snapshot_history_limit,
                 last_open_project_path=normalized,
-                recent_project_paths=tuple(recent[:limit]),
+                recent_project_paths=tuple(recent[: (limit or current.recent_item_limit)]),
                 last_open_session_path=current.last_open_session_path,
                 recent_session_paths=current.recent_session_paths,
                 last_output_directory=current.last_output_directory,
@@ -146,6 +161,9 @@ class UiSettingsService:
                 verbose_logging_enabled=current.verbose_logging_enabled,
                 file_logging_enabled=current.file_logging_enabled,
                 log_file_path=current.log_file_path,
+                restore_latest_snapshot_on_load=current.restore_latest_snapshot_on_load,
+                recent_item_limit=current.recent_item_limit,
+                snapshot_history_limit=current.snapshot_history_limit,
                 last_open_project_path=current.last_open_project_path,
                 recent_project_paths=current.recent_project_paths,
                 last_open_session_path=current.last_open_session_path,

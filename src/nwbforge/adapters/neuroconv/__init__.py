@@ -11,6 +11,8 @@ from nwbforge.adapters.neuroconv.models import NeuroConvSourceConfig
 from nwbforge.adapters.neuroconv.workflows import (
     NeuroConvWorkflowAdapter,
     NeuroConvWorkflowRouteConfig,
+    WorkflowExecutionPlan,
+    WorkflowExecutionStep,
     WorkflowSourceRequirement,
 )
 
@@ -20,6 +22,8 @@ __all__ = [
     "NeuroConvSourceConfig",
     "NeuroConvWorkflowAdapter",
     "NeuroConvWorkflowRouteConfig",
+    "WorkflowExecutionPlan",
+    "WorkflowExecutionStep",
     "WorkflowSourceRequirement",
     "coerce_neuroconv_value",
     "extracted_fields_from_dataframe",

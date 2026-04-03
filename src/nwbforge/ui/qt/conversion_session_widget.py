@@ -103,6 +103,9 @@ class ConversionSessionWidget(QWidget):
         self._result_label = QLabel("No preview or execution yet.", self)
         self._artifact_list = QListWidget(self)
         self._artifact_list.itemSelectionChanged.connect(self._refresh_artifact_actions)
+        self._snapshot_history_list = QListWidget(self)
+        self._snapshot_history_list.itemSelectionChanged.connect(self._refresh_snapshot_actions)
+        self._progress_history_list = QListWidget(self)
         self._disagreement_list = QListWidget(self)
         self._disagreement_list.currentItemChanged.connect(self._sync_selected_disagreement)
         self._disagreement_filter_combo = QComboBox(self)
@@ -149,17 +152,23 @@ class ConversionSessionWidget(QWidget):
         self._open_validation_report_button.clicked.connect(lambda: self._open_artifact_by_type("validation_report"))
         self._open_review_artifact_button = QPushButton("Open Review Decision", self)
         self._open_review_artifact_button.clicked.connect(lambda: self._open_artifact_by_type("review_decision"))
+        self._restore_snapshot_button = QPushButton("Restore Selected Snapshot", self)
+        self._restore_snapshot_button.clicked.connect(self._restore_selected_snapshot)
 
         self._session_summary_group = QGroupBox("Session Summary", self)
         self._execution_group = QGroupBox("Execution Status", self)
         self._review_group = QGroupBox("Validation and Review", self)
         self._artifact_group = QGroupBox("Generated Artifacts", self)
+        self._history_group = QGroupBox("Saved Session History", self)
+        self._diagnostics_group = QGroupBox("Runtime Diagnostics", self)
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
 
         self._source_list.setAlternatingRowColors(True)
         self._issue_list.setAlternatingRowColors(True)
         self._artifact_list.setAlternatingRowColors(True)
+        self._snapshot_history_list.setAlternatingRowColors(True)
+        self._progress_history_list.setAlternatingRowColors(True)
         self._disagreement_list.setAlternatingRowColors(True)
         self._selected_disagreement_source_list.setAlternatingRowColors(True)
         self._source_list.setMinimumWidth(300)
@@ -171,6 +180,7 @@ class ConversionSessionWidget(QWidget):
         self._reveal_artifact_button.setProperty("secondary", True)
         self._open_validation_report_button.setProperty("secondary", True)
         self._open_review_artifact_button.setProperty("secondary", True)
+        self._restore_snapshot_button.setProperty("secondary", True)
         self._clear_override_button.setProperty("secondary", True)
         self._clear_source_override_button.setProperty("secondary", True)
         self._clear_all_field_overrides_button.setProperty("danger", True)
@@ -253,6 +263,18 @@ class ConversionSessionWidget(QWidget):
         artifact_layout.addLayout(artifact_button_row)
         self._artifact_group.setLayout(artifact_layout)
 
+        history_layout = QVBoxLayout()
+        history_layout.addWidget(self._snapshot_history_list, stretch=1)
+        history_layout.addWidget(self._restore_snapshot_button)
+        self._history_group.setLayout(history_layout)
+
+        self._diagnostics_summary_label = QLabel("No runtime events captured yet.", self)
+        self._diagnostics_summary_label.setWordWrap(True)
+        diagnostics_layout = QVBoxLayout()
+        diagnostics_layout.addWidget(self._diagnostics_summary_label)
+        diagnostics_layout.addWidget(self._progress_history_list, stretch=1)
+        self._diagnostics_group.setLayout(diagnostics_layout)
+
         metadata_review_page = QWidget(self)
         metadata_review_layout = QVBoxLayout(metadata_review_page)
         metadata_review_layout.addWidget(QLabel("Pending mixed-source metadata review", self))
@@ -298,10 +320,20 @@ class ConversionSessionWidget(QWidget):
         artifact_page_layout = QVBoxLayout(artifact_page)
         artifact_page_layout.addWidget(self._artifact_group)
 
+        history_page = QWidget(self)
+        history_page_layout = QVBoxLayout(history_page)
+        history_page_layout.addWidget(self._history_group)
+
+        diagnostics_page = QWidget(self)
+        diagnostics_page_layout = QVBoxLayout(diagnostics_page)
+        diagnostics_page_layout.addWidget(self._diagnostics_group)
+
         self._workspace_tabs.addTab(run_overview_page, "Run Overview")
         self._workspace_tabs.addTab(review_page, "Review Workspace")
         self._workspace_tabs.addTab(metadata_review_page, "Metadata Review")
         self._workspace_tabs.addTab(artifact_page, "Artifacts")
+        self._workspace_tabs.addTab(history_page, "History")
+        self._workspace_tabs.addTab(diagnostics_page, "Diagnostics")
 
         right_column = QWidget(self)
         right_column_layout = QVBoxLayout(right_column)
@@ -349,6 +381,8 @@ class ConversionSessionWidget(QWidget):
         self._sync_validation_issues(state)
         self._sync_metadata_disagreements(state)
         self._sync_generated_artifacts(state)
+        self._sync_snapshot_history(state)
+        self._sync_progress_history(state)
 
         if state.user_error is not None:
             self._status_label.setText(state.user_error.message)
@@ -391,6 +425,7 @@ class ConversionSessionWidget(QWidget):
         self._review_guidance_label.setText(self._review_guidance_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
+        self._diagnostics_summary_label.setText(self._diagnostics_summary_text(state))
 
         if state.output_path is not None and self._output_path_edit.text() != str(state.output_path):
             self._output_path_edit.setText(str(state.output_path))
@@ -417,6 +452,7 @@ class ConversionSessionWidget(QWidget):
         self._reviewer_edit.setEnabled(state.execution is not None)
         self._refresh_metadata_resolution_actions()
         self._refresh_artifact_actions()
+        self._refresh_snapshot_actions()
         self._sync_workspace_tab(state)
 
     def _sync_sources(self, state: ConversionSessionScreenState) -> None:
@@ -499,6 +535,44 @@ class ConversionSessionWidget(QWidget):
             item.setToolTip(tooltip)
             self._artifact_list.addItem(item)
         self._refresh_artifact_actions()
+
+    def _sync_snapshot_history(self, state: ConversionSessionScreenState) -> None:
+        selected_item = self._snapshot_history_list.currentItem()
+        selected_snapshot_id = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
+        self._snapshot_history_list.clear()
+        for snapshot in state.snapshot_history:
+            label = (
+                f"{snapshot.saved_at_text} | {snapshot.status}"
+                f" | {snapshot.artifact_count} artifacts"
+                f" | {snapshot.issue_count} issues"
+            )
+            if snapshot.has_review_record:
+                label += " | reviewed"
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, snapshot.snapshot_id)
+            item.setToolTip(snapshot.snapshot_id)
+            self._snapshot_history_list.addItem(item)
+        if self._snapshot_history_list.count() == 0:
+            self._refresh_snapshot_actions()
+            return
+        restored_row = 0
+        if selected_snapshot_id is not None:
+            for row in range(self._snapshot_history_list.count()):
+                if self._snapshot_history_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_snapshot_id:
+                    restored_row = row
+                    break
+        self._snapshot_history_list.setCurrentRow(restored_row)
+        self._refresh_snapshot_actions()
+
+    def _sync_progress_history(self, state: ConversionSessionScreenState) -> None:
+        self._progress_history_list.clear()
+        for event in state.progress_history:
+            source_suffix = f" | {event.source_id}" if event.source_id is not None else ""
+            item = QListWidgetItem(
+                f"{event.created_at_text} | {event.stage} | {event.percent_complete}% | {event.message}{source_suffix}"
+            )
+            item.setToolTip(event.message)
+            self._progress_history_list.addItem(item)
 
     def _sync_metadata_disagreements(self, state: ConversionSessionScreenState | None = None, *_args) -> None:
         if state is None or not isinstance(state, ConversionSessionScreenState):
@@ -840,6 +914,19 @@ class ConversionSessionWidget(QWidget):
             f"{source_override_count} source overrides"
         )
 
+    @staticmethod
+    def _diagnostics_summary_text(state: ConversionSessionScreenState) -> str:
+        event_count = len(state.progress_history)
+        snapshot_count = len(state.snapshot_history)
+        if event_count == 0:
+            return "No runtime events captured yet."
+        latest_event = state.progress_history[-1]
+        return (
+            f"{event_count} runtime events | "
+            f"{snapshot_count} saved snapshots | "
+            f"Latest stage: {latest_event.stage} ({latest_event.percent_complete}%)"
+        )
+
     def _filtered_metadata_disagreements(
         self,
         state: ConversionSessionScreenState,
@@ -885,6 +972,9 @@ class ConversionSessionWidget(QWidget):
         self._open_validation_report_button.setEnabled(self._artifact_path_for_type("validation_report") is not None)
         self._open_review_artifact_button.setEnabled(self._artifact_path_for_type("review_decision") is not None)
 
+    def _refresh_snapshot_actions(self) -> None:
+        self._restore_snapshot_button.setEnabled(self._selected_snapshot_id() is not None)
+
     def _sync_workspace_tab(self, state: ConversionSessionScreenState) -> None:
         if state.execution is None:
             if state.metadata_disagreements:
@@ -901,7 +991,17 @@ class ConversionSessionWidget(QWidget):
         if state.generated_artifacts:
             self._workspace_tabs.setCurrentIndex(3)
             return
+        if state.snapshot_history:
+            self._workspace_tabs.setCurrentIndex(4)
+            return
         self._workspace_tabs.setCurrentIndex(0)
+
+    def _selected_snapshot_id(self) -> str | None:
+        item = self._snapshot_history_list.currentItem()
+        if item is None:
+            return None
+        snapshot_id = item.data(Qt.ItemDataRole.UserRole)
+        return str(snapshot_id) if snapshot_id else None
 
     def _selected_artifact_path(self) -> Path | None:
         item = self._artifact_list.currentItem()
@@ -933,6 +1033,12 @@ class ConversionSessionWidget(QWidget):
             if item.text().startswith(f"[{artifact_type}]") and path_text:
                 return Path(path_text)
         return None
+
+    def _restore_selected_snapshot(self) -> None:
+        snapshot_id = self._selected_snapshot_id()
+        if snapshot_id is None:
+            return
+        self._screen_model.restore_snapshot(snapshot_id)
 
     def _open_artifact_by_type(self, artifact_type: str) -> None:
         path = self._artifact_path_for_type(artifact_type)

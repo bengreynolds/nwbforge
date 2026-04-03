@@ -313,11 +313,13 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
         window.conversion_widget._role_policy_label.text()
         == "Conflict precedence: primary sources override metadata sources, which override supplemental sources."
     )
-    assert window.conversion_widget._workspace_tabs.count() == 4
+    assert window.conversion_widget._workspace_tabs.count() == 6
     assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
     assert window.conversion_widget._workspace_tabs.tabText(1) == "Review Workspace"
     assert window.conversion_widget._workspace_tabs.tabText(2) == "Metadata Review"
     assert window.conversion_widget._workspace_tabs.tabText(3) == "Artifacts"
+    assert window.conversion_widget._workspace_tabs.tabText(4) == "History"
+    assert window.conversion_widget._workspace_tabs.tabText(5) == "Diagnostics"
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.conversion_widget._pathway_metric_value.text() == "supported"
     assert window.conversion_widget._stage_metric_value.text() == "sources added"

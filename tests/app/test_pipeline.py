@@ -271,6 +271,68 @@ def make_hybrid_session(tmp_path: Path) -> ConversionSession:
     )
 
 
+def make_multimodal_custom_session(tmp_path: Path) -> ConversionSession:
+    custom_path = tmp_path / "custom_session.json"
+    custom_path.write_text(
+        json.dumps(
+            {
+                "recording_context": {
+                    "recording_id": "custom-run-02",
+                    "summary": "Custom multimodal session",
+                    "study_description": "Custom multimodal workflow slice",
+                    "started_at": "2026-03-31T10:15:00-06:00",
+                    "operator_name": "Researcher, Alice",
+                    "institute_name": "Test University",
+                    "group_name": "Systems Lab",
+                },
+                "animal_profile": {
+                    "identifier": "mouse-custom-02",
+                    "species_name": "Mus musculus",
+                    "sex_code": "U",
+                    "life_stage": "P90D",
+                },
+                "annotations": {
+                    "keywords": ["custom", "multimodal"],
+                },
+                "signal_sets": [
+                    {
+                        "stream_key": "camera-frames",
+                        "name": "Camera Frames",
+                        "modality": "imaging",
+                        "description": "Inline frame stack",
+                        "data": [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                        "unit": "n/a",
+                        "rate": 5.0,
+                    },
+                    {
+                        "stream_key": "probe-voltage",
+                        "name": "Probe Voltage",
+                        "modality": "ecephys",
+                        "description": "Inline probe recording",
+                        "data": [[0.1, 0.2], [0.3, 0.4]],
+                        "unit": "volts",
+                        "rate": 30000.0,
+                        "electrode_location": "CA1",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = SourceReference(
+        source_id="custom-source",
+        location=custom_path,
+        source_type=SourceType.FILE,
+        label="Custom multimodal session JSON",
+        adapter_hint="custom_json_session",
+    )
+    return ConversionSession(
+        session_id="sess-custom-002",
+        pathway=ConversionPathway.CUSTOM,
+        sources=(source,),
+    )
+
+
 def write_valid_nwb(path: Path) -> None:
     nwbfile = NWBFile(
         session_description="Validation test session",
@@ -455,3 +517,26 @@ def test_pipeline_execute_hybrid_session_combines_supported_and_custom_sources(t
         behavior = nwbfile.acquisition["behavior"]
         assert "Lick Trace" in behavior.time_series
         assert "Wheel Velocity" in behavior.time_series
+
+
+def test_pipeline_execute_custom_multimodal_session_writes_imaging_and_ecephys_streams(tmp_path: Path) -> None:
+    pipeline = make_pipeline()
+    preview = pipeline.build_preview(make_multimodal_custom_session(tmp_path))
+    output_path = tmp_path / "generated" / "custom-multimodal.nwb"
+
+    execution = pipeline.execute(preview, output_path)
+
+    assert any(
+        decision.target_path == "ImageSeries[camera-frames].data"
+        for decision in preview.mapping_plan.decisions
+    )
+    assert any(
+        decision.target_path == "ElectricalSeries[probe-voltage].data"
+        for decision in preview.mapping_plan.decisions
+    )
+    assert execution.session.status == SessionStatus.COMPLETED
+    assert execution.validation_summary.is_passing() is True
+    with NWBHDF5IO(str(output_path), "r") as io:
+        nwbfile = io.read()
+        assert "Camera Frames" in nwbfile.acquisition
+        assert "Probe Voltage" in nwbfile.acquisition

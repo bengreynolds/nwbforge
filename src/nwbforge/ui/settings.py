@@ -50,6 +50,15 @@ class SettingsScreenModel:
     def set_log_file_path(self, path_text: str) -> SettingsScreenState:
         return self._set_draft(log_file_path=path_text)
 
+    def set_restore_latest_snapshot_on_load(self, enabled: bool) -> SettingsScreenState:
+        return self._set_draft(restore_latest_snapshot_on_load=enabled)
+
+    def set_recent_item_limit(self, limit: int) -> SettingsScreenState:
+        return self._set_draft(recent_item_limit=max(int(limit), 1))
+
+    def set_snapshot_history_limit(self, limit: int) -> SettingsScreenState:
+        return self._set_draft(snapshot_history_limit=max(int(limit), 1))
+
     def discard_changes(self) -> SettingsScreenState:
         applied = self._state.applied_settings
         return self._set_state(self._state_from_settings(applied, status_message="Changes discarded."))
@@ -93,6 +102,9 @@ class SettingsScreenModel:
             verbose_logging_enabled=self._state.verbose_logging_enabled,
             file_logging_enabled=self._state.file_logging_enabled,
             log_file_path=log_file_path,
+            restore_latest_snapshot_on_load=self._state.restore_latest_snapshot_on_load,
+            recent_item_limit=max(int(self._state.recent_item_limit), 1),
+            snapshot_history_limit=max(int(self._state.snapshot_history_limit), 1),
             last_open_project_path=applied.last_open_project_path,
             recent_project_paths=applied.recent_project_paths,
             last_open_session_path=applied.last_open_session_path,
@@ -116,6 +128,9 @@ class SettingsScreenModel:
             verbose_logging_enabled=settings.verbose_logging_enabled,
             file_logging_enabled=settings.file_logging_enabled,
             log_file_path=str(settings.log_file_path),
+            restore_latest_snapshot_on_load=settings.restore_latest_snapshot_on_load,
+            recent_item_limit=settings.recent_item_limit,
+            snapshot_history_limit=settings.snapshot_history_limit,
             last_open_project_path=str(settings.last_open_project_path) if settings.last_open_project_path else "",
             recent_project_paths=tuple(str(path) for path in settings.recent_project_paths),
             last_open_session_path=str(settings.last_open_session_path) if settings.last_open_session_path else "",

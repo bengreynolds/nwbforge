@@ -67,6 +67,10 @@ class DesktopAppServices:
 LOGGER = get_logger(__name__)
 
 
+def _all_routes_available(*route_names: str) -> bool:
+    return all(route_dependencies_available(route_name) for route_name in route_names)
+
+
 def build_adapter_registry() -> AdapterRegistry:
     """Build the default desktop adapter registry from available adapters."""
 
@@ -165,6 +169,44 @@ def build_adapter_registry() -> AdapterRegistry:
             continue
         registry.register(adapter_cls())
 
+    workflow_routes = (
+        (
+            ("spikeglx", "phy"),
+            "NeuroConvSpikeGLXPhyWorkflowAdapter",
+            {
+                "recording": "neuroconv_spikeglx",
+                "sorting": "neuroconv_phy_sorting",
+            },
+        ),
+        (
+            ("tiff", "suite2p"),
+            "NeuroConvTiffSuite2pWorkflowAdapter",
+            {
+                "imaging": "neuroconv_tiff_imaging",
+                "segmentation": "neuroconv_suite2p_segmentation",
+            },
+        ),
+        (
+            ("openephys_binary", "deeplabcut"),
+            "NeuroConvOpenEphysDeepLabCutWorkflowAdapter",
+            {
+                "recording": "neuroconv_openephys_binary",
+                "behavior": "neuroconv_deeplabcut",
+            },
+        ),
+    )
+    for required_routes, workflow_name, delegate_map in workflow_routes:
+        if not _all_routes_available(*required_routes):
+            continue
+        workflow_cls = getattr(adapters_module, workflow_name, None)
+        if workflow_cls is None:
+            continue
+        try:
+            delegates = {role: registry.get(adapter_id) for role, adapter_id in delegate_map.items()}
+        except KeyError:
+            continue
+        registry.register_workflow(workflow_cls(delegates))
+
     return registry
 
 
@@ -238,12 +280,16 @@ def build_desktop_services(
     conversion_executor = ThreadedConversionExecutor(pipeline_service)
     review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
     persistence_service = SessionPersistenceService(
-        JsonSessionSnapshotStore(app_state_dir / "session-state")
+        JsonSessionSnapshotStore(
+            app_state_dir / "session-state",
+            history_limit=settings_screen_model.state.applied_settings.snapshot_history_limit,
+        )
     )
     conversion_screen_model = ConversionSessionScreenModel(
         conversion_executor,
         review_service=review_service,
         persistence_service=persistence_service,
+        restore_latest_snapshot_on_load=settings_screen_model.state.applied_settings.restore_latest_snapshot_on_load,
     )
 
     return DesktopAppServices(

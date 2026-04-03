@@ -452,6 +452,10 @@ class RuleBasedMappingPlanner(MappingPlanner):
             return f"Position[position].SpatialSeries[{stream.stream_id}]"
         if modality == "behavior":
             return f"BehavioralTimeSeries[behavior].TimeSeries[{stream.stream_id}]"
+        if modality in {"image", "images", "imaging", "ophys", "video"}:
+            return f"ImageSeries[{stream.stream_id}]"
+        if modality in {"ecephys", "electrical"}:
+            return f"ElectricalSeries[{stream.stream_id}]"
         return f"TimeSeries[{stream.stream_id}]"
 
     @staticmethod

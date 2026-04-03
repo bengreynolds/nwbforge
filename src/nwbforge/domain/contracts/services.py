@@ -13,6 +13,7 @@ from nwbforge.domain.models import (
     ProvenanceArtifact,
     ProvenanceRecord,
     SessionSnapshot,
+    SessionSnapshotHistoryEntry,
     ValidationReviewOutcome,
     ValidationSummary,
 )
@@ -21,6 +22,9 @@ from nwbforge.domain.models import (
 class SourceInspectionService(Protocol):
     def inspect(self, session: ConversionSession, source_id: str) -> ExtractionResult:
         """Inspect a source attached to a session and return extracted structure."""
+
+    def inspect_session(self, session: ConversionSession) -> tuple[ExtractionResult, ...] | None:
+        """Inspect a whole session through a multi-source workflow adapter when available."""
 
 
 class NormalizationService(Protocol):
@@ -109,3 +113,9 @@ class SessionSnapshotStore(Protocol):
 
     def load(self, session_id: str) -> SessionSnapshot | None:
         """Load a previously persisted session snapshot if one exists."""
+
+    def list_history(self, session_id: str) -> tuple[SessionSnapshotHistoryEntry, ...]:
+        """List persisted snapshots for a session, newest first."""
+
+    def load_version(self, session_id: str, snapshot_id: str) -> SessionSnapshot | None:
+        """Load one persisted snapshot version if it exists."""

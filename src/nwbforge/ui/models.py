@@ -23,6 +23,7 @@ from nwbforge.app.services.models import ConversionExecution, ConversionPreview,
 from nwbforge.domain.enums import ReviewStatus
 from nwbforge.domain.models import (
     ConversionSession,
+    SessionSnapshotHistoryEntry,
     SourceReference,
     ValidationReviewOutcome,
     ValidationSummary,
@@ -197,6 +198,29 @@ class GeneratedArtifactItem:
 
 
 @dataclass(frozen=True, slots=True)
+class ProgressHistoryItem:
+    """A UI-facing runtime progress event with a stable timestamp for triage."""
+
+    created_at_text: str
+    stage: str
+    percent_complete: int
+    message: str
+    source_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SessionSnapshotHistoryItem:
+    """A UI-facing summary of one persisted session snapshot version."""
+
+    snapshot_id: str
+    saved_at_text: str
+    status: str
+    artifact_count: int = 0
+    issue_count: int = 0
+    has_review_record: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class MetadataDisagreementSourceItem:
     """One source-specific value contributing to a mixed-source disagreement."""
 
@@ -236,8 +260,10 @@ class ConversionSessionScreenState:
     persisted_validation_summary: ValidationSummary | None = None
     persisted_review_outcome: ValidationReviewOutcome | None = None
     progress_event: PipelineProgressEvent | None = None
+    progress_history: tuple[ProgressHistoryItem, ...] = ()
     output_path: Path | None = None
     generated_artifacts: tuple[GeneratedArtifactItem, ...] = ()
+    snapshot_history: tuple[SessionSnapshotHistoryItem, ...] = ()
     validation_issues: tuple[ValidationIssueItem, ...] = ()
     metadata_disagreements: tuple[MetadataDisagreementItem, ...] = ()
     reviewer_name: str = ""
@@ -281,6 +307,9 @@ class SettingsScreenState:
     verbose_logging_enabled: bool = False
     file_logging_enabled: bool = False
     log_file_path: str = str(UiSettings().log_file_path)
+    restore_latest_snapshot_on_load: bool = UiSettings().restore_latest_snapshot_on_load
+    recent_item_limit: int = UiSettings().recent_item_limit
+    snapshot_history_limit: int = UiSettings().snapshot_history_limit
     last_open_project_path: str = ""
     recent_project_paths: tuple[str, ...] = ()
     last_open_session_path: str = ""
@@ -376,4 +405,22 @@ ShellStateListener = Callable[[DesktopShellState], None]
 PackageInstallerStateListener = Callable[[PackageInstallerState], None]
 ConversionSessionStateListener = Callable[[ConversionSessionScreenState], None]
 SettingsScreenStateListener = Callable[[SettingsScreenState], None]
+
+
+def snapshot_history_items(
+    entries: tuple[SessionSnapshotHistoryEntry, ...],
+) -> tuple[SessionSnapshotHistoryItem, ...]:
+    """Project persisted snapshot history into UI-facing items."""
+
+    return tuple(
+        SessionSnapshotHistoryItem(
+            snapshot_id=entry.snapshot_id,
+            saved_at_text=entry.saved_at.isoformat(timespec="seconds"),
+            status=entry.status,
+            artifact_count=entry.artifact_count,
+            issue_count=entry.issue_count,
+            has_review_record=entry.has_review_record,
+        )
+        for entry in entries
+    )
 SessionAssemblyStateListener = Callable[[SessionAssemblyState], None]

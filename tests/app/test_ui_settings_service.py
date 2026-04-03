@@ -62,3 +62,15 @@ def test_ui_settings_service_records_output_directory(tmp_path: Path) -> None:
     saved = service.record_output_directory(tmp_path / "outputs" / "result.nwb")
 
     assert saved.last_output_directory == (tmp_path / "outputs").resolve()
+
+
+def test_ui_settings_service_uses_configured_recent_item_limit(tmp_path: Path) -> None:
+    service = UiSettingsService(tmp_path / "ui-settings.json")
+    service.save(UiSettings(recent_item_limit=2))
+
+    service.record_recent_session(tmp_path / "a" / "session_manifest.json")
+    service.record_recent_session(tmp_path / "b" / "session_manifest.json")
+    saved = service.record_recent_session(tmp_path / "c" / "session_manifest.json")
+
+    assert len(saved.recent_session_paths) == 2
+    assert saved.recent_session_paths[0] == (tmp_path / "c" / "session_manifest.json").resolve()
