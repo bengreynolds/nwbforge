@@ -713,7 +713,10 @@ class ConversionSessionWidget(QWidget):
         self._disagreement_list.clear()
         disagreements = self._filtered_metadata_disagreements(state)
         for disagreement in disagreements:
-            item = QListWidgetItem(f"{disagreement.canonical_key} -> {disagreement.resolved_value}")
+            status_label = "Pending Review" if disagreement.pending_resolution else "Resolved"
+            item = QListWidgetItem(
+                f"[{status_label}] {disagreement.canonical_key} -> {disagreement.resolved_value}"
+            )
             item.setData(Qt.ItemDataRole.UserRole, disagreement.canonical_key)
             item.setToolTip(
                 f"Resolved from {disagreement.resolved_origin} value using source(s): "

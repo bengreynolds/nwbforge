@@ -1993,6 +1993,7 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     assert window.conversion_widget._workspace_tabs.currentIndex() == 1
     assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
+    assert "Pending Review" in window.conversion_widget._disagreement_list.item(0).text()
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
     assert not window.conversion_widget._custom_session_override_toggle.isChecked()
     assert not window.conversion_widget._manual_session_override_edit.isVisible()
@@ -2484,6 +2485,7 @@ def test_conversion_widget_filters_resolved_metadata_conflicts(qapp, tmp_path: P
 
     assert "0 pending review" in window.conversion_widget._metadata_resolution_summary_label.text()
     assert "1 resolved" in window.conversion_widget._metadata_resolution_summary_label.text()
+    assert "Resolved" in window.conversion_widget._disagreement_list.item(0).text()
     window.conversion_widget._disagreement_filter_combo.setCurrentText("Resolved only")
     qapp.processEvents()
     assert window.conversion_widget._disagreement_list.count() == 1
