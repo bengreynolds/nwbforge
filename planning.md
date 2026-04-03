@@ -201,11 +201,23 @@ Priority order:
 
 #### Milestone A: Direct-Ingest Dataset Model
 - Keep refining the structured source-ingest flow that now lets users add NeuroConv-supported sources, custom files/folders, or a mixture of both within one session-assembly workspace.
+- Preserve the structured source selector as the default ingest model: the `New Session` workflow should expose a repeatable source-type choice with a `Custom` option plus all currently installed NeuroConv-supported packages.
+- Treat proprietary and custom ingest as additive, not mutually exclusive, so one session can include multiple structured sources plus arbitrary supported custom files/folders without splitting the workflow into separate sessions.
+- For supported-route selection, prompt for the package's project file, main file, or root dataset directory and treat that chosen path as the canonical dataset entry reference for the structured source bundle.
 - Tighten route-specific entry-path validation and canonical dataset-entry semantics so a selected NeuroConv package clearly owns the expected project/main file or root directory for that bundle.
+- Represent supported selections as structured source objects that carry route identity, canonical entry semantics, and any later bundle/context decisions into downstream grouping, review, persistence, and provenance.
+- Use the selected NeuroConv package as real context in session assembly: proprietary selections should contribute known modality and relationship hints to later grouping and mapping rather than behaving like unlabeled generic files.
 - Represent direct-ingest bundles with stronger dataset identity than the current grouped-path summary alone, including durable group intent, clearer canonical entry-path semantics, and better saved-project round trips for proprietary-plus-custom sessions.
+- Keep proprietary-path validation conservative but explicit: reject obviously wrong entry selections early, preserve plausible-but-uncertain cases as reviewable, and do not silently reinterpret a selected package as generic custom ingest.
+- Keep custom ingest open to individual files, multiple files, or folders, but only admit supported scientific/media/metadata file types into the candidate pool.
+- Preserve the distinction that custom inputs join the session file pool directly and are not tied to a specific NeuroConv package, even when they are later associated with a structured source bundle.
+- Continue evolving the decision engine so it accepts both structured and unstructured inputs, uses route context plus file structure and metadata to organize them, and proposes associations or new mappings without silently overcommitting.
+- Keep mixed-source attachment logic reviewable: attach nearby custom inputs to an existing structured bundle when the evidence is narrow enough, propose new groupings when association is weak, and explicitly flag ambiguity for user review.
+- Push custom-input organization toward NWB-facing roles such as acquisition, behavior, metadata, and processed data whenever the evidence supports it, while preserving provenance and keeping uncertain mappings included but marked for review.
+- Keep UI language and issue text researcher-facing: use technically precise NWB and NeuroConv terminology without oversimplifying the workflow.
 - Preserve explicit provenance for bundle membership, grouping reasons, and user corrections so later review/report flows can explain how a session was assembled.
 - Keep hardening custom ingest acceptance so supported scientific/media/metadata files remain eligible while obviously unrelated files are rejected with clear reviewable feedback.
-- Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, and saved-project round trips over the richer dataset model.
+- Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, structured-source context propagation, and saved-project round trips over the richer dataset model.
 
 #### Milestone B: Metadata Review And Resolution
 - Expand the metadata-review workspace from the current override actions into a fuller field-by-field resolution workflow over the current canonical field set.
