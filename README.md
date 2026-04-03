@@ -201,6 +201,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Persisted desktop settings with an integrated `Settings` workspace tab for verbose logging, file-log configuration, snapshot auto-recovery, and history-retention behavior
 - Conversion-session review controls for validation outcomes, acknowledgements, and approve/reject submission
 - `File -> Import Session JSON (Compatibility)...` support for manifest-backed desktop sessions when compatibility/testing import is needed
+- Imported-session actions now live under a dedicated `Import / Compatibility` File-menu section so direct-ingest and project actions remain the primary operator-facing controls
 - Persisted last-opened session state plus an `Open Recent Imported Session` desktop menu
 - Explicit `New Session` and `Reopen Last Imported Session` desktop actions
 - Persisted last-used output directory with default NWB output-path suggestions for newly loaded sessions
