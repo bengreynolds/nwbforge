@@ -1133,6 +1133,7 @@ def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_
     assert "project=saved-project.nwbforge-project.json" in tooltip
     assert str(project_path.resolve()) in tooltip
     assert "Project: saved-project" in window._workspace_subtitle_label.text()
+    assert window._workspace_badge_label.text() == "saved-project | Sources Added"
     assert "Project: saved-project | sess-qt" in window.conversion_widget._session_context_label.text()
     window.conversion_widget._session_details_toggle.setChecked(True)
     qapp.processEvents()

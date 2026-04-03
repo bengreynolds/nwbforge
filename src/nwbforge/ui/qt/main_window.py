@@ -1080,7 +1080,10 @@ class MainWindow(QMainWindow):
         self._workspace_subtitle_label.setText(project_text)
         if self._workspace_badge_label is not None:
             badge_text = state.progress_event.stage.value if state.progress_event is not None else state.session.status.value
-            self._workspace_badge_label.setText(badge_text.replace("_", " ").title())
+            badge_label = badge_text.replace("_", " ").title()
+            if project_name:
+                badge_label = f"{project_name} | {badge_label}"
+            self._workspace_badge_label.setText(badge_label)
 
     @staticmethod
     def _conversion_tab_id_for_session(session: ConversionSession, *, session_path: Path | None = None) -> str:
