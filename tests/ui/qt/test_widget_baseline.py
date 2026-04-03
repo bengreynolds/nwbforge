@@ -414,6 +414,9 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     window.conversion_widget._workspace_tabs.setCurrentIndex(2)
     qapp.processEvents()
     assert window.conversion_widget._reviewer_edit.isVisible() is True
+    assert window.conversion_widget._validation_summary_label.isVisible() is True
+    assert window.conversion_widget._review_outcome_label.isVisible() is True
+    assert window.conversion_widget._review_status_label.isVisible() is True
     window.conversion_widget._workspace_tabs.setCurrentIndex(0)
     qapp.processEvents()
 
