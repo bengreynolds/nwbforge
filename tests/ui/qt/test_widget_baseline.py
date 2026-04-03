@@ -395,6 +395,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.conversion_widget._pathway_metric_value.text() == "supported"
     assert window.conversion_widget._stage_metric_value.text() == "sources added"
+    assert window._close_current_session_action.isEnabled() is False
 
     window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
@@ -994,17 +995,24 @@ def test_main_window_keeps_multiple_sessions_in_conversion_tabs(qapp, tmp_path: 
     assert window.conversion_widget._session_tabs.isHidden() is False
     assert window.conversion_widget._session_tabs.tabText(0) == "sess-qt"
     assert window.conversion_widget._session_tabs.tabText(1) == "custom-qt"
+    assert window._close_current_session_action.isEnabled() is True
     assert "custom-qt" in window.conversion_widget._session_label.text()
 
     window.conversion_widget._session_tabs.setCurrentIndex(0)
     qapp.processEvents()
     assert "sess-qt" in window.conversion_widget._session_label.text()
 
-    window._on_conversion_tab_close_requested(0)
+    window._close_current_session_action.trigger()
     qapp.processEvents()
     assert window.conversion_widget._session_tabs.count() == 1
     assert window.conversion_widget._session_tabs.tabText(0) == "custom-qt"
+    assert window._close_current_session_action.isEnabled() is True
     assert "custom-qt" in window.conversion_widget._session_label.text()
+
+    window._close_current_session_action.trigger()
+    qapp.processEvents()
+    assert window.conversion_widget._session_tabs.count() == 0
+    assert window._close_current_session_action.isEnabled() is False
     window.close()
 
 

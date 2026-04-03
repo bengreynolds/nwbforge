@@ -252,6 +252,11 @@ class MainWindow(QMainWindow):
         )
         self._file_menu.addAction(self._new_session_action)
 
+        self._close_current_session_action = QAction("Close Current Session", self)
+        self._close_current_session_action.setEnabled(False)
+        self._close_current_session_action.triggered.connect(self._close_current_session)
+        self._file_menu.addAction(self._close_current_session_action)
+
         self._new_project_action = QAction("New Project", self)
         self._new_project_action.triggered.connect(self._new_project)
         self._file_menu.addAction(self._new_project_action)
@@ -494,6 +499,21 @@ class MainWindow(QMainWindow):
 
         log_event(self._logger, logging.INFO, "Reopening last desktop session.", session_path=str(last_path))
         self._load_session(last_path)
+
+    def _close_current_session(self) -> None:
+        current_index = self._conversion_widget._session_tabs.currentIndex()
+        if current_index < 0 or current_index >= len(self._conversion_workspace_tabs):
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:close:noop",
+                    message="No conversion session is currently open.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=False,
+                )
+            )
+            return
+        self._on_conversion_tab_close_requested(current_index)
 
     def _load_project(self, project_path: Path) -> None:
         log_event(self._logger, logging.INFO, "Loading direct-ingest project.", project_path=str(project_path))
@@ -923,6 +943,7 @@ class MainWindow(QMainWindow):
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
         if not self._restoring_conversion_tab and self._loading_conversion_tab_id is None:
             self._sync_active_conversion_tab_from_state(state)
+        self._close_current_session_action.setEnabled(bool(self._conversion_workspace_tabs))
         self._sync_workspace_header(state)
         if state.output_path is not None:
             candidate_directory = state.output_path.parent.resolve()
@@ -1101,6 +1122,7 @@ class MainWindow(QMainWindow):
             index = self._conversion_widget._session_tabs.addTab(self._conversion_tab_label(state))
             self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
         self._conversion_widget._session_tabs.show()
+        self._close_current_session_action.setEnabled(True)
 
     def _set_current_conversion_tab(self, tab_id: str) -> None:
         index = self._conversion_tab_index(tab_id)
@@ -1167,8 +1189,10 @@ class MainWindow(QMainWindow):
         if not self._conversion_workspace_tabs:
             self._active_conversion_tab_id = None
             self._conversion_widget._session_tabs.hide()
+            self._close_current_session_action.setEnabled(False)
             self._conversion_screen_model.clear_session()
             return
+        self._close_current_session_action.setEnabled(True)
         if closing_active:
             next_index = min(index, len(self._conversion_workspace_tabs) - 1)
             next_tab = self._conversion_workspace_tabs[next_index]
