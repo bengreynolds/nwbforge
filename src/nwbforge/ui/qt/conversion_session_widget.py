@@ -56,6 +56,8 @@ class ConversionSessionWidget(QWidget):
         self._session_label = QLabel("No session loaded.", self)
         self._pathway_label = QLabel("Not available.", self)
         self._source_count_label = QLabel("0", self)
+        self._project_origin_label = QLabel("Not saved from a direct-ingest project.", self)
+        self._project_origin_label.setWordWrap(True)
         self._source_list = QListWidget(self)
         self._source_list.currentItemChanged.connect(self._sync_selected_source_details)
         self._source_location_label = QLabel("No source selected.", self)
@@ -260,6 +262,7 @@ class ConversionSessionWidget(QWidget):
         form_layout.addRow("Session", self._session_label)
         form_layout.addRow("Workflow", self._pathway_label)
         form_layout.addRow("Data sources", self._source_count_label)
+        form_layout.addRow("Saved project", self._project_origin_label)
 
         source_detail_layout = QFormLayout()
         source_detail_layout.addRow("Location", self._source_location_label)
@@ -529,6 +532,7 @@ class ConversionSessionWidget(QWidget):
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
         self._review_checklist_label.setText(self._review_checklist_text(state))
         self._session_context_label.setText(self._session_context_text(state))
+        self._project_origin_label.setText(self._session_project_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
         self._diagnostics_summary_label.setText(self._diagnostics_summary_text(state))
@@ -1121,11 +1125,27 @@ class ConversionSessionWidget(QWidget):
         )
 
     @staticmethod
+    def _session_project_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Not saved from a direct-ingest project."
+        project_path = ConversionSessionWidget._session_project_path(state.session)
+        if project_path is None:
+            return "Not saved from a direct-ingest project."
+        return str(project_path)
+
+    @staticmethod
     def _session_project_name(session: ConversionSession) -> str | None:
+        project_path = ConversionSessionWidget._session_project_path(session)
+        if project_path is None:
+            return None
+        return ConversionSessionWidget._display_project_name(project_path)
+
+    @staticmethod
+    def _session_project_path(session: ConversionSession) -> Path | None:
         for source in session.sources:
-            project_name = source.metadata.get("session_assembly.project_name", "").strip()
-            if project_name:
-                return ConversionSessionWidget._display_project_name(Path(project_name))
+            project_path_text = source.metadata.get("session_assembly.project_path", "").strip()
+            if project_path_text:
+                return Path(project_path_text)
         return None
 
     @staticmethod
