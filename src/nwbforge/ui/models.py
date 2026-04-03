@@ -146,6 +146,11 @@ class SessionAssemblyGroupItem:
     suggested_pathway: str
     group_kind: str = "folder"
     anchor_path: Path | None = None
+    canonical_source_id: str | None = None
+    canonical_source_label: str | None = None
+    canonical_source_path: Path | None = None
+    canonical_entry_role_label: str | None = None
+    canonical_selection_label: str | None = None
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()

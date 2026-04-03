@@ -370,7 +370,11 @@ def test_session_assembly_service_attaches_custom_input_to_single_supported_anch
         source_intents={
             str(manifest_path.resolve()): {
                 "ingest_kind": "supported",
+                "route_name": "session_manifest",
                 "route_display_name": "Session Manifest",
+                "entry_path_kind": "file",
+                "entry_role_label": "manifest file or session directory",
+                "entry_validation_status": "validated",
             }
         },
     )
@@ -382,6 +386,11 @@ def test_session_assembly_service_attaches_custom_input_to_single_supported_anch
     assert notes_source.group_key == manifest_source.group_key
     assert notes_source.context_source_id == manifest_source.source_id
     assert notes_source.context_label == "Session Manifest"
+    assert draft.groups[0].canonical_source_id == manifest_source.source_id
+    assert draft.groups[0].canonical_source_label == "session_manifest.json"
+    assert draft.groups[0].canonical_source_path == manifest_path.resolve()
+    assert draft.groups[0].canonical_entry_role_label == "manifest file or session directory"
+    assert draft.groups[0].canonical_selection_label == "Session Manifest"
     assert any(issue.code == "session-assembly-custom-context-association" for issue in draft.issues)
 
 

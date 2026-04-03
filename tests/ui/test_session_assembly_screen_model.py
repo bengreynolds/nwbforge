@@ -404,6 +404,10 @@ def test_session_assembly_screen_model_groups_custom_input_under_single_supporte
 
     assert notes_source.group_key == manifest_source.group_key
     assert notes_source.group_label == manifest_source.group_label
+    assert state.groups[0].canonical_source_id == manifest_source.source_id
+    assert state.groups[0].canonical_source_label == "session_manifest.json"
+    assert state.groups[0].canonical_entry_role_label == "manifest file or session directory"
+    assert state.groups[0].canonical_selection_label == "Session Manifest"
     assert any(issue.code == "session-assembly-custom-context-association" for issue in state.issues)
 
 

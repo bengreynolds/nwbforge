@@ -1193,6 +1193,44 @@ def test_session_assembly_dialog_exposes_structured_source_selector(qapp, tmp_pa
     window.close()
 
 
+def test_session_assembly_dialog_shows_canonical_entry_for_structured_group(qapp, tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    session_assembly_screen.add_supported_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+    session_assembly_screen.add_custom_paths((notes_path,))
+    qapp.processEvents()
+
+    dialog = window.session_assembly_dialog
+    dialog._sync_selected_group()
+
+    assert "session_manifest.json" in dialog._selected_group_canonical_label.text()
+    assert "Session Manifest manifest file or session directory" in dialog._selected_group_canonical_label.text()
+    assert str(manifest_path.resolve()) in dialog._selected_group_canonical_label.text()
+
+    window.close()
+
+
 def test_main_window_applies_last_output_directory_default(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)

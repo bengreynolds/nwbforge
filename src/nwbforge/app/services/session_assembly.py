@@ -64,6 +64,11 @@ class SessionAssemblyGroup:
     source_count: int
     group_kind: str = "folder"
     anchor_path: Path | None = None
+    canonical_source_id: str | None = None
+    canonical_source_label: str | None = None
+    canonical_source_path: Path | None = None
+    canonical_entry_role_label: str | None = None
+    canonical_selection_label: str | None = None
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     primary_count: int = 0
@@ -700,6 +705,7 @@ class SessionAssemblyService:
                 sources[0].location.parent if sources[0].location.is_file() else sources[0].location
             )
             group_kind = self._group_kind_for_key(group_key, sources)
+            canonical_source = self._canonical_source_for_group(group_key, sources)
             grouping_reason = self._group_reason_for(
                 group_key=group_key,
                 sources=sources,
@@ -763,6 +769,15 @@ class SessionAssemblyService:
                     source_count=len(sources),
                     group_kind=group_kind,
                     anchor_path=anchor_path,
+                    canonical_source_id=canonical_source.source_id if canonical_source is not None else None,
+                    canonical_source_label=canonical_source.label if canonical_source is not None else None,
+                    canonical_source_path=canonical_source.location if canonical_source is not None else None,
+                    canonical_entry_role_label=(
+                        canonical_source.entry_role_label if canonical_source is not None else None
+                    ),
+                    canonical_selection_label=(
+                        canonical_source.selection_label if canonical_source is not None else None
+                    ),
                     grouping_reason=grouping_reason,
                     member_labels=tuple(source.label for source in sources),
                     primary_count=sum(1 for source in sources if source.role == "primary"),
@@ -1168,6 +1183,15 @@ class SessionAssemblyService:
         ).items():
             groups.setdefault(group_label, []).append(path)
         return groups
+
+    @staticmethod
+    def _canonical_source_for_group(
+        group_key: str,
+        sources: list[SessionAssemblySource],
+    ) -> SessionAssemblySource | None:
+        if group_key.startswith("supported-anchor:"):
+            return next((source for source in sources if source.ingest_kind == "supported"), None)
+        return None
 
     @staticmethod
     def _group_kind_for_key(group_key: str, sources: list[SessionAssemblySource]) -> str:

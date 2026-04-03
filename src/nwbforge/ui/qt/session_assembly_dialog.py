@@ -101,6 +101,8 @@ class SessionAssemblyDialog(QWidget):
         self._selected_group_kind_label = QLabel("Not available.", self)
         self._selected_group_anchor_label = QLabel("Not available.", self)
         self._selected_group_anchor_label.setWordWrap(True)
+        self._selected_group_canonical_label = QLabel("Not available.", self)
+        self._selected_group_canonical_label.setWordWrap(True)
         self._selected_group_reason_label = QLabel("Not available.", self)
         self._selected_group_reason_label.setWordWrap(True)
         self._selected_group_members_label = QLabel("No group selected.", self)
@@ -210,6 +212,7 @@ class SessionAssemblyDialog(QWidget):
         group_details.addRow("Pathway", self._selected_group_pathway_label)
         group_details.addRow("Kind", self._selected_group_kind_label)
         group_details.addRow("Anchor", self._selected_group_anchor_label)
+        group_details.addRow("Canonical Entry", self._selected_group_canonical_label)
         group_details.addRow("Reason", self._selected_group_reason_label)
         group_details.addRow("Members", self._selected_group_members_label)
         group_details.addRow("Composition", self._selected_group_counts_label)
@@ -604,6 +607,7 @@ class SessionAssemblyDialog(QWidget):
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_kind_label.setText("Not available.")
             self._selected_group_anchor_label.setText("Not available.")
+            self._selected_group_canonical_label.setText("Not available.")
             self._selected_group_reason_label.setText("Not available.")
             self._selected_group_members_label.setText("No group selected.")
             self._selected_group_counts_label.setText("No group selected.")
@@ -625,6 +629,7 @@ class SessionAssemblyDialog(QWidget):
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_kind_label.setText("Not available.")
             self._selected_group_anchor_label.setText("Not available.")
+            self._selected_group_canonical_label.setText("Not available.")
             self._selected_group_reason_label.setText("Not available.")
             self._selected_group_members_label.setText("No group selected.")
             self._selected_group_counts_label.setText("No group selected.")
@@ -643,6 +648,15 @@ class SessionAssemblyDialog(QWidget):
         self._selected_group_pathway_label.setText(group.suggested_pathway)
         self._selected_group_kind_label.setText(group.group_kind.replace("_", " "))
         self._selected_group_anchor_label.setText(str(group.anchor_path) if group.anchor_path is not None else "Not available.")
+        canonical_text = "Not available."
+        if group.canonical_source_label is not None:
+            canonical_text = (
+                f"{group.canonical_source_label}\n"
+                f"{group.canonical_selection_label or 'Structured source'} "
+                f"{group.canonical_entry_role_label or 'entry'}\n"
+                f"{group.canonical_source_path}"
+            )
+        self._selected_group_canonical_label.setText(canonical_text)
         self._selected_group_reason_label.setText(group.grouping_reason or "No grouping reason available.")
         self._selected_group_members_label.setText(", ".join(group.member_labels) if group.member_labels else "No members listed.")
         self._selected_group_counts_label.setText(
