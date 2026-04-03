@@ -375,6 +375,145 @@ Confirmed mismatch to address:
 - supported-route breadth is currently more visible in product surfaces than the core operator journey should allow
 - preview, write, validation, and review stages exist technically, but the UI still needs clearer progression and completion criteria
 
+#### Mismatch A: Researcher-friendly workflow vs power-user control panel
+
+Problem statement:
+- the current conversion widget still exposes too many categories of work on one surface at once: session summary, execution state, review actions, metadata conflict controls, artifacts, history, diagnostics, and advanced override affordances
+- this is useful for internal engineering and testing, but it is too dense for the likely first-pass user, who needs confidence and sequence more than raw control density
+
+Implementation tasks:
+- redesign the conversion workspace around a visible 4-step progression: `Ingest`, `Review Metadata`, `Run Conversion`, `Review Validation / Artifacts`
+- keep the current backend capabilities, but reduce simultaneous on-screen control density in the default view
+- move diagnostics, snapshot history, and other internal-testing-heavy controls behind progressive disclosure such as an `Advanced` section, collapsible panels, or clearly secondary tabs
+- keep one recommended path visible at a time in the main view, especially during preview/build and post-write review
+- audit labels and group-box titles so the main surface reads like a task workflow rather than a debugging console
+
+Acceptance checks:
+- a new user should be able to identify the current step and next step without reading code-oriented terminology
+- the default conversion view should no longer require users to interpret diagnostics/history controls before they can understand preview or write
+- advanced controls should still exist, but they should not dominate the initial screen reading order
+
+#### Mismatch B: Direct-ingest-first vs lingering fixture/session-loader posture
+
+Problem statement:
+- the plan says `New Session` is the primary path, and session JSON loading is compatibility/testing support
+- the current code still gives session-file loading substantial menu prominence and operational weight, which weakens the product story and encourages mixed signals about the intended workflow
+
+Implementation tasks:
+- keep `Open Session...` for compatibility, reopen, and testing, but relabel and position it as an import/compatibility path rather than the main operator path
+- make `New Session` and direct-ingest project actions the clearest product-facing startup actions
+- review startup copy, workspace header copy, and file-menu wording so they consistently reinforce direct ingest as the intended path
+- audit code and docs for places where session JSON loading still reads like a peer workflow instead of a compatibility path
+- when direct-ingest and session-import features overlap, prioritize direct-ingest UX improvements before expanding session-loader affordances
+
+Acceptance checks:
+- a first-time operator should clearly infer that `New Session` is the preferred primary workflow
+- session import should remain available, but it should read as compatibility/testing support rather than the happy path
+- plan, README, menu copy, and shell copy should all tell the same story
+
+#### Mismatch C: Coherent product vs platform breadth signaling
+
+Problem statement:
+- the repo correctly supports a broad NeuroConv-first route strategy
+- however, too much of that breadth is still visible in product-facing surfaces and planning emphasis, which makes the app feel like it is proving platform ambition rather than guiding a coherent operator workflow
+
+Implementation tasks:
+- freeze new product-facing route-surface additions unless they unblock representative internal-testing datasets
+- treat route breadth as backend/platform readiness, not as a primary product-navigation feature
+- audit package/install UI and route catalogs for places where route-count signaling outweighs operator clarity
+- defer more package-surface complexity until the core ingest/group/review/run workflow is calmer and easier to use
+- require future route work to state which real testing workflow it unblocks before it is treated as first-pass product work
+
+Acceptance checks:
+- new first-pass UI work should improve operator clarity more often than it expands visible route surface area
+- route/package UI should support the workflow without becoming the workflow
+- planning updates for new route work should explain direct user/testing value, not just backend completeness
+
+#### Mismatch D: Stage-based guidance vs insufficient UX scaffolding
+
+Problem statement:
+- the runtime already has stage transitions for preview, execute, validate, and review
+- however, the UI still relies too heavily on enabled buttons, badges, and raw status messages instead of explicit guided progression and completion criteria
+
+Implementation tasks:
+- show stage-aware guidance in the conversion workspace for current step, next action, and what blocks write
+- add explicit completion criteria per stage, especially before `Write NWB`
+- expose inline readiness summaries such as `ready to run`, `needs review`, and `blocked by X`
+- add recommended actions for metadata-review states so users do not have to infer the preferred next move from raw conflict panels
+- ensure stage guidance survives transitions between preview, write, and post-write review instead of disappearing into raw status text
+
+Acceptance checks:
+- users should be able to answer `What step am I in?`, `What should I do next?`, and `Why can’t I write yet?` directly from the UI
+- the write path should have visible readiness criteria beyond button enablement alone
+- mixed-source review states should present guidance, not just raw disagreement data
+
+#### Essential vs secondary vs premature feature triage
+
+Essential and must be strengthened:
+- direct-ingest session assembly, grouping, group confirmation, and reviewable assembly issues
+- preview -> execute -> validate -> review artifact chain
+- metadata disagreement surfacing and override actions
+- integrated main-window workflow with background execution, progress, and user-facing runtime status
+
+Useful but secondary for first-pass user value:
+- snapshot history and restore
+- diagnostics and richer internal-testing observability surfaces
+- richer NWB viewer preview paths
+- broader package setup customization once the core operator journey is calmer
+
+Premature or excessive for the current product phase:
+- broad route-surface growth in product-facing install and registry flows before first-time UX is stable
+- showing many conflict-resolution controls simultaneously without progressive disclosure
+- allowing backend capability breadth to shape the visible product more than the main researcher workflow
+
+Task consequences:
+- strengthen essential features first when choosing between UI work items
+- keep useful-secondary features available, but move them behind progressive disclosure where possible
+- avoid new premature surface-area growth unless it directly fixes a representative workflow blocker
+
+#### Product-directed UX task list
+
+Workflow simplification pass:
+- redesign the conversion panel as a guided stage flow rather than a dense all-at-once control surface
+- move diagnostics/history into collapsible advanced sections or clearly secondary tabs
+- simplify the default reading order so summary -> metadata review -> run -> results is obvious
+
+Conflict-resolution UX pass:
+- show one recommended resolution path first for each conflict where feasible
+- keep advanced per-source override actions available, but hide them by default behind a second-level affordance
+- add explainability text so users understand why one value is currently preferred and what override would change
+
+Navigation clarity pass:
+- promote `New Session` as the default home action in copy and visible menu emphasis
+- relabel `Open Session...` as compatibility/import support in product-facing copy
+- keep project actions aligned with the direct-ingest-first story rather than with older fixture-loader habits
+
+Terminology simplification pass:
+- prefer user-facing labels such as `Data source role` before technical precedence language
+- keep technical semantics available as helper text, not as the main title or first-exposed explanation
+- audit conversion and session-assembly labels for unnecessary cognitive load
+
+Success-metric pass:
+- add inline counters or summaries such as `ready to run`, `needs review`, and `blocked by X`
+- expose the main blockers in concise language rather than forcing the user to read across multiple panes
+- make review readiness and write readiness visible at a glance
+
+#### Sequencing for this correction
+
+Order of execution:
+1. finish the guided conversion workspace direction, including stronger stage messaging and visible readiness/blocker summaries
+2. demote session-import posture in menus, copy, and startup framing
+3. move diagnostics/history and advanced metadata-resolution controls toward progressive disclosure
+4. simplify terminology and label hierarchy in the conversion and direct-ingest surfaces
+5. only after those are materially improved, revisit whether more product-facing route/package surface belongs in the first-pass UI
+
+Definition of done for the correction:
+- the product reads primarily as a researcher workflow tool, not an engineering control panel
+- direct ingest is visibly the preferred primary workflow in both docs and UI
+- stage guidance and write-readiness criteria are explicit in the conversion workspace
+- advanced/internal-testing features remain available but are visually secondary
+- new first-pass UI work is chosen by operator-value impact rather than by backend breadth
+
 ### Priority 1: Finished-feeling desktop product surface
 
 Required direction:
