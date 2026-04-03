@@ -714,14 +714,23 @@ class ConversionSessionWidget(QWidget):
         disagreements = self._filtered_metadata_disagreements(state)
         for disagreement in disagreements:
             status_label = "Pending Review" if disagreement.pending_resolution else "Resolved"
+            resolution_suffix = ""
+            if disagreement.resolution_status == "session_override":
+                resolution_suffix = " | session override"
+            elif disagreement.resolution_status == "source_override":
+                resolution_suffix = " | source override"
             item = QListWidgetItem(
-                f"[{status_label}] {disagreement.canonical_key} -> {disagreement.resolved_value}"
+                f"[{status_label}] {disagreement.canonical_key} -> {disagreement.resolved_value}{resolution_suffix}"
             )
             item.setData(Qt.ItemDataRole.UserRole, disagreement.canonical_key)
-            item.setToolTip(
+            tooltip_lines = [
+                f"Resolution state: {disagreement.resolution_status.replace('_', ' ')}",
                 f"Resolved from {disagreement.resolved_origin} value using source(s): "
-                f"{', '.join(disagreement.source_ids) or 'session merge'}"
-            )
+                f"{', '.join(disagreement.source_ids) or 'session merge'}",
+            ]
+            if disagreement.resolution_history:
+                tooltip_lines.append(disagreement.resolution_history[-1])
+            item.setToolTip("\n".join(tooltip_lines))
             self._disagreement_list.addItem(item)
         if self._disagreement_list.count() == 0:
             self._sync_selected_disagreement()

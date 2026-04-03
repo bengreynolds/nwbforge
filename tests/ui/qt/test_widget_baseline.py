@@ -2593,6 +2593,8 @@ def test_conversion_widget_can_clear_all_overrides_for_selected_field(qapp, tmp_
         == "Source-specific overrides: Custom session JSON: source-value"
     )
     assert "session override" in window.conversion_widget._selected_resolution_status_label.text().lower()
+    assert "session override" in window.conversion_widget._disagreement_list.item(0).text().lower()
+    assert "Resolution state: session override" in window.conversion_widget._disagreement_list.item(0).toolTip()
     window.conversion_widget._clear_all_field_overrides_button.click()
     qapp.processEvents()
 
