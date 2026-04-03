@@ -489,8 +489,8 @@ Task consequences:
 #### Product-directed UX task list
 
 Current status:
-- The mismatch A-D correction pass is now materially implemented in the desktop app: guided conversion workflow messaging, progressive disclosure for advanced tools, recommended metadata-resolution actions, direct-ingest-first navigation framing, simpler workflow terminology, visible readiness summaries, `New Session` as the home workspace, stage-specific control placement, and post-write review checklist guidance are all in place.
-- Remaining UX work should now focus on deeper workflow polish rather than on finishing the mismatch checklist, especially project-aware session workspaces and representative-dataset hardening.
+- The current UX task-list baseline is complete in the desktop app: guided conversion workflow messaging, progressive disclosure for advanced tools, recommended metadata-resolution actions, direct-ingest-first navigation framing, simpler workflow terminology, visible readiness summaries, `New Session` as the home workspace, stage-specific control placement, and post-write review checklist guidance are all in place.
+- Remaining UX work should now focus on deeper workflow polish beyond this completed baseline, especially project-aware session workspaces and representative-dataset hardening.
 
 Workflow simplification pass:
 - redesign the conversion panel as a guided stage flow rather than a dense all-at-once control surface
