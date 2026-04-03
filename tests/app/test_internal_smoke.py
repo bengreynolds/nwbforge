@@ -41,3 +41,32 @@ def test_internal_smoke_writes_json_report(tmp_path: Path) -> None:
     assert payload["case_count"] == 2
     assert payload["result"] == "passed"
     assert payload["cases"] == cases
+
+
+def test_internal_smoke_parse_args_accepts_repeated_cases() -> None:
+    module = _load_internal_smoke_module()
+
+    args = module.parse_args(["--case", "supported", "--case", "project"])
+
+    assert args.case == ["supported", "project"]
+
+
+def test_internal_smoke_runs_only_requested_cases(tmp_path: Path, monkeypatch) -> None:
+    module = _load_internal_smoke_module()
+    invoked: list[str] = []
+
+    def fake_conversion_case(repo_root: Path, workspace: Path, relative_session_path: str, output_name: str):
+        invoked.append(output_name)
+        return {"case_type": "conversion", "output_path": output_name, "result": "passed"}
+
+    def fake_project_case(repo_root: Path, workspace: Path):
+        invoked.append("project")
+        return {"case_type": "project", "output_path": "project", "result": "passed"}
+
+    monkeypatch.setattr(module, "_run_conversion_case", fake_conversion_case)
+    monkeypatch.setattr(module, "_run_project_round_trip", fake_project_case)
+
+    cases = module._run_smoke_suite(tmp_path, tmp_path / "workspace", case_names=("custom", "project"))
+
+    assert invoked == ["custom-case.nwb", "project"]
+    assert len(cases) == 2

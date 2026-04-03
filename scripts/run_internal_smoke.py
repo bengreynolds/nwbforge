@@ -13,9 +13,10 @@ from nwbforge.app.desktop import build_desktop_services, load_desktop_session
 
 
 LOGGER = logging.getLogger("nwbforge.internal_smoke")
+CASE_NAMES = ("supported", "custom", "hybrid", "project")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run NWB Forge internal local smoke checks.")
     parser.add_argument(
         "--workspace",
@@ -29,7 +30,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional path for a JSON smoke summary report.",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--case",
+        action="append",
+        choices=CASE_NAMES,
+        default=None,
+        help="Run only the named smoke case. Repeat to run multiple focused cases.",
+    )
+    return parser.parse_args(argv)
 
 
 def _run_conversion_case(repo_root: Path, workspace: Path, relative_session_path: str, output_name: str) -> dict[str, str]:
@@ -129,29 +137,46 @@ def _run_project_round_trip(repo_root: Path, workspace: Path) -> dict[str, str]:
         services.package_screen_model.shutdown(wait=False)
 
 
-def _run_smoke_suite(repo_root: Path, workspace: Path) -> list[dict[str, str]]:
+def _run_smoke_suite(
+    repo_root: Path,
+    workspace: Path,
+    *,
+    case_names: tuple[str, ...] | None = None,
+) -> list[dict[str, str]]:
     workspace.mkdir(parents=True, exist_ok=True)
-    return [
-        _run_conversion_case(
-            repo_root,
-            workspace / "supported-case",
-            "examples/sessions/supported/session_manifest.json",
-            "supported-case.nwb",
-        ),
-        _run_conversion_case(
-            repo_root,
-            workspace / "custom-case",
-            "examples/sessions/custom/custom_session.json",
-            "custom-case.nwb",
-        ),
-        _run_conversion_case(
-            repo_root,
-            workspace / "hybrid-case",
-            "examples/sessions/hybrid/hybrid_session.json",
-            "hybrid-case.nwb",
-        ),
-        _run_project_round_trip(repo_root, workspace / "project-case"),
-    ]
+    requested = case_names or CASE_NAMES
+    cases: list[dict[str, str]] = []
+    for case_name in requested:
+        if case_name == "supported":
+            cases.append(
+                _run_conversion_case(
+                    repo_root,
+                    workspace / "supported-case",
+                    "examples/sessions/supported/session_manifest.json",
+                    "supported-case.nwb",
+                )
+            )
+        elif case_name == "custom":
+            cases.append(
+                _run_conversion_case(
+                    repo_root,
+                    workspace / "custom-case",
+                    "examples/sessions/custom/custom_session.json",
+                    "custom-case.nwb",
+                )
+            )
+        elif case_name == "hybrid":
+            cases.append(
+                _run_conversion_case(
+                    repo_root,
+                    workspace / "hybrid-case",
+                    "examples/sessions/hybrid/hybrid_session.json",
+                    "hybrid-case.nwb",
+                )
+            )
+        elif case_name == "project":
+            cases.append(_run_project_round_trip(repo_root, workspace / "project-case"))
+    return cases
 
 
 def _write_report(report_path: Path, *, workspace: Path, cases: list[dict[str, str]]) -> None:
@@ -173,7 +198,7 @@ def main() -> int:
     if args.workspace is not None:
         workspace = args.workspace.resolve()
         LOGGER.info("Running internal smoke suite.", extra={"nwbforge_context": {"workspace": str(workspace)}})
-        cases = _run_smoke_suite(repo_root, workspace)
+        cases = _run_smoke_suite(repo_root, workspace, case_names=tuple(args.case) if args.case else None)
         if args.report_json is not None:
             _write_report(args.report_json.resolve(), workspace=workspace, cases=cases)
         return 0
@@ -181,7 +206,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="nwbforge-smoke-") as temp_dir:
         workspace = Path(temp_dir)
         LOGGER.info("Running internal smoke suite.", extra={"nwbforge_context": {"workspace": str(workspace)}})
-        cases = _run_smoke_suite(repo_root, workspace)
+        cases = _run_smoke_suite(repo_root, workspace, case_names=tuple(args.case) if args.case else None)
         if args.report_json is not None:
             _write_report(args.report_json.resolve(), workspace=workspace, cases=cases)
         with suppress(OSError):
