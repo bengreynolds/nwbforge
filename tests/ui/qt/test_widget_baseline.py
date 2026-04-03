@@ -361,10 +361,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window._workspace_title_label.text() == "sess-qt"
     assert "Supported pathway" in window._workspace_subtitle_label.text()
     assert "sess-qt" in window.conversion_widget._session_label.text()
-    assert window.conversion_widget._session_summary_group.title() == "Session Summary"
-    assert window.conversion_widget._source_detail_group.title() == "Source Details"
+    assert window.conversion_widget._session_summary_group.title() == "Session Overview"
+    assert window.conversion_widget._source_detail_group.title() == "Selected Data Source"
     assert window.conversion_widget._execution_group.title() == "Execution Status"
-    assert window.conversion_widget._review_group.title() == "Validation and Review"
+    assert window.conversion_widget._review_group.title() == "Quality Check and Review"
     assert window.conversion_widget._artifact_group.title() == "Generated Artifacts"
     assert window.conversion_widget._stage_value_label.text() == "sources_added"
     assert window.conversion_widget._pathway_label.text() == "supported"
@@ -381,7 +381,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert "build preview" in window.conversion_widget._ready_to_write_label.text()
     assert (
         window.conversion_widget._role_policy_label.text()
-        == "Conflict precedence: primary sources override metadata sources, which override supplemental sources."
+        == "Data source priority during conflict review: primary sources take precedence over metadata sources, which take precedence over supplemental sources."
     )
     assert window.conversion_widget._workspace_tabs.count() == 6
     assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
@@ -940,7 +940,7 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     assert dialog._workspace_tabs.count() == 3
     assert dialog._workspace_tabs.tabText(0) == "Grouping"
     assert dialog._workspace_tabs.tabText(1) == "Session Metadata"
-    assert dialog._workspace_tabs.tabText(2) == "Selected Source Metadata"
+    assert dialog._workspace_tabs.tabText(2) == "Selected Data Source Metadata"
     dialog._add_files_button.click()
     qapp.processEvents()
     assert dialog._input_list.count() == 1

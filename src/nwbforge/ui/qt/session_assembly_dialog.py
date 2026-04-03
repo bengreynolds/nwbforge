@@ -180,7 +180,7 @@ class SessionAssemblyDialog(QWidget):
         summary_layout.addRow("Session ID", self._session_id_edit)
         summary_layout.addRow("Title", self._title_edit)
         summary_layout.addRow("Project", self._project_label)
-        summary_layout.addRow("Pathway", self._pathway_label)
+        summary_layout.addRow("Workflow", self._pathway_label)
         summary_layout.addRow("Grouping", self._grouping_label)
         summary_layout.addRow("Status", self._summary_label)
 
@@ -197,14 +197,14 @@ class SessionAssemblyDialog(QWidget):
         input_layout.addLayout(input_buttons)
         input_layout.addWidget(self._input_list)
 
-        source_group = QGroupBox("Source Assembly Preview", self)
+        source_group = QGroupBox("Data Source Preview", self)
         source_layout = QVBoxLayout(source_group)
         source_layout.addWidget(self._source_list)
         source_details = QFormLayout()
-        source_details.addRow("Selected Source", self._selected_source_label)
+        source_details.addRow("Selected data source", self._selected_source_label)
         source_details.addRow("Structured Entry", self._selected_entry_label)
         source_details.addRow("Resolved Bundle", self._selected_bundle_label)
-        source_details.addRow("Role", self._role_combo)
+        source_details.addRow("Data source role", self._role_combo)
         source_details.addRow("Group", self._group_edit)
         source_details.addRow("Sidecar Association", self._selected_sidecar_label)
         source_details.addRow("Adapter Match", self._selected_adapter_label)
@@ -215,7 +215,7 @@ class SessionAssemblyDialog(QWidget):
         group_layout.addWidget(self._group_list)
         group_details = QFormLayout()
         group_details.addRow("Group", self._selected_group_label)
-        group_details.addRow("Pathway", self._selected_group_pathway_label)
+        group_details.addRow("Workflow", self._selected_group_pathway_label)
         group_details.addRow("Kind", self._selected_group_kind_label)
         group_details.addRow("Workflow", self._selected_group_workflow_label)
         group_details.addRow("Anchor", self._selected_group_anchor_label)
@@ -236,7 +236,7 @@ class SessionAssemblyDialog(QWidget):
         group_layout.addLayout(group_action_row)
         group_layout.addWidget(self._group_action_hint_label)
 
-        metadata_group = QGroupBox("Metadata Overrides", self)
+        metadata_group = QGroupBox("Session Metadata Overrides", self)
         metadata_layout = QFormLayout(metadata_group)
         for key, label in self._METADATA_OVERRIDE_FIELDS:
             edit = QLineEdit(self)
@@ -245,7 +245,7 @@ class SessionAssemblyDialog(QWidget):
             metadata_layout.addRow(label, edit)
             self._metadata_override_edits[key] = edit
 
-        source_metadata_group = QGroupBox("Selected Source Metadata Overrides", self)
+        source_metadata_group = QGroupBox("Selected Data Source Metadata Overrides", self)
         source_metadata_layout = QFormLayout(source_metadata_group)
         for key, label in self._METADATA_OVERRIDE_FIELDS:
             edit = QLineEdit(self)
@@ -291,7 +291,7 @@ class SessionAssemblyDialog(QWidget):
         self._workspace_tabs.setUsesScrollButtons(True)
         self._workspace_tabs.addTab(grouping_page, "Grouping")
         self._workspace_tabs.addTab(session_metadata_page, "Session Metadata")
-        self._workspace_tabs.addTab(source_metadata_page, "Selected Source Metadata")
+        self._workspace_tabs.addTab(source_metadata_page, "Selected Data Source Metadata")
 
         left_column_widget = QWidget(self)
         left_column_widget.setLayout(left_column)
