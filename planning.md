@@ -183,6 +183,7 @@ Next:
 - Deliver the next direct-ingest milestone as a richer dataset/session model: stronger bundle identity, clearer confirmation semantics, and better handling of ambiguous multi-file groups.
 - Deliver the next metadata-review milestone as fuller field-by-field disagreement resolution with clearer session-wide versus source-specific override history.
 - Continue hardening persistence, recovery, logging, review/report, and diagnostics flows until routine manual testing no longer depends on frequent developer intervention.
+- Hardening the desktop UI itself is now explicit local-app work: scroll behavior, splitter/resize behavior, smaller-display usability, actionable controls, and removing unexpected tab focus changes should be treated as blocking polish rather than optional cleanup.
 - Reduce reliance on `Open Session...` JSON/bootstrap fixtures during day-to-day testing by preferring direct-ingest plus explicit project reopen flows wherever practical.
 - Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps.
 - Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area only when a real testing scenario is blocked by the current baseline.
@@ -233,6 +234,13 @@ Priority order:
 - Finish hardening snapshot recovery, restore, report/review reopen behavior, and desktop error handling so repeated manual-testing runs are predictable.
 - Define and run the first internal-testing matrix: smoke baseline, focused route/workflow checks, and representative local datasets.
 - Record findings as explicit blocking versus non-blocking local-app issues so testing-driven fixes can be prioritized without reopening broad architecture scope.
+
+#### Milestone D: Desktop Workspace Usability
+- Treat major workspace panels as scrollable and resizable on smaller displays instead of assuming one large monitor baseline.
+- Remove automatic tab-focus changes triggered only by state updates when they interfere with package selection, settings edits, file-menu flows, or metadata review work.
+- Keep package, settings, direct-ingest, and conversion controls user-driven and actionable while the surrounding runtime state changes.
+- Add a project-aware session workspace model so multiple sessions created under one project can remain open in tabs and users can quickly switch between them.
+- Support explicit creation and deletion of both projects and sessions as first-class desktop actions rather than relying only on one transient conversion workspace.
 
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
 
