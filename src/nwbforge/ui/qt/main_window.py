@@ -851,7 +851,12 @@ class MainWindow(QMainWindow):
             self._session_assembly_dialog,
             self._package_dialog,
         }:
-            self._workspace_tabs.setCurrentWidget(self._conversion_widget)
+            self._workspace_tabs.setCurrentWidget(self._default_workspace_widget())
+
+    def _default_workspace_widget(self):
+        if self._conversion_workspace_tabs or self._conversion_screen_model.state.session is not None:
+            return self._conversion_widget
+        return self._session_assembly_dialog
 
     def _apply_shell_state(self, state) -> None:
         self._status_label.setText(state.status_bar.message)

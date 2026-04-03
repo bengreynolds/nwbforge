@@ -579,6 +579,15 @@ def test_embedded_workspace_panels_are_scrollable_and_keep_manual_tab_selection(
 
     window.settings_dialog.reject()
     qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
+
+    window.conversion_widget.load_session(session)
+    window.workspace_tabs.setCurrentWidget(window.conversion_widget)
+    qapp.processEvents()
+    window.workspace_tabs.setCurrentWidget(window.settings_dialog)
+    qapp.processEvents()
+    window.settings_dialog.reject()
+    qapp.processEvents()
     assert window.workspace_tabs.currentWidget() is window.conversion_widget
 
     window.close()
