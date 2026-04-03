@@ -252,14 +252,16 @@ Priority order:
 - The conversion workspace now keeps multiple loaded or created sessions open in runtime tabs so users can switch between idle sessions and close individual session tabs without clearing the whole workspace.
 - The desktop shell now exposes explicit `New Project` and `Delete Project` actions for the active direct-ingest draft/file instead of relying only on open/save flows.
 - The desktop shell now also exposes an explicit `Close Current Session` action, so session removal is a first-class shell control rather than only a tab-strip gesture.
+- The first stage-guidance baseline is now in place in the conversion workspace: current step, next action, readiness state, and a live pre-write checklist are visible without requiring users to infer progress only from button enablement.
+- `New Session` now opens as the default home workspace, so the direct-ingest-first product story is reflected in actual startup behavior rather than only in documentation and menu wording.
 - Treat major workspace panels as scrollable and resizable on smaller displays instead of assuming one large monitor baseline.
 - Remove automatic tab-focus changes triggered only by state updates when they interfere with package selection, settings edits, file-menu flows, or metadata review work.
 - Keep package, settings, direct-ingest, and conversion controls user-driven and actionable while the surrounding runtime state changes.
 - Add a project-aware session workspace model so multiple sessions created under one project can remain open in tabs and users can quickly switch between them.
 - Support explicit creation and deletion of both projects and sessions as first-class desktop actions rather than relying only on one transient conversion workspace.
-- Add stage-based workflow guidance in the conversion workspace, with explicit `next action` and `ready to write when...` messaging rather than relying only on button enablement and status text.
 - Demote session JSON loading in product-facing navigation and copy so it reads as a compatibility/import path rather than the primary happy path.
 - Move diagnostics, history, and advanced conflict-resolution controls toward progressive disclosure after the main operator path is clearer.
+- The next Milestone D slice should focus on post-write review clarity and project-aware session workspaces rather than on the already-landed baseline mismatch-correction pass.
 
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
 
@@ -486,6 +488,10 @@ Task consequences:
 
 #### Product-directed UX task list
 
+Current status:
+- The first UX-correction baseline is now materially implemented in the desktop app: guided conversion workflow messaging, progressive disclosure for advanced tools, recommended metadata-resolution actions, direct-ingest-first navigation framing, simpler workflow terminology, visible readiness summaries, and `New Session` as the home workspace are all in place.
+- Remaining UX work should now focus on deeper workflow polish rather than on finishing the initial mismatch checklist, especially post-write review clarity, project-aware session workspaces, and representative-dataset hardening.
+
 Workflow simplification pass:
 - redesign the conversion panel as a guided stage flow rather than a dense all-at-once control surface
 - move diagnostics/history into collapsible advanced sections or clearly secondary tabs
@@ -514,10 +520,10 @@ Success-metric pass:
 #### Sequencing for this correction
 
 Order of execution:
-1. finish the guided conversion workspace direction, including stronger stage messaging and visible readiness/blocker summaries
-2. demote session-import posture in menus, copy, and startup framing
-3. move diagnostics/history and advanced metadata-resolution controls toward progressive disclosure
-4. simplify terminology and label hierarchy in the conversion and direct-ingest surfaces
+1. carry the now-landed mismatch-correction baseline through internal testing and confirm it actually lowers operator friction on representative datasets
+2. improve post-write review clarity so validation, review status, and artifact follow-up feel as guided as pre-write readiness
+3. make project-aware session workspaces clearer so multi-session project use feels intentional rather than like a flat runtime tab list
+4. continue targeted small-slice polish only where testing exposes real workflow friction
 5. only after those are materially improved, revisit whether more product-facing route/package surface belongs in the first-pass UI
 
 Definition of done for the correction:
