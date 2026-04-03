@@ -1067,7 +1067,11 @@ class MainWindow(QMainWindow):
             return
 
         source_count = len(state.session.sources)
-        project_text = f"{state.session.pathway.value.title()} pathway | {source_count} source"
+        project_name = self._session_project_name(state.session)
+        project_text = ""
+        if project_name:
+            project_text = f"Project: {project_name} | "
+        project_text += f"{state.session.pathway.value.title()} pathway | {source_count} source"
         if source_count != 1:
             project_text += "s"
         if state.output_path is not None:
