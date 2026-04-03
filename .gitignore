@@ -16,3 +16,4 @@ conda-meta/
 
 # Local temporary example data for manual testing
 temp/example-data/**
+temp/**

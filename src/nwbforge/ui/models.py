@@ -104,19 +104,37 @@ class SessionAssemblySourceItem:
     """A UI-facing summary of one selected input in session assembly."""
 
     source_id: str
+    ingest_kind: str
+    selection_label: str
+    route_name: str | None
     group_key: str
     group_label: str
     label: str
     location: Path
     source_type: str
     suggested_pathway: str
+    entry_path_kind: str | None = None
+    entry_role_label: str | None = None
+    entry_validation_status: str | None = None
     role: str = "primary"
     metadata_overrides: dict[str, str] = field(default_factory=dict)
     sidecar_for_source_id: str | None = None
     sidecar_for_label: str | None = None
+    context_source_id: str | None = None
+    context_label: str | None = None
     matching_adapter_ids: tuple[str, ...] = ()
     suggested_adapter_id: str | None = None
     needs_review: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SessionAssemblySourceTypeOption:
+    """One user-selectable source-ingest option in the direct-ingest workspace."""
+
+    ingest_kind: str
+    label: str
+    route_name: str | None = None
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +146,11 @@ class SessionAssemblyGroupItem:
     suggested_pathway: str
     group_kind: str = "folder"
     anchor_path: Path | None = None
+    canonical_source_id: str | None = None
+    canonical_source_label: str | None = None
+    canonical_source_path: Path | None = None
+    canonical_entry_role_label: str | None = None
+    canonical_selection_label: str | None = None
     grouping_reason: str = ""
     member_labels: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
@@ -156,6 +179,8 @@ class SessionAssemblyState:
     """State consumable by a direct-ingest session-assembly screen."""
 
     selected_paths: tuple[Path, ...] = ()
+    source_type_options: tuple[SessionAssemblySourceTypeOption, ...] = ()
+    source_intents: dict[str, dict[str, str]] = field(default_factory=dict)
     project_path: Path | None = None
     session_id: str = ""
     title: str = ""

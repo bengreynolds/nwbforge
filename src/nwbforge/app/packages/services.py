@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from nwbforge.app.packages.catalog import PRESET_ROUTE_NAMES, ROUTE_PACKAGE_BY_NAME, ROUTE_PACKAGE_CATALOG
-from nwbforge.app.packages.models import InstallPreset, PackageSelection, RoutePackageSpec
+from nwbforge.app.packages.models import InstallMode, InstallPreset, PackageSelection, RoutePackageSpec
 from nwbforge.app.packages.planner import DEFAULT_SELECTION_PATH, load_package_selection, resolve_install_plan, save_install_plan
 from nwbforge.app.packages.service_models import (
     PackageCompatibilityIssue,
@@ -75,8 +75,9 @@ class PackageManagementService:
         plan,
     ) -> tuple[PackageCompatibilityIssue, ...]:
         issues: list[PackageCompatibilityIssue] = []
+        request_mode = InstallMode(request.mode)
 
-        if request.mode.value == "selected" and plan.selection.preset is InstallPreset.CUSTOM and not plan.selection.routes:
+        if request_mode is InstallMode.SELECTED and plan.selection.preset is InstallPreset.CUSTOM and not plan.selection.routes:
             issues.append(
                 PackageCompatibilityIssue(
                     code="package-selection-empty-custom",

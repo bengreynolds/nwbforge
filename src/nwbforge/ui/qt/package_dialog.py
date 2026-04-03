@@ -35,16 +35,16 @@ class PackageInstallerDialog(QWidget):
         self._screen_model = screen_model
 
         self._mode_combo = QComboBox(self)
-        self._mode_combo.addItem("Minimal", InstallMode.MINIMAL)
-        self._mode_combo.addItem("Selected", InstallMode.SELECTED)
-        self._mode_combo.addItem("Full", InstallMode.FULL)
+        self._mode_combo.addItem("Minimal", InstallMode.MINIMAL.value)
+        self._mode_combo.addItem("Selected", InstallMode.SELECTED.value)
+        self._mode_combo.addItem("Full", InstallMode.FULL.value)
         self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
 
         self._preset_combo = QComboBox(self)
-        self._preset_combo.addItem("Minimal", InstallPreset.MINIMAL)
-        self._preset_combo.addItem("Common", InstallPreset.COMMON)
-        self._preset_combo.addItem("Full", InstallPreset.FULL)
-        self._preset_combo.addItem("Custom", InstallPreset.CUSTOM)
+        self._preset_combo.addItem("Minimal", InstallPreset.MINIMAL.value)
+        self._preset_combo.addItem("Common", InstallPreset.COMMON.value)
+        self._preset_combo.addItem("Full", InstallPreset.FULL.value)
+        self._preset_combo.addItem("Custom", InstallPreset.CUSTOM.value)
         self._preset_combo.currentIndexChanged.connect(self._on_preset_changed)
 
         self._route_list = QListWidget(self)
@@ -142,13 +142,13 @@ class PackageInstallerDialog(QWidget):
 
     def _sync_mode_combo(self, mode: InstallMode) -> None:
         with QSignalBlocker(self._mode_combo):
-            index = self._mode_combo.findData(mode)
+            index = self._mode_combo.findData(mode.value)
             if index >= 0:
                 self._mode_combo.setCurrentIndex(index)
 
     def _sync_preset_combo(self, preset: InstallPreset) -> None:
         with QSignalBlocker(self._preset_combo):
-            index = self._preset_combo.findData(preset)
+            index = self._preset_combo.findData(preset.value)
             if index >= 0:
                 self._preset_combo.setCurrentIndex(index)
 
@@ -167,17 +167,18 @@ class PackageInstallerDialog(QWidget):
                 item.setCheckState(Qt.CheckState.Checked if spec.route_name in selected else Qt.CheckState.Unchecked)
 
     def _on_mode_changed(self) -> None:
-        mode = self._mode_combo.currentData()
+        mode = self._mode_combo.currentData(Qt.ItemDataRole.UserRole)
         if mode is not None:
-            self._screen_model.set_install_mode(mode)
+            self._screen_model.set_install_mode(InstallMode(str(mode)))
 
     def _on_preset_changed(self) -> None:
-        preset = self._preset_combo.currentData()
+        preset = self._preset_combo.currentData(Qt.ItemDataRole.UserRole)
         if preset is not None:
-            self._screen_model.select_preset(preset)
+            self._screen_model.select_preset(InstallPreset(str(preset)))
 
     def _on_route_item_changed(self) -> None:
-        if self._preset_combo.currentData() is not InstallPreset.CUSTOM:
+        preset = self._preset_combo.currentData(Qt.ItemDataRole.UserRole)
+        if preset is None or InstallPreset(str(preset)) is not InstallPreset.CUSTOM:
             return
         selected = []
         for index in range(self._route_list.count()):

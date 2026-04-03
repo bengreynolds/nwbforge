@@ -74,6 +74,21 @@ def test_package_installer_screen_model_updates_custom_routes(tmp_path: Path) ->
     screen.shutdown()
 
 
+def test_package_installer_screen_model_normalizes_string_mode_and_preset_inputs(tmp_path: Path) -> None:
+    screen = make_screen_model(tmp_path)
+    screen.load()
+
+    mode_state = screen.set_install_mode("full")
+    preset_state = screen.set_install_mode("selected")
+    preset_state = screen.select_preset("custom")
+
+    assert mode_state.install_mode is InstallMode.FULL
+    assert mode_state.install_preset is InstallPreset.FULL
+    assert preset_state.install_mode is InstallMode.SELECTED
+    assert preset_state.install_preset is InstallPreset.CUSTOM
+    screen.shutdown()
+
+
 def test_package_installer_screen_model_runs_background_install(tmp_path: Path) -> None:
     screen = make_screen_model(tmp_path)
     screen.load()

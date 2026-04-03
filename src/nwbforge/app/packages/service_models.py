@@ -17,6 +17,11 @@ class PackageInstallRequest:
     use_saved_selection: bool = False
     persist_selection: bool = False
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "mode", InstallMode(self.mode))
+        object.__setattr__(self, "preset", InstallPreset(self.preset) if self.preset is not None else None)
+        object.__setattr__(self, "routes", tuple(str(route) for route in self.routes))
+
 
 @dataclass(frozen=True, slots=True)
 class PackageCompatibilityIssue:

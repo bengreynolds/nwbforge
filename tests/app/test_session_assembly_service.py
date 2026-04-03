@@ -258,3 +258,169 @@ def test_session_assembly_service_requires_primary_source(tmp_path: Path) -> Non
 
     assert draft.can_create_session is False
     assert any(issue.code == "session-assembly-no-primary-source" for issue in draft.issues)
+
+
+def test_session_assembly_service_blocks_mismatched_selected_supported_route(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (manifest_path,),
+        source_intents={
+            str(manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "deeplabcut",
+                "route_display_name": "DeepLabCut",
+            }
+        },
+    )
+
+    assert draft.can_create_session is False
+    assert draft.sources[0].ingest_kind == "supported"
+    assert draft.sources[0].selection_label == "DeepLabCut"
+    assert draft.sources[0].route_name == "deeplabcut"
+    assert draft.sources[0].matching_adapter_ids == ()
+    assert any(issue.code == "session-assembly-selected-route-mismatch" for issue in draft.issues)
+
+
+def test_session_assembly_service_accepts_valid_supported_entry_and_records_entry_metadata(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+    draft = service.assemble_draft(accepted, source_intents=intents)
+
+    assert accepted == (manifest_path.resolve(),)
+    assert rejected == ()
+    assert intents[str(manifest_path.resolve())]["entry_role_label"] == "manifest file or session directory"
+    assert intents[str(manifest_path.resolve())]["entry_validation_status"] == "validated"
+    assert draft.sources[0].entry_path_kind == "file"
+    assert draft.sources[0].entry_role_label == "manifest file or session directory"
+    assert draft.sources[0].entry_validation_status == "validated"
+
+
+def test_session_assembly_service_rejects_obviously_wrong_supported_entry_path(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (manifest_path,),
+        route_name="deeplabcut",
+        route_display_name="DeepLabCut",
+    )
+
+    assert accepted == ()
+    assert intents == {}
+    assert len(rejected) == 1
+    assert "DeepLabCut" in rejected[0]
+    assert ".csv, .h5" in rejected[0]
+
+
+def test_session_assembly_service_preserves_selected_source_context_in_draft(tmp_path: Path) -> None:
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (notes_path,),
+        source_intents={
+            str(notes_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "deeplabcut",
+                "route_display_name": "DeepLabCut",
+            }
+        },
+        source_roles={"notes": "primary"},
+    )
+
+    assert draft.sources[0].selection_label == "DeepLabCut"
+    assert draft.sources[0].route_name == "deeplabcut"
+
+
+def test_session_assembly_service_filters_unsupported_custom_file_types(tmp_path: Path) -> None:
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+    binary_path = tmp_path / "mystery.exe"
+    binary_path.write_text("not a dataset", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, rejected = service.filter_custom_selected_paths((notes_path, binary_path))
+
+    assert accepted == (notes_path.resolve(),)
+    assert len(rejected) == 1
+    assert "mystery.exe" in rejected[0]
+
+
+def test_session_assembly_service_attaches_custom_input_to_single_supported_anchor(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (manifest_path, notes_path),
+        source_intents={
+            str(manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "session_manifest",
+                "route_display_name": "Session Manifest",
+                "entry_path_kind": "file",
+                "entry_role_label": "manifest file or session directory",
+                "entry_validation_status": "validated",
+            }
+        },
+    )
+
+    manifest_source = next(source for source in draft.sources if source.location == manifest_path.resolve())
+    notes_source = next(source for source in draft.sources if source.location == notes_path.resolve())
+
+    assert len(draft.groups) == 1
+    assert notes_source.group_key == manifest_source.group_key
+    assert notes_source.context_source_id == manifest_source.source_id
+    assert notes_source.context_label == "Session Manifest"
+    assert draft.groups[0].canonical_source_id == manifest_source.source_id
+    assert draft.groups[0].canonical_source_label == "session_manifest.json"
+    assert draft.groups[0].canonical_source_path == manifest_path.resolve()
+    assert draft.groups[0].canonical_entry_role_label == "manifest file or session directory"
+    assert draft.groups[0].canonical_selection_label == "Session Manifest"
+    assert any(issue.code == "session-assembly-custom-context-association" for issue in draft.issues)
+
+
+def test_session_assembly_service_leaves_custom_input_separate_when_multiple_supported_anchors_exist(
+    tmp_path: Path,
+) -> None:
+    first_manifest_path = tmp_path / "session_manifest.json"
+    first_manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    second_manifest_path = tmp_path / "custom_session.json"
+    second_manifest_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (first_manifest_path, second_manifest_path, notes_path),
+        source_intents={
+            str(first_manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_display_name": "Session Manifest",
+            },
+            str(second_manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_display_name": "Custom Session",
+            },
+        },
+    )
+
+    notes_source = next(source for source in draft.sources if source.location == notes_path.resolve())
+
+    assert notes_source.context_source_id is None
+    assert len(draft.groups) == 3
+    assert any(issue.code == "session-assembly-ambiguous-custom-context" for issue in draft.issues)

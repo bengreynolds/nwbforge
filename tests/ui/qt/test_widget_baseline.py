@@ -8,7 +8,7 @@ from subprocess import CompletedProcess
 from PySide6.QtCore import Qt
 import nwbforge.ui.qt.main_window as main_window_module
 
-from nwbforge.app.packages import PackageInstallationService, PackageManagementService
+from nwbforge.app.packages import InstallMode, InstallPreset, PackageInstallationService, PackageManagementService
 from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
 from nwbforge.app.services import (
@@ -346,6 +346,48 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.package_dialog._install_button.isEnabled() is True
 
     window.close()
+
+
+def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_path: Path) -> None:
+    package_screen = make_package_screen(tmp_path)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        package_screen,
+        ConversionSessionScreenModel(FakeConversionExecutor(*make_preview_and_execution(make_session(tmp_path)))),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    qapp.processEvents()
+
+    full_index = window.package_dialog._mode_combo.findData(InstallMode.FULL.value)
+    window.package_dialog._mode_combo.setCurrentIndex(full_index)
+    qapp.processEvents()
+    assert package_screen.state.install_mode is InstallMode.FULL
+    assert package_screen.state.install_preset is InstallPreset.FULL
+
+    selected_index = window.package_dialog._mode_combo.findData(InstallMode.SELECTED.value)
+    custom_index = window.package_dialog._preset_combo.findData(InstallPreset.CUSTOM.value)
+    window.package_dialog._mode_combo.setCurrentIndex(selected_index)
+    window.package_dialog._preset_combo.setCurrentIndex(custom_index)
+    qapp.processEvents()
+    assert package_screen.state.install_mode is InstallMode.SELECTED
+    assert package_screen.state.install_preset is InstallPreset.CUSTOM
+    assert window.package_dialog._route_list.isEnabled() is True
+
+    first_item = window.package_dialog._route_list.item(0)
+    first_item.setCheckState(Qt.CheckState.Checked)
+    qapp.processEvents()
+    assert first_item.data(Qt.ItemDataRole.UserRole) in package_screen.state.selected_routes
+
+    window.package_dialog._install_button.click()
+    qapp.processEvents()
+    assert package_screen.state.progress_event is not None
+
+    window.close()
+    package_screen.shutdown()
 
 
 def test_conversion_widget_uses_split_session_and_review_layout(qapp, tmp_path: Path) -> None:
@@ -1120,6 +1162,72 @@ def test_main_window_restores_new_session_draft(qapp, tmp_path: Path, monkeypatc
     assert dialog._input_list.count() == 1
     assert dialog._role_combo.currentText() == "metadata"
     assert dialog._metadata_override_edits["subject.subject_id"].text() == "restored-mouse-01"
+    window.close()
+
+
+def test_session_assembly_dialog_exposes_structured_source_selector(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+
+    assert dialog._source_type_combo.count() >= 1
+    assert dialog._source_type_combo.itemText(0) == "Custom"
+    assert dialog._add_files_button.text() == "Add Custom Files..."
+    assert dialog._add_folder_button.text() == "Add Custom Folder..."
+
+    window.close()
+
+
+def test_session_assembly_dialog_shows_canonical_entry_for_structured_group(qapp, tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    session_assembly_screen.add_supported_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+    session_assembly_screen.add_custom_paths((notes_path,))
+    qapp.processEvents()
+
+    dialog = window.session_assembly_dialog
+    dialog._sync_selected_group()
+
+    assert "session_manifest.json" in dialog._selected_group_canonical_label.text()
+    assert "Session Manifest manifest file or session directory" in dialog._selected_group_canonical_label.text()
+    assert str(manifest_path.resolve()) in dialog._selected_group_canonical_label.text()
+
     window.close()
 
 

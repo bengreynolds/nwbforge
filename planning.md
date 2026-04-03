@@ -169,19 +169,21 @@ Completed:
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:
-- No core implementation tracks are currently marked in progress; the repo has closed the active baseline gaps and is now in testing-driven refinement.
+- Workstream 1: deepen direct-ingest dataset modeling beyond the current heuristic grouping, confirmation, and manual correction baseline so heterogeneous multi-file bundles are represented more honestly during session assembly.
+- Workstream 2: expand mixed-source metadata disagreement handling beyond the current session/source override actions into a fuller field-level review workflow with clearer durable resolution history.
+- Workstream 3: harden local-app recovery, diagnostics, review/report behavior, and internal-testing triage so repeated local runs are predictable and failures are easier to diagnose.
 
 Next:
-- Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth
-- Continue structured internal testing in the dedicated Conda environment using the smoke baseline, focused route checks, and real representative lab datasets
-- Capture internal testing findings and convert them into prioritized UI, workflow, performance, and operational fixes
-- Deepen direct-ingest grouping from current heuristics, confirmation, and manual correction toward a richer dataset/session model
-- Expand mixed-source disagreement handling from the current metadata-review workspace toward fuller field-by-field conflict resolution and clearer override history
-- Harden desktop persistence, recovery, logging, and review/report flows until manual testing can proceed without high-friction recovery or triage gaps
-- Enter a user decision/change phase once the local app is stable enough for broader hands-on feedback, and treat requested changes as the main prioritization input before any deployment work
-- Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps
-- Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area, not more single-interface route accumulation
-- Keep release engineering planned but defer implementation until after local-app maturity and the first user decision/change phase
+- Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth.
+- Define and run the internal-testing matrix in the dedicated Conda environment: smoke baseline, focused route/workflow checks, and at least 3 representative local datasets that stress supported, custom, or hybrid ingest paths.
+- Capture internal-testing findings in a repeatable triage loop and convert them into prioritized UI, workflow, performance, and operational fixes instead of reopening broad architecture work.
+- Deliver the next direct-ingest milestone as a richer dataset/session model: stronger bundle identity, clearer confirmation semantics, and better handling of ambiguous multi-file groups.
+- Deliver the next metadata-review milestone as fuller field-by-field disagreement resolution with clearer session-wide versus source-specific override history.
+- Continue hardening persistence, recovery, logging, review/report, and diagnostics flows until routine manual testing no longer depends on frequent developer intervention.
+- Reduce reliance on `Open Session...` JSON/bootstrap fixtures during day-to-day testing by preferring direct-ingest plus explicit project reopen flows wherever practical.
+- Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps.
+- Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area only when a real testing scenario is blocked by the current baseline.
+- Keep release engineering planned but defer implementation until after local-app maturity and the first user decision/change phase.
 
 ## Final Local App Maturity Path
 
@@ -195,17 +197,51 @@ Priority order:
 5. Combined-workflow expansion only where it unblocks real user scenarios
 6. Release engineering after the above
 
+### Near-Term Milestone Checklist
+
+#### Milestone A: Direct-Ingest Dataset Model
+- Keep refining the structured source-ingest flow that now lets users add NeuroConv-supported sources, custom files/folders, or a mixture of both within one session-assembly workspace.
+- Preserve the structured source selector as the default ingest model: the `New Session` workflow should expose a repeatable source-type choice with a `Custom` option plus all currently installed NeuroConv-supported packages.
+- Treat proprietary and custom ingest as additive, not mutually exclusive, so one session can include multiple structured sources plus arbitrary supported custom files/folders without splitting the workflow into separate sessions.
+- For supported-route selection, prompt for the package's project file, main file, or root dataset directory and treat that chosen path as the canonical dataset entry reference for the structured source bundle.
+- Tighten route-specific entry-path validation and canonical dataset-entry semantics so a selected NeuroConv package clearly owns the expected project/main file or root directory for that bundle.
+- Represent supported selections as structured source objects that carry route identity, canonical entry semantics, and any later bundle/context decisions into downstream grouping, review, persistence, and provenance.
+- Use the selected NeuroConv package as real context in session assembly: proprietary selections should contribute known modality and relationship hints to later grouping and mapping rather than behaving like unlabeled generic files.
+- Represent direct-ingest bundles with stronger dataset identity than the current grouped-path summary alone, including durable group intent, clearer canonical entry-path semantics, and better saved-project round trips for proprietary-plus-custom sessions.
+- Keep proprietary-path validation conservative but explicit: reject obviously wrong entry selections early, preserve plausible-but-uncertain cases as reviewable, and do not silently reinterpret a selected package as generic custom ingest.
+- Keep custom ingest open to individual files, multiple files, or folders, but only admit supported scientific/media/metadata file types into the candidate pool.
+- Preserve the distinction that custom inputs join the session file pool directly and are not tied to a specific NeuroConv package, even when they are later associated with a structured source bundle.
+- Continue evolving the decision engine so it accepts both structured and unstructured inputs, uses route context plus file structure and metadata to organize them, and proposes associations or new mappings without silently overcommitting.
+- Keep mixed-source attachment logic reviewable: attach nearby custom inputs to an existing structured bundle when the evidence is narrow enough, propose new groupings when association is weak, and explicitly flag ambiguity for user review.
+- Push custom-input organization toward NWB-facing roles such as acquisition, behavior, metadata, and processed data whenever the evidence supports it, while preserving provenance and keeping uncertain mappings included but marked for review.
+- Keep UI language and issue text researcher-facing: use technically precise NWB and NeuroConv terminology without oversimplifying the workflow.
+- Preserve explicit provenance for bundle membership, grouping reasons, and user corrections so later review/report flows can explain how a session was assembled.
+- Keep hardening custom ingest acceptance so supported scientific/media/metadata files remain eligible while obviously unrelated files are rejected with clear reviewable feedback.
+- Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, structured-source context propagation, and saved-project round trips over the richer dataset model.
+
+#### Milestone B: Metadata Review And Resolution
+- Expand the metadata-review workspace from the current override actions into a fuller field-by-field resolution workflow over the current canonical field set.
+- Make session-wide versus source-specific override history more explicit so users can tell which action resolved a disagreement and what still remains unresolved.
+- Add tests that cover repeated review/rebuild cycles, override clearing, and mixed-source disagreement resolution in supported, custom, and hybrid sessions.
+
+#### Milestone C: Recovery, Diagnostics, And Testing Triage
+- Finish hardening snapshot recovery, restore, report/review reopen behavior, and desktop error handling so repeated manual-testing runs are predictable.
+- Define and run the first internal-testing matrix: smoke baseline, focused route/workflow checks, and representative local datasets.
+- Record findings as explicit blocking versus non-blocking local-app issues so testing-driven fixes can be prioritized without reopening broad architecture scope.
+
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
 
 The app should be considered mature enough to move from engineering-led internal testing into a broader user-feedback/change phase only when all of the following are true:
 
-- Direct-ingest session creation is reliable enough that users can assemble real sessions without frequent manual rescue from bootstrap JSON compatibility paths.
-- Project save/load, recent history, recovery, output selection, and review/report actions behave predictably across repeated local runs.
-- Mixed-source metadata review is usable enough that important disagreements can be understood and resolved without developer intervention.
-- Logging and error surfaces are strong enough that failed or confusing local runs are diagnosable after the fact.
+- Direct-ingest session creation is reliable enough that users can assemble representative real sessions without frequent manual rescue from bootstrap JSON compatibility paths.
+- The internal smoke baseline remains green while testing fixes are applied.
+- Focused route/workflow checks for the currently exercised supported and combined-workflow slices remain green while testing fixes are applied.
+- At least 3 representative local datasets have been exercised through the current desktop workflow, with at least one stressing multi-source grouping or mixed-source metadata disagreement handling.
+- Project save/load, recent history, snapshot recovery, output selection, and review/report actions behave predictably across repeated local runs and at least one explicit recovery/restore scenario per session type has been checked.
+- Mixed-source metadata review is usable enough that important disagreements can be understood and resolved without developer intervention for the current canonical field set.
+- Logging, diagnostics, and user-facing error surfaces are strong enough that failed or confusing local runs are diagnosable after the fact without needing ad hoc instrumentation.
 - The integrated NWB viewer is stable enough for routine inspection of generated files and arbitrary external NWB files during testing.
-- The internal smoke baseline plus focused route/workflow tests remain green while testing fixes are applied.
-- At least one real round of internal testing on representative local datasets has been completed and its findings have been triaged into explicit follow-up work.
+- The findings from at least one real internal-testing round have been triaged into explicit follow-up work with blocking versus non-blocking status.
 
 ### User Decision/Change Phase
 
@@ -1203,7 +1239,7 @@ Current status:
 
 Current status:
 - End-to-end NeuroConv-backed supported workflows now exist for CSV and Excel time intervals carried into NWB trials plus still-image and audio conversion through documented NeuroConv interfaces
-- Additional supported routes and a minimal operator-facing shell remain outstanding
+- The integrated operator-facing desktop shell now exists; remaining supported-path work should be driven by real testing blockers and combined-workflow needs rather than by broad single-interface route accumulation
 - UI/runtime contracts for background execution, progress, logging, and user-facing errors are now explicit, with logging implemented across the core runtime path
 - This phase is no longer the sole near-term definition of first-pass readiness; supported-path coverage now serves the broader first-pass desktop product milestone rather than acting as the main gate by itself
 - The current supported-path desktop entry still leans on `session_manifest.json` as a testing/bootstrap fixture; future supported-path UX should start from direct file/folder ingestion and metadata review rather than a hand-authored app descriptor
@@ -1320,8 +1356,9 @@ Current status:
 ## Open Questions
 
 - Which 3 to 5 lab pipelines should define the initial architecture tests?
-- Do we need a desktop-first UI, browser-first UI, or both?
-- Where should session state live for early deployments: local files, SQLite, or service-backed storage?
+- Which exact representative local datasets should define the first internal-testing matrix for supported, custom, and hybrid/direct-ingest behavior?
+- When should the current local desktop-first direction justify a browser surface, if ever, instead of continuing to deepen one desktop product?
+- What criteria should trigger migration from the current JSON snapshot/project baseline to SQLite or another structured local store?
 - What minimum provenance record is required for auditability?
 - When should the system recommend descriptive metadata versus a formal NDX?
 - How should lab vocabularies be versioned and reviewed?

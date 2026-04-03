@@ -108,3 +108,19 @@ def test_package_management_service_persists_valid_selection(tmp_path: Path) -> 
     saved = service.load_saved_selection()
     assert saved is not None
     assert saved.routes == ("deeplabcut", "image")
+
+
+def test_package_management_service_normalizes_string_request_values(tmp_path: Path) -> None:
+    service = PackageManagementService(selection_path=tmp_path / "selection.json")
+
+    preview = service.preview_install(
+        PackageInstallRequest(
+            mode="selected",
+            preset="custom",
+            routes=("image",),
+        )
+    )
+
+    assert preview.request.mode is InstallMode.SELECTED
+    assert preview.request.preset is InstallPreset.CUSTOM
+    assert preview.is_installable is True

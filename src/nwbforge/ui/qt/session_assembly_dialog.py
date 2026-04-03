@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from nwbforge.domain.models import ConversionSession
-from nwbforge.ui.models import SessionAssemblyState
+from nwbforge.ui.models import SessionAssemblySourceTypeOption, SessionAssemblyState
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
@@ -90,6 +90,8 @@ class SessionAssemblyDialog(QWidget):
         self._error_label.setWordWrap(True)
         self._selected_source_label = QLabel("No source selected.", self)
         self._selected_source_label.setWordWrap(True)
+        self._selected_entry_label = QLabel("Not available.", self)
+        self._selected_entry_label.setWordWrap(True)
         self._selected_adapter_label = QLabel("No adapter match", self)
         self._selected_adapter_label.setWordWrap(True)
         self._selected_sidecar_label = QLabel("None", self)
@@ -99,6 +101,8 @@ class SessionAssemblyDialog(QWidget):
         self._selected_group_kind_label = QLabel("Not available.", self)
         self._selected_group_anchor_label = QLabel("Not available.", self)
         self._selected_group_anchor_label.setWordWrap(True)
+        self._selected_group_canonical_label = QLabel("Not available.", self)
+        self._selected_group_canonical_label.setWordWrap(True)
         self._selected_group_reason_label = QLabel("Not available.", self)
         self._selected_group_reason_label.setWordWrap(True)
         self._selected_group_members_label = QLabel("No group selected.", self)
@@ -129,6 +133,10 @@ class SessionAssemblyDialog(QWidget):
         self._group_action_hint_label.setWordWrap(True)
         self._metadata_override_edits: dict[str, QLineEdit] = {}
         self._source_metadata_override_edits: dict[str, QLineEdit] = {}
+        self._source_type_combo = QComboBox(self)
+        self._source_type_combo.currentIndexChanged.connect(self._update_add_controls)
+        self._source_type_description_label = QLabel("", self)
+        self._source_type_description_label.setWordWrap(True)
 
         self._add_files_button = QPushButton("Add Files...", self)
         self._add_files_button.clicked.connect(self._add_files)
@@ -173,6 +181,10 @@ class SessionAssemblyDialog(QWidget):
 
         input_group = QGroupBox("Selected Inputs", self)
         input_layout = QVBoxLayout(input_group)
+        source_type_row = QFormLayout()
+        source_type_row.addRow("Source Type", self._source_type_combo)
+        input_layout.addLayout(source_type_row)
+        input_layout.addWidget(self._source_type_description_label)
         input_buttons = QHBoxLayout()
         input_buttons.addWidget(self._add_files_button)
         input_buttons.addWidget(self._add_folder_button)
@@ -185,6 +197,7 @@ class SessionAssemblyDialog(QWidget):
         source_layout.addWidget(self._source_list)
         source_details = QFormLayout()
         source_details.addRow("Selected Source", self._selected_source_label)
+        source_details.addRow("Structured Entry", self._selected_entry_label)
         source_details.addRow("Role", self._role_combo)
         source_details.addRow("Group", self._group_edit)
         source_details.addRow("Sidecar Association", self._selected_sidecar_label)
@@ -199,6 +212,7 @@ class SessionAssemblyDialog(QWidget):
         group_details.addRow("Pathway", self._selected_group_pathway_label)
         group_details.addRow("Kind", self._selected_group_kind_label)
         group_details.addRow("Anchor", self._selected_group_anchor_label)
+        group_details.addRow("Canonical Entry", self._selected_group_canonical_label)
         group_details.addRow("Reason", self._selected_group_reason_label)
         group_details.addRow("Members", self._selected_group_members_label)
         group_details.addRow("Composition", self._selected_group_counts_label)
@@ -311,25 +325,58 @@ class SessionAssemblyDialog(QWidget):
         self.dismissed.emit()
 
     def _add_files(self) -> None:
+        selected_option = self._selected_source_type_option()
+        if selected_option is None:
+            return
+        if selected_option.ingest_kind == "supported":
+            selected_path, _ = QFileDialog.getOpenFileName(
+                self,
+                f"Add {selected_option.label} Main File",
+                str(Path.cwd()),
+                "All supported inputs (*.*)",
+            )
+            if not selected_path:
+                return
+            self._screen_model.add_supported_paths(
+                (Path(selected_path),),
+                route_name=str(selected_option.route_name or ""),
+                route_display_name=selected_option.label,
+            )
+            return
+
         selected_paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Add Source Files",
+            "Add Custom Source Files",
             str(Path.cwd()),
             "All supported inputs (*.*)",
         )
         if not selected_paths:
             return
-        self._screen_model.add_paths(tuple(Path(path) for path in selected_paths))
+        self._screen_model.add_custom_paths(tuple(Path(path) for path in selected_paths))
 
     def _add_folder(self) -> None:
+        selected_option = self._selected_source_type_option()
+        if selected_option is None:
+            return
         selected_path = QFileDialog.getExistingDirectory(
             self,
-            "Add Source Folder",
+            (
+                f"Add {selected_option.label} Root Folder"
+                if selected_option.ingest_kind == "supported"
+                else "Add Custom Source Folder"
+            ),
             str(Path.cwd()),
         )
         if not selected_path:
             return
-        self._screen_model.add_paths((Path(selected_path),))
+        if selected_option.ingest_kind == "supported":
+            self._screen_model.add_supported_paths(
+                (Path(selected_path),),
+                route_name=str(selected_option.route_name or ""),
+                route_display_name=selected_option.label,
+            )
+            return
+        self._screen_model.add_custom_paths((Path(selected_path),))
 
     def _remove_selected_inputs(self) -> None:
         selected_paths = []
@@ -361,6 +408,7 @@ class SessionAssemblyDialog(QWidget):
                 self._title_edit.setText(state.title)
 
         self._pathway_label.setText(state.suggested_pathway)
+        self._sync_source_type_options(state)
         if self._header_badge_label is not None:
             badge_text = state.suggested_pathway.title() if state.selected_paths else "Direct Ingest"
             if state.has_unsaved_changes and state.selected_paths:
@@ -385,7 +433,9 @@ class SessionAssemblyDialog(QWidget):
 
         self._input_list.clear()
         for path in state.selected_paths:
-            item = QListWidgetItem(path.name)
+            source_item = next((item for item in state.sources if item.location == path), None)
+            selection_prefix = f"[{source_item.selection_label}] " if source_item is not None else ""
+            item = QListWidgetItem(f"{selection_prefix}{path.name}")
             item.setToolTip(str(path))
             item.setData(Qt.ItemDataRole.UserRole, str(path))
             self._input_list.addItem(item)
@@ -394,7 +444,8 @@ class SessionAssemblyDialog(QWidget):
         for source in state.sources:
             adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "no adapter match"
             item = QListWidgetItem(
-                f"[{source.group_label}] [{source.suggested_pathway}] {source.label} ({source.role}) -> {adapter_summary}"
+                f"[{source.selection_label}] [{source.group_label}] [{source.suggested_pathway}] "
+                f"{source.label} ({source.role}) -> {adapter_summary}"
             )
             item.setToolTip(str(source.location))
             item.setData(Qt.ItemDataRole.UserRole, source.source_id)
@@ -460,11 +511,13 @@ class SessionAssemblyDialog(QWidget):
             if state.project_path is None and not state.has_unsaved_changes
             else "Conversion Project"
         )
+        self._update_add_controls()
 
     def _sync_selected_source(self, *_args) -> None:
         selected_item = self._source_list.currentItem()
         if selected_item is None:
             self._selected_source_label.setText("No source selected.")
+            self._selected_entry_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
@@ -486,6 +539,7 @@ class SessionAssemblyDialog(QWidget):
         source = next((item for item in self._screen_model.state.sources if item.source_id == source_id), None)
         if source is None:
             self._selected_source_label.setText("No source selected.")
+            self._selected_entry_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
             with QSignalBlocker(self._role_combo):
@@ -504,6 +558,18 @@ class SessionAssemblyDialog(QWidget):
             return
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
+        entry_text = "Custom or unstructured input."
+        if source.ingest_kind == "supported":
+            entry_role_label = source.entry_role_label or (
+                "root directory" if source.entry_path_kind == "directory" else "main file"
+            )
+            validation_status = source.entry_validation_status or "review"
+            entry_text = (
+                f"{source.selection_label} {entry_role_label}\n"
+                f"Entry type: {source.entry_path_kind or source.source_type.lower()}\n"
+                f"Validation: {validation_status}"
+            )
+        self._selected_entry_label.setText(entry_text)
         adapter_summary = ", ".join(source.matching_adapter_ids) if source.matching_adapter_ids else "No adapter match"
         self._selected_adapter_label.setText(adapter_summary)
         self._selected_sidecar_label.setText(source.sidecar_for_label or "None")
@@ -541,6 +607,7 @@ class SessionAssemblyDialog(QWidget):
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_kind_label.setText("Not available.")
             self._selected_group_anchor_label.setText("Not available.")
+            self._selected_group_canonical_label.setText("Not available.")
             self._selected_group_reason_label.setText("Not available.")
             self._selected_group_members_label.setText("No group selected.")
             self._selected_group_counts_label.setText("No group selected.")
@@ -562,6 +629,7 @@ class SessionAssemblyDialog(QWidget):
             self._selected_group_pathway_label.setText("Not available.")
             self._selected_group_kind_label.setText("Not available.")
             self._selected_group_anchor_label.setText("Not available.")
+            self._selected_group_canonical_label.setText("Not available.")
             self._selected_group_reason_label.setText("Not available.")
             self._selected_group_members_label.setText("No group selected.")
             self._selected_group_counts_label.setText("No group selected.")
@@ -580,6 +648,15 @@ class SessionAssemblyDialog(QWidget):
         self._selected_group_pathway_label.setText(group.suggested_pathway)
         self._selected_group_kind_label.setText(group.group_kind.replace("_", " "))
         self._selected_group_anchor_label.setText(str(group.anchor_path) if group.anchor_path is not None else "Not available.")
+        canonical_text = "Not available."
+        if group.canonical_source_label is not None:
+            canonical_text = (
+                f"{group.canonical_source_label}\n"
+                f"{group.canonical_selection_label or 'Structured source'} "
+                f"{group.canonical_entry_role_label or 'entry'}\n"
+                f"{group.canonical_source_path}"
+            )
+        self._selected_group_canonical_label.setText(canonical_text)
         self._selected_group_reason_label.setText(group.grouping_reason or "No grouping reason available.")
         self._selected_group_members_label.setText(", ".join(group.member_labels) if group.member_labels else "No members listed.")
         self._selected_group_counts_label.setText(
@@ -618,6 +695,50 @@ class SessionAssemblyDialog(QWidget):
         if source_id is None:
             return
         self._screen_model.set_source_group_label(str(source_id), self._group_edit.text())
+
+    def _selected_source_type_option(self) -> SessionAssemblySourceTypeOption | None:
+        selected_index = self._source_type_combo.currentIndex()
+        if selected_index < 0:
+            return None
+        option = self._source_type_combo.itemData(selected_index, Qt.ItemDataRole.UserRole)
+        if isinstance(option, SessionAssemblySourceTypeOption):
+            return option
+        return None
+
+    def _sync_source_type_options(self, state: SessionAssemblyState) -> None:
+        current_key = self._source_type_combo.currentData(Qt.ItemDataRole.UserRole)
+        current_label = None
+        if isinstance(current_key, SessionAssemblySourceTypeOption):
+            current_label = (current_key.ingest_kind, current_key.route_name or "")
+
+        with QSignalBlocker(self._source_type_combo):
+            self._source_type_combo.clear()
+            for option in state.source_type_options:
+                self._source_type_combo.addItem(option.label, option)
+
+            restored_index = 0
+            if current_label is not None:
+                for index, option in enumerate(state.source_type_options):
+                    if (option.ingest_kind, option.route_name or "") == current_label:
+                        restored_index = index
+                        break
+            if state.source_type_options:
+                self._source_type_combo.setCurrentIndex(restored_index)
+
+    def _update_add_controls(self) -> None:
+        selected_option = self._selected_source_type_option()
+        if selected_option is None:
+            self._source_type_description_label.setText("")
+            self._add_files_button.setText("Add Files...")
+            self._add_folder_button.setText("Add Folder...")
+            return
+        self._source_type_description_label.setText(selected_option.description)
+        if selected_option.ingest_kind == "supported":
+            self._add_files_button.setText(f"Add {selected_option.label} File...")
+            self._add_folder_button.setText(f"Add {selected_option.label} Folder...")
+            return
+        self._add_files_button.setText("Add Custom Files...")
+        self._add_folder_button.setText("Add Custom Folder...")
 
     def _selected_source_ids(self) -> tuple[str, ...]:
         source_ids: list[str] = []

@@ -284,3 +284,157 @@ def test_session_assembly_screen_model_restores_project_path_from_workspace(tmp_
 
     assert restored_screen.state.project_path == project_path.resolve()
     assert restored_screen.state.has_unsaved_changes is False
+
+
+def test_session_assembly_screen_model_exposes_custom_source_option() -> None:
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    assert screen.state.source_type_options
+    assert screen.state.source_type_options[0].ingest_kind == "custom"
+    assert screen.state.source_type_options[0].label == "Custom"
+
+
+def test_session_assembly_screen_model_rejects_invalid_supported_entry_selection(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_supported_paths(
+        (manifest_path,),
+        route_name="deeplabcut",
+        route_display_name="DeepLabCut",
+    )
+
+    assert state.selected_paths == ()
+    assert state.sources == ()
+    assert state.error_message is not None
+    assert "DeepLabCut" in state.error_message
+
+
+def test_session_assembly_screen_model_tracks_supported_entry_metadata_for_valid_selection(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_supported_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+
+    assert state.source_intents[str(manifest_path.resolve())]["route_name"] == "session_manifest"
+    assert state.source_intents[str(manifest_path.resolve())]["entry_validation_status"] == "validated"
+    assert state.sources[0].selection_label == "Session Manifest"
+    assert state.sources[0].entry_role_label == "manifest file or session directory"
+    assert state.sources[0].entry_validation_status == "validated"
+    assert state.can_create_session is True
+
+
+def test_session_assembly_screen_model_persists_supported_source_intent_in_workspace(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    workspace_store = JsonSessionAssemblyWorkspaceStore(tmp_path / "drafts" / "route-draft.json")
+
+    first_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+    first_screen.add_supported_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+
+    restored_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+        workspace_store=workspace_store,
+    )
+
+    assert restored_screen.state.source_intents[str(manifest_path.resolve())]["route_name"] == "session_manifest"
+    assert restored_screen.state.sources[0].selection_label == "Session Manifest"
+
+
+def test_session_assembly_screen_model_rejects_unsupported_custom_file_type(tmp_path: Path) -> None:
+    unsupported_path = tmp_path / "unknown.exe"
+    unsupported_path.write_text("not a dataset", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_custom_paths((unsupported_path,))
+
+    assert state.selected_paths == ()
+    assert state.sources == ()
+    assert state.error_message is not None
+    assert "unknown.exe" in state.error_message
+
+
+def test_session_assembly_screen_model_keeps_supported_custom_input_and_reports_rejected_one(tmp_path: Path) -> None:
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+    unsupported_path = tmp_path / "unknown.exe"
+    unsupported_path.write_text("not a dataset", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_custom_paths((notes_path, unsupported_path))
+
+    assert state.selected_paths == (notes_path.resolve(),)
+    assert len(state.sources) == 1
+    assert state.sources[0].selection_label == "Custom"
+    assert state.error_message is not None
+    assert "unknown.exe" in state.error_message
+
+
+def test_session_assembly_screen_model_groups_custom_input_under_single_supported_source(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    screen.add_supported_paths(
+        (manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+    state = screen.add_custom_paths((notes_path,))
+
+    notes_source = next(source for source in state.sources if source.location == notes_path.resolve())
+    manifest_source = next(source for source in state.sources if source.location == manifest_path.resolve())
+
+    assert notes_source.group_key == manifest_source.group_key
+    assert notes_source.group_label == manifest_source.group_label
+    assert state.groups[0].canonical_source_id == manifest_source.source_id
+    assert state.groups[0].canonical_source_label == "session_manifest.json"
+    assert state.groups[0].canonical_entry_role_label == "manifest file or session directory"
+    assert state.groups[0].canonical_selection_label == "Session Manifest"
+    assert any(issue.code == "session-assembly-custom-context-association" for issue in state.issues)
+
+
+def test_session_assembly_screen_model_flags_ambiguous_custom_context_between_supported_sources(
+    tmp_path: Path,
+) -> None:
+    first_manifest_path = tmp_path / "session_manifest.json"
+    first_manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    second_manifest_path = tmp_path / "custom_session.json"
+    second_manifest_path.write_text(json.dumps({"recording_context": {"recording_id": "custom-01"}}), encoding="utf-8")
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    screen.add_supported_paths(
+        (first_manifest_path,),
+        route_name="session_manifest",
+        route_display_name="Session Manifest",
+    )
+    screen.add_supported_paths(
+        (second_manifest_path,),
+        route_name="custom_session",
+        route_display_name="Custom Session",
+    )
+    state = screen.add_custom_paths((notes_path,))
+
+    notes_source = next(source for source in state.sources if source.location == notes_path.resolve())
+
+    assert notes_source.context_source_id is None
+    assert any(issue.code == "session-assembly-ambiguous-custom-context" for issue in state.issues)
