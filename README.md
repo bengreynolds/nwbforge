@@ -25,7 +25,7 @@ Typical local-app flow:
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
 5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them.
-6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, and what still blocks `Write NWB`.
+6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, what still blocks `Write NWB`, and the recommended resolution path for the currently selected metadata conflict.
 7. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
@@ -216,6 +216,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Progressive disclosure in the Conversion workspace so advanced review tools plus history/diagnostics stay hidden by default until explicitly requested
 - Simpler researcher-facing labels in the core direct-ingest and conversion widgets, with technical semantics kept as helper text rather than as the default primary wording
 - At-a-glance readiness summaries in the Conversion workspace so users can see whether the current session is blocked, needs review, ready to write, or complete without scanning multiple panes
+- Recommended metadata-review guidance in the Conversion workspace so the selected conflict explains which session-level resolution path the app currently suggests and why
 - Actionable metadata-review controls that can promote a selected source value into a session-wide override and then require a preview rebuild
 - Actionable metadata-review controls that can also apply and clear source-specific overrides before the next preview rebuild
 - Manual metadata-review controls that can apply typed session overrides, use selected source values as source-specific overrides, and summarize pending versus resolved override state
