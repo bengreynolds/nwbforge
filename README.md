@@ -24,7 +24,7 @@ Typical local-app flow:
 2. Add one or more NeuroConv-supported sources, custom files/folders, or a mixture of both.
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
-5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them.
+5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them. When a session came from a saved direct-ingest project, the tabs and conversion header now carry that project context forward.
 6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, what still blocks `Write NWB`, and the recommended resolution path for the currently selected metadata conflict. Session/source inspection remains available, but it now stays behind an opt-in `Show Session Details` control so the default screen reading order stays workflow-first.
 7. Use the pre-write checklist in the Conversion workspace to confirm whether the current session, preview, metadata review, and output-path requirements are complete before writing NWB.
 8. Set the output file directly from the run overview and enter reviewer information from the review stage instead of opening session details for those stage-specific tasks.
@@ -219,6 +219,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Run-overview and review-guidance summaries in the conversion panel so stage, output target, issue counts, artifact counts, and expected review actions are visible at a glance
 - A tabbed conversion workspace for run overview, review work, metadata review, and artifacts
 - Additional runtime session tabs inside the Conversion workspace so users can switch between loaded sessions without leaving the main Conversion surface
+- Project-aware conversion-session context so saved direct-ingest project origin can surface in runtime tab labels/tooltips, the conversion header, and the session-focus summary
 - Researcher-facing workflow messaging in the Conversion workspace that now surfaces the current step, recommended next action, and `ready to write` criteria
 - A staged Conversion workspace tab order so the default reading path now follows run overview, metadata review, quality review, and artifacts
 - Progressive disclosure in the Conversion workspace so advanced review tools plus history/diagnostics stay hidden by default until explicitly requested
@@ -229,6 +230,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Actionable metadata-review controls that can promote a selected source value into a session-wide override and then require a preview rebuild
 - Actionable metadata-review controls that can also apply and clear source-specific overrides before the next preview rebuild
 - Field-level metadata review now separates preferred session-value status from source-specific override status so users can see which resolution layer is active before rebuilding preview
+- Metadata conflict scanability is now stronger in the list itself, with explicit pending-versus-resolved labels, visible override scope, and pending items sorted ahead of resolved ones in the default all-conflicts view
 - Manual metadata-review controls that can apply typed session overrides, use selected source values as source-specific overrides, and summarize pending versus resolved override state
 - Filterable metadata-review controls with per-field resolution status/history and a clear-all-overrides action for one canonical field
 - An integrated read-only NWB viewer tab that can inspect arbitrary `.nwb` files through a lazy PyNWB-backed tree/detail browser
@@ -242,6 +244,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Desktop reopen flow that recovers the latest saved snapshot state for artifacts, validation, review status, and NWB output location
 - Desktop history flow that lists saved snapshot versions in the conversion workspace and can restore an earlier saved state
 - Snapshot history now also shows selected-snapshot restore context in the desktop workspace, including saved status, artifact count, issue count, and review state before restore
+- Diagnostics summary and runtime history rows now distinguish ordinary progress from recovery/error context more explicitly, and snapshot rows now label preview-versus-results state plus review-record presence directly in the list
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar

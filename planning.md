@@ -185,11 +185,11 @@ Next:
 - Finish local-app maturity by prioritizing desktop polish, operational hardening, and testing-driven fixes over broad new feature growth.
 - Define and run the internal-testing matrix in the dedicated Conda environment: smoke baseline, focused route/workflow checks, and at least 3 representative local datasets that stress supported, custom, or hybrid ingest paths.
 - Capture internal-testing findings in a repeatable triage loop and convert them into prioritized UI, workflow, performance, and operational fixes instead of reopening broad architecture work.
-- Continue Milestone A by improving ambiguous multi-file dataset handling and saved-project round trips now that stronger direct-ingest group identity survives into created sessions.
-- Continue Milestone B by broadening field-level metadata review beyond the current canonical-field cycle coverage and making resolved versus pending conflicts easier to scan at a glance.
-- Continue Milestone C by improving diagnostics triage clarity and repeated-run recovery/report behavior now that snapshot restore context is visible before restore.
+- Continue Milestone A by improving ambiguous multi-file dataset handling now that saved direct-ingest project origin survives into created sessions and downstream workspace context.
+- Continue Milestone B by broadening field-level metadata review beyond the current canonical-field cycle coverage now that pending/resolved state, override scope, and default sort order are easier to scan in the conflict list.
+- Continue Milestone C by moving from diagnostics labeling into a first explicit internal-testing matrix and richer repeated-run recovery/report comparisons now that recovery, runtime history, and snapshot rows are easier to triage at a glance.
 - Hardening the desktop UI itself is now explicit local-app work: scroll behavior, splitter/resize behavior, smaller-display usability, actionable controls, and removing unexpected tab focus changes should be treated as blocking polish rather than optional cleanup.
-- Continue Milestone D by making project-aware session workspaces clearer now that explicit session close is available through both the runtime tabs and the File menu.
+- Continue Milestone D with internal-testing-driven polish now that project-aware session tabs, header copy, and session-focus summaries are all carrying saved-project context in the conversion workspace.
 - Reduce reliance on `Open Session...` JSON/bootstrap fixtures during day-to-day testing by preferring direct-ingest plus explicit project reopen flows wherever practical.
 - Keep the integrated NWB viewer evolving only when testing uncovers justified large-file, usability, or renderer gaps.
 - Treat deeper combined-workflow execution and explicit workflow selection as the next supported-route growth area only when a real testing scenario is blocked by the current baseline.
@@ -229,7 +229,8 @@ Priority order:
 - Keep UI language and issue text researcher-facing: use technically precise NWB and NeuroConv terminology without oversimplifying the workflow.
 - Preserve explicit provenance for bundle membership, grouping reasons, and user corrections so later review/report flows can explain how a session was assembled.
 - Stronger direct-ingest bundle identity is now partially in place: created conversion sessions retain group kind, pathway, canonical bundle context, grouping reason, and member/source summaries from the direct-ingest workspace.
-- The next Milestone A slice should deepen ambiguous bundle handling and saved-project round trips now that direct-ingest group identity survives past session creation.
+- Saved direct-ingest project origin now also survives into created conversion sessions through persisted project-path and project-name metadata on created sources, which gives later workspace and reopen flows a stable project-context baseline.
+- The next Milestone A slice should deepen ambiguous bundle handling now that both direct-ingest group identity and saved-project origin survive past session creation.
 - Keep hardening custom ingest acceptance so supported scientific/media/metadata files remain eligible while obviously unrelated files are rejected with clear reviewable feedback.
 - Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, structured-source context propagation, and saved-project round trips over the richer dataset model.
 
@@ -237,13 +238,15 @@ Priority order:
 - Expand the metadata-review workspace from the current override actions into a fuller field-by-field resolution workflow over the current canonical field set.
 - Make session-wide versus source-specific override history more explicit so users can tell which action resolved a disagreement and what still remains unresolved.
 - Session-wide versus source-specific resolution state is now clearer in the conversion workspace, and explicit preview -> override -> rebuild -> clear -> rebuild coverage exists for the current canonical mixed-source review path.
-- The next Milestone B slice should make resolved versus pending disagreement state easier to scan in the conflict list and continue expanding beyond the current canonical field coverage.
+- Metadata-review scanability is now stronger in the conflict list itself: pending versus resolved state is labeled directly, override scope appears inline and in tooltips, and pending items sort ahead of resolved items in the default all-conflicts view.
+- The next Milestone B slice should continue expanding beyond the current canonical field coverage now that the existing conflict list is easier to scan at a glance.
 - Add tests that cover repeated review/rebuild cycles, override clearing, and mixed-source disagreement resolution in supported, custom, and hybrid sessions.
 
 #### Milestone C: Recovery, Diagnostics, And Testing Triage
 - Finish hardening snapshot recovery, restore, report/review reopen behavior, and desktop error handling so repeated manual-testing runs are predictable.
 - Snapshot history now includes selected-snapshot restore context in the desktop workspace before restore, which reduces restore ambiguity during repeated local testing.
-- The next Milestone C slice should improve diagnostics triage readability and make failure-versus-recovery state easier to distinguish during manual runs.
+- Diagnostics triage readability is now stronger: the diagnostics summary distinguishes recovery versus error states, runtime progress history rows carry explicit triage prefixes, and snapshot history rows call out preview-versus-results state plus review-record presence directly in the list.
+- The next Milestone C slice should define and run the first explicit internal-testing matrix now that the desktop recovery and diagnostics surfaces are easier to interpret during repeated manual runs.
 - Define and run the first internal-testing matrix: smoke baseline, focused route/workflow checks, and representative local datasets.
 - Record findings as explicit blocking versus non-blocking local-app issues so testing-driven fixes can be prioritized without reopening broad architecture scope.
 
@@ -261,7 +264,8 @@ Priority order:
 - Support explicit creation and deletion of both projects and sessions as first-class desktop actions rather than relying only on one transient conversion workspace.
 - Demote session JSON loading in product-facing navigation and copy so it reads as a compatibility/import path rather than the primary happy path.
 - Move diagnostics, history, and advanced conflict-resolution controls toward progressive disclosure after the main operator path is clearer.
-- The next Milestone D slice should focus on project-aware session workspaces and internal-testing-driven polish rather than on the now-completed mismatch-correction pass.
+- Project-aware session workspace context is now partially in place: saved-project origin can surface in runtime session-tab labels/tooltips, the conversion header, and the session-focus summary when a session came from a saved direct-ingest project.
+- The next Milestone D slice should focus on internal-testing-driven polish over that project-aware baseline rather than on the now-completed mismatch-correction pass.
 
 ### Exit Criteria: Local App Mature Enough For User Decision/Change Phase
 
