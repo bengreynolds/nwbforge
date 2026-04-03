@@ -1331,6 +1331,24 @@ class ConversionSessionWidget(QWidget):
     def _diagnostics_summary_text(state: ConversionSessionScreenState) -> str:
         event_count = len(state.progress_history)
         snapshot_count = len(state.snapshot_history)
+        if state.error_message:
+            return (
+                f"{event_count} runtime events | "
+                f"{snapshot_count} saved snapshots | "
+                f"Latest state: error | {state.error_message}"
+            )
+        if state.recovery_message:
+            return (
+                f"{event_count} runtime events | "
+                f"{snapshot_count} saved snapshots | "
+                f"Latest state: recovery | {state.recovery_message}"
+            )
+        if state.review_message and state.review_message.startswith("Recovered "):
+            return (
+                f"{event_count} runtime events | "
+                f"{snapshot_count} saved snapshots | "
+                f"Latest state: recovered review | {state.review_message}"
+            )
         if event_count == 0:
             return "No runtime events captured yet."
         latest_event = state.progress_history[-1]

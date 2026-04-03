@@ -715,6 +715,8 @@ def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) 
     assert "manual review=True" in window.conversion_widget._review_outcome_label.text()
     assert window.conversion_widget._artifact_count_value_label.text() == "2 artifacts"
     assert window.conversion_widget._output_path_edit.text().endswith("recovered-output.nwb")
+    assert "Latest state: recovery" in window.conversion_widget._diagnostics_summary_label.text()
+    assert "Recovered latest saved session state." in window.conversion_widget._diagnostics_summary_label.text()
     window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
     assert window.conversion_widget._snapshot_history_list.count() >= 1
