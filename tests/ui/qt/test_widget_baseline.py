@@ -381,6 +381,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._workflow_steps_label.text().startswith("Workflow:")
     assert window.conversion_widget._session_details_toggle.isChecked() is False
     assert window.conversion_widget._session_summary_group.isHidden() is True
+    assert window.conversion_widget._output_path_edit.isVisible() is True
     assert "sess-qt | supported workflow | 1 data source" in window.conversion_widget._session_context_label.text()
     assert window.conversion_widget._advanced_toggle.isChecked() is False
     assert window.conversion_widget._advanced_resolution_group.isHidden() is True
@@ -409,6 +410,12 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._pathway_metric_value.text() == "supported"
     assert window.conversion_widget._stage_metric_value.text() == "sources added"
     assert window._close_current_session_action.isEnabled() is False
+
+    window.conversion_widget._workspace_tabs.setCurrentIndex(2)
+    qapp.processEvents()
+    assert window.conversion_widget._reviewer_edit.isVisible() is True
+    window.conversion_widget._workspace_tabs.setCurrentIndex(0)
+    qapp.processEvents()
 
     window.conversion_widget._session_details_toggle.setChecked(True)
     qapp.processEvents()

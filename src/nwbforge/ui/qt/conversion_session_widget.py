@@ -255,8 +255,6 @@ class ConversionSessionWidget(QWidget):
         form_layout.addRow("Session", self._session_label)
         form_layout.addRow("Workflow", self._pathway_label)
         form_layout.addRow("Data sources", self._source_count_label)
-        form_layout.addRow("Output", self._output_path_edit)
-        form_layout.addRow("Reviewer", self._reviewer_edit)
 
         source_detail_layout = QFormLayout()
         source_detail_layout.addRow("Location", self._source_location_label)
@@ -265,11 +263,6 @@ class ConversionSessionWidget(QWidget):
         source_detail_layout.addRow("Media", self._source_media_type_label)
         self._source_detail_group = QGroupBox("Selected Data Source", self)
         self._source_detail_group.setLayout(source_detail_layout)
-
-        button_row = QHBoxLayout()
-        button_row.addWidget(self._preview_button)
-        button_row.addWidget(self._execute_button)
-        button_row.addWidget(self._choose_output_button)
 
         review_button_row = QHBoxLayout()
         review_button_row.addWidget(self._approve_button)
@@ -286,7 +279,6 @@ class ConversionSessionWidget(QWidget):
         session_summary_layout.addWidget(QLabel("Data sources", self))
         session_summary_layout.addWidget(self._source_list, stretch=1)
         session_summary_layout.addWidget(self._source_detail_group)
-        session_summary_layout.addLayout(button_row)
         self._session_summary_group.setLayout(session_summary_layout)
 
         run_overview_layout = QFormLayout()
@@ -295,6 +287,13 @@ class ConversionSessionWidget(QWidget):
         run_overview_layout.addRow("Validation", self._issue_count_value_label)
         run_overview_layout.addRow("Metadata review", self._disagreement_count_value_label)
         run_overview_layout.addRow("Artifacts", self._artifact_count_value_label)
+
+        output_form_layout = QFormLayout()
+        output_form_layout.addRow("Output file", self._output_path_edit)
+        output_button_row = QHBoxLayout()
+        output_button_row.addWidget(self._choose_output_button)
+        output_button_row.addWidget(self._preview_button)
+        output_button_row.addWidget(self._execute_button)
 
         execution_layout = QVBoxLayout()
         execution_layout.addLayout(run_overview_layout)
@@ -306,6 +305,8 @@ class ConversionSessionWidget(QWidget):
         execution_layout.addWidget(self._next_action_label)
         execution_layout.addWidget(self._ready_to_write_label)
         execution_layout.addWidget(self._pre_write_checklist_label)
+        execution_layout.addLayout(output_form_layout)
+        execution_layout.addLayout(output_button_row)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
         execution_layout.addWidget(self._validation_summary_label)
@@ -318,6 +319,9 @@ class ConversionSessionWidget(QWidget):
         review_layout.addWidget(self._review_guidance_label)
         review_layout.addWidget(self._role_policy_label)
         review_layout.addWidget(self._acknowledgement_summary_label)
+        reviewer_form_layout = QFormLayout()
+        reviewer_form_layout.addRow("Reviewer", self._reviewer_edit)
+        review_layout.addLayout(reviewer_form_layout)
         review_layout.addWidget(QLabel("Validation issues", self))
         review_layout.addWidget(self._issue_list, stretch=1)
         review_layout.addWidget(self._override_checkbox)
