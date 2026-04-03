@@ -20,6 +20,19 @@ Run the focused desktop/backend smoke suite:
 conda run -n nwbforge-dev python scripts/run_internal_smoke.py
 ```
 
+Run one or more focused smoke cases when you only need a specific workflow slice:
+
+```text
+conda run -n nwbforge-dev python scripts/run_internal_smoke.py --case supported
+conda run -n nwbforge-dev python scripts/run_internal_smoke.py --case hybrid --case project
+```
+
+Write a machine-readable smoke summary for triage records:
+
+```text
+conda run -n nwbforge-dev python scripts/run_internal_smoke.py --report-json temp\smoke-report.json
+```
+
 What the smoke suite covers:
 - checked-in supported session example through preview and NWB write
 - checked-in custom session example through preview and NWB write
@@ -93,6 +106,9 @@ Minimum triage fields:
 - expected behavior
 - category
 - next action
+
+Recommended attachment when available:
+- JSON smoke summary from `scripts/run_internal_smoke.py --report-json ...`
 
 ## Manual desktop baseline
 
