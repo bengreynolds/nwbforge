@@ -699,8 +699,10 @@ class ConversionSessionWidget(QWidget):
         self._progress_history_list.clear()
         for event in state.progress_history:
             source_suffix = f" | {event.source_id}" if event.source_id is not None else ""
+            stage_prefix = self._progress_stage_prefix(event.stage)
             item = QListWidgetItem(
-                f"{event.created_at_text} | {event.stage} | {event.percent_complete}% | {event.message}{source_suffix}"
+                f"[{stage_prefix}] {event.created_at_text} | {event.stage} | {event.percent_complete}% | "
+                f"{event.message}{source_suffix}"
             )
             item.setToolTip(event.message)
             self._progress_history_list.addItem(item)
@@ -1368,6 +1370,16 @@ class ConversionSessionWidget(QWidget):
         if filter_value == "Resolved only":
             return tuple(item for item in state.metadata_disagreements if not item.pending_resolution)
         return state.metadata_disagreements
+
+    @staticmethod
+    def _progress_stage_prefix(stage: str) -> str:
+        if stage == "failed":
+            return "Error"
+        if stage == "completed":
+            return "Complete"
+        if stage == "ready_to_write":
+            return "Ready"
+        return "Progress"
 
     def _on_execute_clicked(self) -> None:
         output_text = self._output_path_edit.text().strip()

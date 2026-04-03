@@ -448,6 +448,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert "Preview built: done" in window.conversion_widget._pre_write_checklist_label.text()
     assert "Metadata review: done" in window.conversion_widget._pre_write_checklist_label.text()
     assert "Output path chosen: pending" in window.conversion_widget._pre_write_checklist_label.text()
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._progress_history_list.count() >= 1
+    assert window.conversion_widget._progress_history_list.item(0).text().startswith("[Ready]")
 
     window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
     qapp.processEvents()
@@ -465,6 +469,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert "output and generated artifacts are ready" in window.conversion_widget._readiness_summary_label.text().lower()
     assert "Conversion results available: done" in window.conversion_widget._review_checklist_label.text()
     assert "Decision recorded: not required" in window.conversion_widget._review_checklist_label.text()
+    assert any(
+        window.conversion_widget._progress_history_list.item(index).text().startswith("[Complete]")
+        for index in range(window.conversion_widget._progress_history_list.count())
+    )
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
     window._install_packages_action.trigger()
