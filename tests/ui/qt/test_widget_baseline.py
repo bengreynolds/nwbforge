@@ -373,6 +373,10 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
     assert window.conversion_widget._workflow_steps_label.text().startswith("Workflow:")
+    assert window.conversion_widget._advanced_toggle.isChecked() is False
+    assert window.conversion_widget._advanced_resolution_group.isHidden() is True
+    assert window.conversion_widget._workspace_tabs.isTabVisible(4) is False
+    assert window.conversion_widget._workspace_tabs.isTabVisible(5) is False
     assert "Build Preview" in window.conversion_widget._next_action_label.text()
     assert "build preview" in window.conversion_widget._ready_to_write_label.text()
     assert (
@@ -389,6 +393,12 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.conversion_widget._pathway_metric_value.text() == "supported"
     assert window.conversion_widget._stage_metric_value.text() == "sources added"
+
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._advanced_resolution_group.isHidden() is False
+    assert window.conversion_widget._workspace_tabs.isTabVisible(4) is True
+    assert window.conversion_widget._workspace_tabs.isTabVisible(5) is True
 
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
@@ -2071,6 +2081,8 @@ def test_conversion_widget_can_apply_source_override_from_metadata_review(qapp, 
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
     window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
     qapp.processEvents()
     window.conversion_widget._selected_source_override_edit.setText("manual-custom-01")
@@ -2264,6 +2276,8 @@ def test_conversion_widget_can_use_selected_source_value_as_source_override(qapp
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
     window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
     qapp.processEvents()
     window.conversion_widget._use_source_value_as_source_override_button.click()
@@ -2455,6 +2469,8 @@ def test_conversion_widget_can_clear_all_overrides_for_selected_field(qapp, tmp_
 
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
     window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
     qapp.processEvents()

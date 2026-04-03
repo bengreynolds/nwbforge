@@ -80,6 +80,8 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._workflow_steps_label.setWordWrap(True)
+        self._advanced_toggle = QCheckBox("Show Advanced Tools", self)
+        self._advanced_toggle.toggled.connect(self._set_advanced_ui_visible)
         self._next_action_label = QLabel("Next action: start with New Session and add data sources.", self)
         self._next_action_label.setWordWrap(True)
         self._ready_to_write_label = QLabel(
@@ -260,6 +262,7 @@ class ConversionSessionWidget(QWidget):
         execution_layout = QVBoxLayout()
         execution_layout.addLayout(run_overview_layout)
         execution_layout.addWidget(self._workflow_steps_label)
+        execution_layout.addWidget(self._advanced_toggle)
         execution_layout.addWidget(self._next_action_label)
         execution_layout.addWidget(self._ready_to_write_label)
         execution_layout.addWidget(self._status_label)
@@ -314,8 +317,6 @@ class ConversionSessionWidget(QWidget):
         metadata_detail_layout.addWidget(self._selected_disagreement_source_list, stretch=1)
         metadata_detail_layout.addWidget(QLabel("Manual session override", self))
         metadata_detail_layout.addWidget(self._manual_session_override_edit)
-        metadata_detail_layout.addWidget(QLabel("Selected source override", self))
-        metadata_detail_layout.addWidget(self._selected_source_override_edit)
         metadata_detail_layout.addWidget(QLabel("Resolution notes", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_notes_label)
         metadata_resolution_row = QHBoxLayout()
@@ -323,12 +324,17 @@ class ConversionSessionWidget(QWidget):
         metadata_resolution_row.addWidget(self._apply_manual_session_override_button)
         metadata_resolution_row.addWidget(self._clear_override_button)
         metadata_detail_layout.addLayout(metadata_resolution_row)
+        self._advanced_resolution_group = QGroupBox("Advanced Resolution Tools", self)
+        advanced_resolution_layout = QVBoxLayout(self._advanced_resolution_group)
+        advanced_resolution_layout.addWidget(QLabel("Selected source override", self))
+        advanced_resolution_layout.addWidget(self._selected_source_override_edit)
         metadata_source_resolution_row = QHBoxLayout()
         metadata_source_resolution_row.addWidget(self._use_source_value_as_source_override_button)
         metadata_source_resolution_row.addWidget(self._apply_source_override_button)
         metadata_source_resolution_row.addWidget(self._clear_source_override_button)
         metadata_source_resolution_row.addWidget(self._clear_all_field_overrides_button)
-        metadata_detail_layout.addLayout(metadata_source_resolution_row)
+        advanced_resolution_layout.addLayout(metadata_source_resolution_row)
+        metadata_detail_layout.addWidget(self._advanced_resolution_group)
         metadata_review_layout.addWidget(metadata_detail_group, stretch=1)
 
         run_overview_page = QWidget(self)
@@ -358,6 +364,7 @@ class ConversionSessionWidget(QWidget):
         self._workspace_tabs.addTab(artifact_page, "Artifacts")
         self._workspace_tabs.addTab(history_page, "History")
         self._workspace_tabs.addTab(diagnostics_page, "Diagnostics")
+        self._set_advanced_ui_visible(False)
 
         right_column = QWidget(self)
         right_column_layout = QVBoxLayout(right_column)
@@ -871,6 +878,13 @@ class ConversionSessionWidget(QWidget):
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state
         self._execute_button.setEnabled(state.can_run_execution and bool(self._output_path_edit.text().strip()))
+
+    def _set_advanced_ui_visible(self, visible: bool) -> None:
+        self._advanced_resolution_group.setVisible(visible)
+        self._workspace_tabs.setTabVisible(4, visible)
+        self._workspace_tabs.setTabVisible(5, visible)
+        if not visible and self._workspace_tabs.currentIndex() in {4, 5}:
+            self._workspace_tabs.setCurrentIndex(0)
 
     def _refresh_metadata_resolution_actions(self, *_args) -> None:
         disagreement = self._selected_disagreement()
