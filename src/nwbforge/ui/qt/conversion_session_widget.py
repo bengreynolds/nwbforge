@@ -117,6 +117,11 @@ class ConversionSessionWidget(QWidget):
         )
         self._role_policy_label.setWordWrap(True)
         self._acknowledgement_summary_label = QLabel("Acknowledged 0 of 0 issues.", self)
+        self._review_checklist_label = QLabel(
+            "Review checklist:\n- Conversion results available: pending\n- Validation issues acknowledged: waiting for results\n- Reviewer recorded: pending\n- Decision recorded: pending",
+            self,
+        )
+        self._review_checklist_label.setWordWrap(True)
         self._reviewer_edit = QLineEdit(self)
         self._reviewer_edit.setPlaceholderText("Reviewer name")
         self._reviewer_edit.textChanged.connect(self._screen_model.set_reviewer_name)
@@ -316,6 +321,7 @@ class ConversionSessionWidget(QWidget):
         review_layout.addWidget(self._review_guidance_label)
         review_layout.addWidget(self._role_policy_label)
         review_layout.addWidget(self._acknowledgement_summary_label)
+        review_layout.addWidget(self._review_checklist_label)
         review_layout.addWidget(self._validation_summary_label)
         review_layout.addWidget(self._review_outcome_label)
         review_layout.addWidget(self._review_status_label)
@@ -521,6 +527,7 @@ class ConversionSessionWidget(QWidget):
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
+        self._review_checklist_label.setText(self._review_checklist_text(state))
         self._session_context_label.setText(self._session_context_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
@@ -1051,6 +1058,35 @@ class ConversionSessionWidget(QWidget):
         return f"Acknowledged {acknowledged} of {total_issues} issues."
 
     @staticmethod
+    def _review_checklist_text(state: ConversionSessionScreenState) -> str:
+        if state.execution is None:
+            return (
+                "Review checklist:\n"
+                "- Conversion results available: pending\n"
+                "- Validation issues acknowledged: waiting for results\n"
+                "- Reviewer recorded: pending\n"
+                "- Decision recorded: pending"
+            )
+        acknowledgement_status = (
+            "done"
+            if not state.validation_issues or len(state.acknowledged_issue_refs) == len(state.validation_issues)
+            else "pending"
+        )
+        reviewer_status = "done" if state.reviewer_name.strip() else "pending"
+        outcome = state.execution.review_outcome
+        if not outcome.requires_manual_review and not outcome.blocks_completion and not state.validation_issues:
+            decision_status = "not required"
+        else:
+            decision_status = "done" if state.last_review_submission is not None else "pending"
+        return (
+            "Review checklist:\n"
+            "- Conversion results available: done\n"
+            f"- Validation issues acknowledged: {acknowledgement_status}\n"
+            f"- Reviewer recorded: {reviewer_status}\n"
+            f"- Decision recorded: {decision_status}"
+        )
+
+    @staticmethod
     def _session_context_text(state: ConversionSessionScreenState) -> str:
         if state.session is None:
             return "Session focus: no session loaded. Open Session Details only when you need source inspection."
@@ -1077,6 +1113,7 @@ class ConversionSessionWidget(QWidget):
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
+        self._review_checklist_label.setText(self._review_checklist_text(state))
 
     def _set_session_summary_visible(self, visible: bool) -> None:
         self._session_summary_group.setVisible(visible)

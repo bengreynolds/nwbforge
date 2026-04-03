@@ -419,6 +419,7 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._validation_summary_label.isVisible() is True
     assert window.conversion_widget._review_outcome_label.isVisible() is True
     assert window.conversion_widget._review_status_label.isVisible() is True
+    assert "Conversion results available: pending" in window.conversion_widget._review_checklist_label.text()
     window.conversion_widget._workspace_tabs.setCurrentIndex(0)
     qapp.processEvents()
 
@@ -460,6 +461,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._artifact_count_value_label.text() == "0 artifacts"
     assert window.conversion_widget._readiness_metric_value.text() == "Completed"
     assert "output and generated artifacts are ready" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Conversion results available: done" in window.conversion_widget._review_checklist_label.text()
+    assert "Decision recorded: not required" in window.conversion_widget._review_checklist_label.text()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
     window._install_packages_action.trigger()
@@ -845,16 +848,23 @@ def test_conversion_widget_submits_review(qapp, tmp_path: Path) -> None:
     assert window.conversion_widget._issue_list.count() == 1
     assert "Manual review is required." in window.conversion_widget._review_guidance_label.text()
     assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 0 of 1 issues."
+    assert "Conversion results available: done" in window.conversion_widget._review_checklist_label.text()
+    assert "Validation issues acknowledged: pending" in window.conversion_widget._review_checklist_label.text()
+    assert "Reviewer recorded: pending" in window.conversion_widget._review_checklist_label.text()
+    assert "Decision recorded: pending" in window.conversion_widget._review_checklist_label.text()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     window.conversion_widget._reviewer_edit.setText("alice")
     issue_item = window.conversion_widget._issue_list.item(0)
     issue_item.setCheckState(Qt.CheckState.Checked)
     qapp.processEvents()
     assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 1 of 1 issues."
+    assert "Validation issues acknowledged: done" in window.conversion_widget._review_checklist_label.text()
+    assert "Reviewer recorded: done" in window.conversion_widget._review_checklist_label.text()
     window.conversion_widget._approve_button.click()
     qapp.processEvents()
 
     assert "approved" in window.conversion_widget._review_status_label.text()
+    assert "Decision recorded: done" in window.conversion_widget._review_checklist_label.text()
     window.close()
 
 
