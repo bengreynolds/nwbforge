@@ -771,6 +771,7 @@ Responsibilities:
 - Provide in-app update checks and update-launch flows
 - Preserve user settings and local state across upgrades
 - Publish release artifacts and metadata consumable by the updater
+- Ship platform-appropriate branded application assets including startup splash UI, desktop icon, and runtime taskbar/dock icon behavior
 
 Key rule:
 - Release engineering is an architecture concern, not post hoc packaging glue
@@ -1002,6 +1003,12 @@ All final application releases must use this deployment model:
 3. Wrap the PyInstaller build in a native installer or installable package for each supported platform
 4. Provide an in-app updater that checks GitHub Releases and launches a user-friendly update flow
 
+Required release UX assets:
+- show a startup splash image/screen during application launch
+- show a visible loading/progress bar on that splash screen while desktop services initialize
+- ship a desktop/application icon appropriate for installed shortcuts and app bundles
+- ensure the running application shows the intended taskbar/dock icon while the app is open
+
 This is the required release baseline, not an open packaging evaluation.
 
 ### Release branch policy
@@ -1070,6 +1077,7 @@ Linux:
 - installers must preserve user data and settings outside the installed application directory where practical
 - installers and updates must not interfere with existing Python or Conda installations on the user machine
 - Conda remains a development-time isolation tool only
+- packaged builds must include the release icon assets and any splash-screen resources needed at startup
 
 ### Update mechanism design
 - Built-in updater should query GitHub releases for the current platform
@@ -1096,9 +1104,10 @@ Updater architecture requirements:
 4. Build the Python desktop application for the target platform
 5. Package the application with PyInstaller into a self-contained application payload
 6. Validate bundled runtime and scientific dependencies in the packaged output
-7. Wrap the PyInstaller payload in a platform-native installer or installable package
-8. Publish GitHub release assets and notes
-9. Application updater consumes published release metadata and launches the correct update artifact
+7. Validate release UX assets in the packaged build, including splash image/loading bar behavior plus desktop and taskbar/dock icon behavior
+8. Wrap the PyInstaller payload in a platform-native installer or installable package
+9. Publish GitHub release assets and notes
+10. Application updater consumes published release metadata and launches the correct update artifact
 
 ### Rollback and failure considerations
 - Failed updates must not corrupt user settings or session data
