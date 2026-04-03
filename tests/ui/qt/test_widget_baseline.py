@@ -367,6 +367,9 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._source_role_label.text() == "primary"
     assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
+    assert window.conversion_widget._workflow_steps_label.text().startswith("Workflow:")
+    assert "Build Preview" in window.conversion_widget._next_action_label.text()
+    assert "build preview" in window.conversion_widget._ready_to_write_label.text()
     assert (
         window.conversion_widget._role_policy_label.text()
         == "Conflict precedence: primary sources override metadata sources, which override supplemental sources."
@@ -386,6 +389,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Preview status: ready_to_write"
     assert window.conversion_widget._stage_value_label.text() == "ready_to_write"
+    assert "Choose Output" in window.conversion_widget._next_action_label.text()
+    assert "choose output path" in window.conversion_widget._ready_to_write_label.text()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.statusBar().findChild(type(window._progress_bar)) is not None
 

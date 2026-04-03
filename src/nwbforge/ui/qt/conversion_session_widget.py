@@ -75,6 +75,18 @@ class ConversionSessionWidget(QWidget):
         self._validation_summary_label = QLabel("Validation summary: not available.", self)
         self._review_outcome_label = QLabel("Review outcome: not available.", self)
         self._review_status_label = QLabel("Review status: not reviewed.", self)
+        self._workflow_steps_label = QLabel(
+            "Workflow: 1. Ingest in New Session  2. Review Metadata  3. Build Preview / Choose Output  4. Write NWB / Review Results",
+            self,
+        )
+        self._workflow_steps_label.setWordWrap(True)
+        self._next_action_label = QLabel("Next action: start with New Session and add data sources.", self)
+        self._next_action_label.setWordWrap(True)
+        self._ready_to_write_label = QLabel(
+            "Ready to write when: a session is loaded, preview is built, an output path is chosen, and remaining review blockers are understood.",
+            self,
+        )
+        self._ready_to_write_label.setWordWrap(True)
         self._stage_value_label = QLabel("idle", self)
         self._output_value_label = QLabel("No output selected.", self)
         self._issue_count_value_label = QLabel("0 issues", self)
@@ -247,6 +259,9 @@ class ConversionSessionWidget(QWidget):
 
         execution_layout = QVBoxLayout()
         execution_layout.addLayout(run_overview_layout)
+        execution_layout.addWidget(self._workflow_steps_label)
+        execution_layout.addWidget(self._next_action_label)
+        execution_layout.addWidget(self._ready_to_write_label)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
         execution_layout.addWidget(self._validation_summary_label)
@@ -442,6 +457,8 @@ class ConversionSessionWidget(QWidget):
         self._validation_metric_value.setText(self._issue_count_value_label.text())
         self._artifact_metric_value.setText(self._artifact_count_value_label.text())
         self._review_guidance_label.setText(self._review_guidance_text(state))
+        self._next_action_label.setText(self._next_action_text(state))
+        self._ready_to_write_label.setText(self._ready_to_write_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
         self._diagnostics_summary_label.setText(self._diagnostics_summary_text(state))
@@ -810,6 +827,40 @@ class ConversionSessionWidget(QWidget):
                 "then supplemental values. Acknowledge issues, add rationale if needed, then approve or reject."
             )
         return "No blocking review actions are currently required."
+
+    @staticmethod
+    def _next_action_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Next action: start with New Session and add supported or custom data sources."
+        if state.is_preview_running:
+            return "Current step: Build Preview. Wait for preview results so the app can surface metadata conflicts and readiness."
+        if state.preview is None:
+            return "Current step: Build Preview. Next action: review the session summary, then select Build Preview."
+        pending_conflicts = [item for item in state.metadata_disagreements if item.pending_resolution]
+        if pending_conflicts:
+            return "Current step: Review Metadata. Next action: inspect pending mixed-source conflicts before writing NWB."
+        if state.output_path is None:
+            return "Current step: Choose Output. Next action: choose an NWB output path before writing."
+        if state.is_execution_running:
+            return "Current step: Write NWB. Wait for conversion to finish, then review validation results and artifacts."
+        if state.execution is None:
+            return "Current step: Write NWB. Next action: run Write NWB when you are satisfied with the current preview."
+        return "Current step: Review Results. Next action: inspect validation issues and artifacts, then complete review if required."
+
+    @staticmethod
+    def _ready_to_write_text(state: ConversionSessionScreenState) -> str:
+        blockers: list[str] = []
+        if state.session is None:
+            blockers.append("load or create a session")
+        if state.preview is None:
+            blockers.append("build preview")
+        if any(item.pending_resolution for item in state.metadata_disagreements):
+            blockers.append("review metadata conflicts")
+        if state.output_path is None:
+            blockers.append("choose output path")
+        if blockers:
+            return "Ready to write when: " + ", ".join(blockers) + "."
+        return "Ready to write when: the current preview looks correct and you want to generate NWB plus validation artifacts."
 
     @staticmethod
     def _acknowledgement_summary_text(state: ConversionSessionScreenState) -> str:
