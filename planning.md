@@ -200,10 +200,12 @@ Priority order:
 ### Near-Term Milestone Checklist
 
 #### Milestone A: Direct-Ingest Dataset Model
-- Add a structured source-ingest flow that lets users add NeuroConv-supported sources, custom files/folders, or a mixture of both within one session-assembly workspace.
-- Represent direct-ingest bundles with stronger dataset identity than the current grouped-path summary alone, including durable group intent and clearer canonical entry-path semantics.
+- Keep refining the structured source-ingest flow that now lets users add NeuroConv-supported sources, custom files/folders, or a mixture of both within one session-assembly workspace.
+- Tighten route-specific entry-path validation and canonical dataset-entry semantics so a selected NeuroConv package clearly owns the expected project/main file or root directory for that bundle.
+- Represent direct-ingest bundles with stronger dataset identity than the current grouped-path summary alone, including durable group intent, clearer canonical entry-path semantics, and better saved-project round trips for proprietary-plus-custom sessions.
 - Preserve explicit provenance for bundle membership, grouping reasons, and user corrections so later review/report flows can explain how a session was assembled.
-- Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, and saved-project round trips over the richer dataset model.
+- Keep hardening custom ingest acceptance so supported scientific/media/metadata files remain eligible while obviously unrelated files are rejected with clear reviewable feedback.
+- Add tests for mixed proprietary-plus-custom ingest, ambiguous multi-file grouping, route-specific entry validation, and saved-project round trips over the richer dataset model.
 
 #### Milestone B: Metadata Review And Resolution
 - Expand the metadata-review workspace from the current override actions into a fuller field-by-field resolution workflow over the current canonical field set.

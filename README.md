@@ -153,12 +153,15 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Threaded runtime executor for package-install work
 - Thin `PackageManagementController` binding for future setup and extension-install screens
 - Toolkit-agnostic desktop UI models for shell state and package-installer screen state
-- Toolkit-agnostic session-assembly screen model for direct file/folder ingest into a draft conversion session
+- Toolkit-agnostic session-assembly screen model for structured source ingest into a draft conversion session, including proprietary NeuroConv-supported sources and custom files/folders
 - Toolkit-agnostic conversion-session screen model over preview/execution runtime contracts
 - Shared UI observability helpers for log-viewer entries and user-facing error translation
 - First concrete PySide6 widget layer with a main window, File menu, status bar, log dock, package-install dialog, and conversion-session widget
-- PySide6 `New Session` workspace tab for direct file/folder ingest, pathway suggestion, source-role assignment, session-wide metadata overrides, and draft session creation
+- PySide6 `New Session` workspace tab for structured proprietary-plus-custom source ingest, pathway suggestion, source-role assignment, session-wide metadata overrides, and draft session creation
 - Explicit direct-ingest project workflow with `Open Project...`, `Save Project`, `Save Project As...`, recent-project history, and project-aware draft recovery
+- Structured source-type selection in `New Session`, including a `Custom` option plus dynamically available installed NeuroConv route options, with per-path ingest intent persisted through draft state and saved projects
+- Conservative custom-ingest filtering so obviously unsupported files are rejected before they enter the direct-ingest workspace, while route-backed selections keep explicit selected-package context for later validation and review
+- Mixed-source grouping that treats selected structured sources as dataset anchors and only attaches nearby custom inputs when the context is narrow enough to stay reviewable
 - Source-specific metadata overrides for selected direct-ingest sources, carried through inspection and normalization as user-supplied values
 - First-class direct-ingest group summaries with pathway/composition review in the `New Session` workflow
 - Dataset-level direct-ingest grouping actions for renaming detected groups, confirming detected bundles, splitting selected sources into individual groups, and creating/moving selected sources into named groups
@@ -203,7 +206,7 @@ Supported-path policy is now explicit: check the NeuroConv Conversion Gallery fi
 
 For real supported proprietary or acquisition-system formats, the intended execution model is to let the UI and orchestration layers parameterize documented NeuroConv conversion APIs directly. The repo now also supports a bridge mode where it assembles a base `NWBFile` from normalized metadata and then lets NeuroConv append the supported route content into that file. Repository-owned PyNWB assembly remains the fallback path for unsupported formats and the primary path for custom and hybrid conversion flows.
 
-The current desktop app can open checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` files for internal testing, but that is not the intended long-term primary ingest model. The target product flow is `New Conversion Session`, then direct file/folder ingestion, inspection, grouping, supported/custom/hybrid classification, and explicit metadata override/review before preview or write. App-owned project files now exist for reopen/recovery and explicit `Save Project` behavior, but they are not meant to replace real source files as the scientific source of truth.
+The current desktop app can open checked-in `session_manifest.json`, `custom_session.json`, and `hybrid_session.json` files for internal testing, but that is not the intended long-term primary ingest model. The target product flow is `New Conversion Session`, then structured source selection, inspection, grouping, supported/custom/hybrid classification, and explicit metadata override/review before preview or write. Users can now mix route-backed NeuroConv sources and custom files/folders inside the same session-assembly workspace, while app-owned project files remain reopen/recovery state rather than the scientific source of truth.
 
 All current implementation slices are backed by tests and documented under `docs/architecture/`.
 
@@ -314,6 +317,6 @@ This keeps the runtime self-contained for lab users while preserving the Python/
 
 1. Continue structured internal testing in the dedicated Conda environment against real representative datasets.
 2. Capture internal-testing findings and convert them into prioritized UI, workflow, performance, and operational fixes.
-3. Expand the new direct-ingest `New Session` workflow from the current heuristic grouping, group summaries, group-kind/anchor descriptors, grouping-reason/member summaries, confirmation gate, current group actions, simple sidecar association, explicit project baseline, and current session/source override model into richer dataset/session modeling and field-by-field conflict resolution.
+3. Expand the new structured-source `New Session` workflow from the current route-aware source selector, custom-ingest filtering, heuristic grouping, group summaries, group-kind/anchor descriptors, grouping-reason/member summaries, confirmation gate, current group actions, simple sidecar association, explicit project baseline, and current session/source override model into richer dataset/session modeling, stricter route-entry validation, and field-by-field conflict resolution.
 4. Deepen diagnostics and recovery beyond the current snapshot history plus runtime-diagnostics baseline, especially comparison/report UX and richer issue triage bundles.
 5. Start release engineering only after the local app is stable enough for a broader user decision/change phase.
