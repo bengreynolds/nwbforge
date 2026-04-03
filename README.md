@@ -222,6 +222,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Progressive metadata-review defaults so the recommended selected-source resolution stays primary while free-form custom session values are an explicit opt-in path
 - Actionable metadata-review controls that can promote a selected source value into a session-wide override and then require a preview rebuild
 - Actionable metadata-review controls that can also apply and clear source-specific overrides before the next preview rebuild
+- Field-level metadata review now separates preferred session-value status from source-specific override status so users can see which resolution layer is active before rebuilding preview
 - Manual metadata-review controls that can apply typed session overrides, use selected source values as source-specific overrides, and summarize pending versus resolved override state
 - Filterable metadata-review controls with per-field resolution status/history and a clear-all-overrides action for one canonical field
 - An integrated read-only NWB viewer tab that can inspect arbitrary `.nwb` files through a lazy PyNWB-backed tree/detail browser
