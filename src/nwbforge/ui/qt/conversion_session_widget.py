@@ -732,11 +732,13 @@ class ConversionSessionWidget(QWidget):
                 resolution_suffix = " | session override"
             elif disagreement.resolution_status == "source_override":
                 resolution_suffix = " | source override"
+            display_label = self._metadata_field_display_label(disagreement.canonical_key)
             item = QListWidgetItem(
-                f"[{status_label}] {disagreement.canonical_key} -> {disagreement.resolved_value}{resolution_suffix}"
+                f"[{status_label}] {display_label} -> {disagreement.resolved_value}{resolution_suffix}"
             )
             item.setData(Qt.ItemDataRole.UserRole, disagreement.canonical_key)
             tooltip_lines = [
+                f"Field: {display_label}",
                 f"Resolution state: {disagreement.resolution_status.replace('_', ' ')}",
                 f"Resolved from {disagreement.resolved_origin} value using source(s): "
                 f"{', '.join(disagreement.source_ids) or 'session merge'}",
@@ -807,9 +809,11 @@ class ConversionSessionWidget(QWidget):
                 self._selected_source_override_edit.setText("")
             self._refresh_metadata_resolution_actions()
             return
+        display_label = self._metadata_field_display_label(disagreement.canonical_key)
+        scope_label = self._metadata_field_scope_label(disagreement.canonical_key)
         self._selected_disagreement_value_label.setText(
-            f"{disagreement.canonical_key}\nResolved value: {disagreement.resolved_value}\n"
-            f"Origin: {disagreement.resolved_origin}"
+            f"Field: {display_label}\nScope: {scope_label}\nCanonical key: {disagreement.canonical_key}\n"
+            f"Resolved value: {disagreement.resolved_value}\nOrigin: {disagreement.resolved_origin}"
         )
         self._selected_resolution_status_label.setText(
             "Resolution status: " + disagreement.resolution_status.replace("_", " ")
@@ -1504,6 +1508,59 @@ class ConversionSessionWidget(QWidget):
             if item.text().startswith(f"[{artifact_type}]") and path_text:
                 return Path(path_text)
         return None
+
+    @classmethod
+    def _metadata_field_display_label(cls, canonical_key: str) -> str:
+        parts = [part for part in canonical_key.split(".") if part]
+        if not parts:
+            return canonical_key
+        if parts[0] == "subject" and len(parts) >= 2:
+            return f"Subject: {cls._humanize_metadata_segment(parts[1])}"
+        if parts[0] == "session" and len(parts) >= 2:
+            if parts[1] == "keywords" and len(parts) >= 3 and parts[2].isdigit():
+                return f"Session: Keywords [{int(parts[2]) + 1}]"
+            return f"Session: {cls._humanize_metadata_segment(parts[1])}"
+        if parts[0] == "devices" and len(parts) >= 3:
+            device_id = parts[1]
+            field_label = " / ".join(cls._humanize_metadata_segment(part) for part in parts[2:])
+            return f"Device {device_id}: {field_label}"
+        if parts[0] == "acquisition_streams" and len(parts) >= 3:
+            stream_id = parts[1]
+            field_label = " / ".join(cls._humanize_metadata_segment(part) for part in parts[2:])
+            return f"Acquisition Stream {stream_id}: {field_label}"
+        if parts[0] == "time_intervals" and len(parts) >= 3:
+            table_id = parts[1]
+            remaining = parts[2:]
+            if len(remaining) >= 3 and remaining[0] == "rows":
+                row_id = remaining[1]
+                field_parts = remaining[2:]
+                field_label = " / ".join(cls._humanize_metadata_segment(part) for part in field_parts)
+                return f"Time Interval {table_id} / Row {row_id}: {field_label}"
+            field_label = " / ".join(cls._humanize_metadata_segment(part) for part in remaining)
+            return f"Time Interval {table_id}: {field_label}"
+        field_label = " / ".join(cls._humanize_metadata_segment(part) for part in parts[1:] or parts)
+        return f"{cls._metadata_field_scope_label(canonical_key)}: {field_label}"
+
+    @staticmethod
+    def _metadata_field_scope_label(canonical_key: str) -> str:
+        parts = [part for part in canonical_key.split(".") if part]
+        if not parts:
+            return "Metadata"
+        scope_map = {
+            "subject": "Subject",
+            "session": "Session",
+            "devices": "Device",
+            "acquisition_streams": "Acquisition Stream",
+            "time_intervals": "Time Interval Table",
+        }
+        return scope_map.get(parts[0], "Additional Metadata")
+
+    @staticmethod
+    def _humanize_metadata_segment(segment: str) -> str:
+        if segment.isdigit():
+            return segment
+        words = segment.replace("_", " ").replace("-", " ").split()
+        return " ".join(word.upper() if word.isupper() else word.capitalize() for word in words)
 
     def _restore_selected_snapshot(self) -> None:
         snapshot_id = self._selected_snapshot_id()

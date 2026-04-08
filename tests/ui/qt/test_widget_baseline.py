@@ -2052,7 +2052,8 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
 
     assert window.conversion_widget._disagreement_list.count() == 1
     assert window.conversion_widget._workspace_tabs.currentIndex() == 1
-    assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert "Field: Subject: Subject Id" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert "Canonical key: subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
     assert "Pending Review" in window.conversion_widget._disagreement_list.item(0).text()
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
@@ -2163,9 +2164,108 @@ def test_conversion_widget_sorts_pending_metadata_conflicts_before_resolved(qapp
 
     assert window.conversion_widget._disagreement_list.count() == 2
     assert "Pending Review" in window.conversion_widget._disagreement_list.item(0).text()
-    assert "subject.subject_id" in window.conversion_widget._disagreement_list.item(0).text()
+    assert "Subject: Subject Id" in window.conversion_widget._disagreement_list.item(0).text()
     assert "Resolved" in window.conversion_widget._disagreement_list.item(1).text()
-    assert "session.session_description" in window.conversion_widget._disagreement_list.item(1).text()
+    assert "Session: Session Description" in window.conversion_widget._disagreement_list.item(1).text()
+    window.close()
+
+
+def test_conversion_widget_formats_broader_metadata_field_labels(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-review-broad-fields-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._screen_model.restore_state(
+        replace(
+            window.conversion_widget._screen_model.state,
+            metadata_disagreements=(
+                MetadataDisagreementItem(
+                    canonical_key="devices.scope.description",
+                    resolved_value="Two-photon scope",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="manifest",
+                            source_label="Structured session manifest",
+                            role="primary",
+                            extracted_key="devices.scope.description",
+                            value="Two-photon scope",
+                        ),
+                    ),
+                    pending_resolution=True,
+                ),
+                MetadataDisagreementItem(
+                    canonical_key="acquisition_streams.behavior.start_time",
+                    resolved_value="2026-04-08T10:00:00",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="custom",
+                            source_label="Custom session JSON",
+                            role="supplemental",
+                            extracted_key="acquisition_streams.behavior.start_time",
+                            value="2026-04-08T10:00:00",
+                        ),
+                    ),
+                    pending_resolution=True,
+                ),
+            ),
+        )
+    )
+    qapp.processEvents()
+    window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
+    qapp.processEvents()
+
+    texts = [
+        window.conversion_widget._disagreement_list.item(index).text()
+        for index in range(window.conversion_widget._disagreement_list.count())
+    ]
+    assert any("Device scope: Description" in text for text in texts)
+    assert any("Acquisition Stream behavior: Start Time" in text for text in texts)
+    acquisition_row = next(
+        index
+        for index in range(window.conversion_widget._disagreement_list.count())
+        if "Acquisition Stream behavior: Start Time"
+        in window.conversion_widget._disagreement_list.item(index).text()
+    )
+    window.conversion_widget._disagreement_list.setCurrentRow(acquisition_row)
+    qapp.processEvents()
+    assert "Field: Acquisition Stream behavior: Start Time" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert "Scope: Acquisition Stream" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert (
+        "Canonical key: acquisition_streams.behavior.start_time"
+        in window.conversion_widget._selected_disagreement_value_label.text()
+    )
     window.close()
 
 
