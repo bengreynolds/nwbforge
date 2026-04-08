@@ -24,11 +24,11 @@ Typical local-app flow:
 2. Add one or more NeuroConv-supported sources, custom files/folders, or a mixture of both.
 3. For supported sources, choose the project file, main file, or root dataset entry that represents the acquisition or processing package.
 4. Review the detected dataset bundles, including any unambiguous combined supported workflows the app can recognize from the selected structured sources, then adjust source roles, metadata overrides, and mixed-source conflicts before preview or write.
-5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them. When a session came from a saved direct-ingest project, the tabs and conversion header now carry that project context forward.
+5. Keep multiple created or opened sessions available in runtime tabs inside the Conversion workspace so you can switch between idle sessions without reopening them. When a session came from a saved direct-ingest project, the tabs and conversion header now carry that project context forward, including when multiple open sessions belong to the same saved project.
 6. Use the guided conversion workspace messaging to confirm the current step, recommended next action, what still blocks `Write NWB`, and the recommended resolution path for the currently selected metadata conflict. Session/source inspection remains available, but it now stays behind an opt-in `Show Session Details` control so the default screen reading order stays workflow-first.
 7. Use the pre-write checklist in the Conversion workspace to confirm whether the current session, preview, metadata review, and output-path requirements are complete before writing NWB.
 8. Set the output file directly from the run overview and enter reviewer information from the review stage instead of opening session details for those stage-specific tasks.
-9. After conversion finishes, use the review checklist to confirm whether acknowledgements, reviewer identity, and a review decision are still required.
+9. After conversion finishes, use the review checklist to confirm whether acknowledgements, reviewer identity, and a review decision are still required. If you inspect saved snapshots, the workspace now compares the selected snapshot against the current state before restore.
 10. Run preview/build, inspect warnings or blocking issues, then execute NWB conversion when the session is ready.
 
 Mixed-source sessions are a first-class workflow. Route-backed proprietary sources provide structured context, while custom files and folders stay in the same session and are flagged for review when the app cannot confidently attach them to an existing dataset bundle.
@@ -190,6 +190,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Follow-up direct-ingest hardening so supported entry validation now matches current Bruker, Thor, audio, image, TIFF, and video route semantics, optional adapter exports fail closed when package-gated symbols are absent, and shell/file logging paths tolerate re-entrant listener updates plus non-JSON context values
 - Conservative custom-ingest filtering so obviously unsupported files are rejected before they enter the direct-ingest workspace, while route-backed selections keep explicit selected-package context for later validation and review
 - Mixed-source grouping that treats selected structured sources as dataset anchors and only attaches nearby custom inputs when the context is narrow enough to stay reviewable
+- Explicit ambiguity warnings for heterogeneous custom-only folder groups, so same-folder selection alone does not imply a trustworthy dataset bundle
 - Workflow-aware direct-ingest grouping that can collapse clean matched supported combinations such as `TIFF + Suite2p` into one reviewable dataset bundle while preserving conservative handling for ambiguous cases
 - Structured-bundle member absorption so deterministic dependent files selected alongside a supported canonical entry remain inside that structured source bundle instead of appearing as separate draft sources
 - Structured supported-source entry semantics in session assembly, including canonical entry-path kind, entry-role labeling, and persisted validation status for downstream grouping and review
@@ -214,6 +215,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Generated-artifact visibility in the conversion-session panel for NWB, validation-report, and review outputs
 - Direct desktop actions to open generated artifacts and their folders from the conversion panel
 - Dedicated desktop shortcuts for validation reports and review decisions
+- Broader metadata-review field labeling so device, acquisition-stream, time-interval, and additional-metadata conflicts read as user-facing field/scope labels instead of only raw canonical keys
 - Shell-level user-facing errors for missing or failed artifact-open actions
 - A sectioned conversion-session desktop surface with clearer summary, execution, review, and artifact panes
 - Run-overview and review-guidance summaries in the conversion panel so stage, output target, issue counts, artifact counts, and expected review actions are visible at a glance
@@ -246,7 +248,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Desktop history flow that lists saved snapshot versions in the conversion workspace and can restore an earlier saved state
 - Snapshot history now also shows selected-snapshot restore context in the desktop workspace, including saved status, artifact count, issue count, and review state before restore
 - Diagnostics summary and runtime history rows now distinguish ordinary progress from recovery/error context more explicitly, and snapshot rows now label preview-versus-results state plus review-record presence directly in the list
-- Internal smoke tooling now supports focused named cases and optional JSON summary output so testing results can be attached directly to local triage records
+- Internal smoke tooling now supports focused named cases plus JSON and Markdown triage-report output so testing results can be attached directly to local triage records
 - NeuroConv-first planning for real supported-path adapters, with direct PyNWB reserved for unsupported or unusually custom cases
 - An explicit approved NeuroConv-first route catalog in [docs/research/neuroconv-supported-routes.md](docs/research/neuroconv-supported-routes.md)
 - Explicit planning requirements for structured logging, background conversion execution, real progress/status events, and a future UI log viewer/status bar
