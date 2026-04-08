@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import argparse
 from contextlib import suppress
+from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
+import shutil
 import tempfile
 
 from nwbforge.app.desktop import build_desktop_services, load_desktop_session
@@ -29,6 +31,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=None,
         help="Optional path for a JSON smoke summary report.",
+    )
+    parser.add_argument(
+        "--report-markdown",
+        type=Path,
+        default=None,
+        help="Optional path for a Markdown triage summary.",
     )
     parser.add_argument(
         "--case",
@@ -182,12 +190,66 @@ def _run_smoke_suite(
 def _write_report(report_path: Path, *, workspace: Path, cases: list[dict[str, str]]) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "workspace": str(workspace),
         "case_count": len(cases),
         "result": "passed",
         "cases": cases,
     }
     report_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _write_markdown_report(report_path: Path, *, workspace: Path, cases: list[dict[str, str]]) -> None:
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Internal Smoke Triage Record",
+        "",
+        f"- Generated at: {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
+        f"- Workspace: `{workspace}`",
+        f"- Case count: {len(cases)}",
+        "- Overall result: `passed`",
+        "",
+        "## Cases",
+        "",
+    ]
+    for case in cases:
+        case_name = case.get("session_id") or case.get("case_type") or "unknown"
+        case_result = case.get("result", "unknown")
+        case_workspace = case.get("workspace", "")
+        output_path = case.get("output_path", "")
+        lines.extend(
+            [
+                f"### {case_name}",
+                f"- Result: `{case_result}`",
+                f"- Type: `{case.get('case_type', 'unknown')}`",
+                f"- Workspace: `{case_workspace}`" if case_workspace else "- Workspace: n/a",
+                f"- Output: `{output_path}`" if output_path else "- Output: n/a",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Triage",
+            "",
+            "Blocking:",
+            "- None recorded yet.",
+            "",
+            "Non-blocking:",
+            "- None recorded yet.",
+            "",
+            "Follow-up:",
+            "- Representative local datasets still need to be run outside the checked-in smoke fixtures.",
+            "",
+        ]
+    )
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _cleanup_temporary_workspace(workspace: Path) -> None:
+    try:
+        shutil.rmtree(workspace)
+    except OSError:
+        LOGGER.warning("Could not fully remove temporary smoke workspace.", extra={"nwbforge_context": {"workspace": str(workspace)}})
 
 
 def main() -> int:
@@ -201,17 +263,23 @@ def main() -> int:
         cases = _run_smoke_suite(repo_root, workspace, case_names=tuple(args.case) if args.case else None)
         if args.report_json is not None:
             _write_report(args.report_json.resolve(), workspace=workspace, cases=cases)
+        if args.report_markdown is not None:
+            _write_markdown_report(args.report_markdown.resolve(), workspace=workspace, cases=cases)
         return 0
 
-    with tempfile.TemporaryDirectory(prefix="nwbforge-smoke-") as temp_dir:
-        workspace = Path(temp_dir)
+    workspace = Path(tempfile.mkdtemp(prefix="nwbforge-smoke-"))
+    try:
         LOGGER.info("Running internal smoke suite.", extra={"nwbforge_context": {"workspace": str(workspace)}})
         cases = _run_smoke_suite(repo_root, workspace, case_names=tuple(args.case) if args.case else None)
         if args.report_json is not None:
             _write_report(args.report_json.resolve(), workspace=workspace, cases=cases)
+        if args.report_markdown is not None:
+            _write_markdown_report(args.report_markdown.resolve(), workspace=workspace, cases=cases)
         with suppress(OSError):
             LOGGER.info("Internal smoke suite finished successfully.")
         return 0
+    finally:
+        _cleanup_temporary_workspace(workspace)
 
 
 if __name__ == "__main__":

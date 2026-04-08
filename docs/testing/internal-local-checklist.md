@@ -33,6 +33,12 @@ Write a machine-readable smoke summary for triage records:
 conda run -n nwbforge-dev python scripts/run_internal_smoke.py --report-json temp\smoke-report.json
 ```
 
+Write a human-readable triage record alongside the JSON report:
+
+```text
+conda run -n nwbforge-dev python scripts/run_internal_smoke.py --report-json temp\smoke-report.json --report-markdown temp\smoke-report.md
+```
+
 What the smoke suite covers:
 - checked-in supported session example through preview and NWB write
 - checked-in custom session example through preview and NWB write
@@ -109,6 +115,7 @@ Minimum triage fields:
 
 Recommended attachment when available:
 - JSON smoke summary from `scripts/run_internal_smoke.py --report-json ...`
+- Markdown triage record from `scripts/run_internal_smoke.py --report-markdown ...`
 
 ## Manual desktop baseline
 

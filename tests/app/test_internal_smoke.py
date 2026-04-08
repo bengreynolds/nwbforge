@@ -37,18 +37,43 @@ def test_internal_smoke_writes_json_report(tmp_path: Path) -> None:
     module._write_report(report_path, workspace=workspace, cases=cases)
 
     payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert "generated_at" in payload
     assert payload["workspace"] == str(workspace)
     assert payload["case_count"] == 2
     assert payload["result"] == "passed"
     assert payload["cases"] == cases
 
 
+def test_internal_smoke_writes_markdown_report(tmp_path: Path) -> None:
+    module = _load_internal_smoke_module()
+    report_path = tmp_path / "reports" / "smoke-report.md"
+    workspace = tmp_path / "workspace"
+    cases = [
+        {
+            "case_type": "conversion",
+            "session_id": "supported-01",
+            "result": "passed",
+            "workspace": str(workspace / "supported"),
+            "output_path": str(workspace / "supported" / "supported-case.nwb"),
+        }
+    ]
+
+    module._write_markdown_report(report_path, workspace=workspace, cases=cases)
+
+    text = report_path.read_text(encoding="utf-8")
+    assert "# Internal Smoke Triage Record" in text
+    assert "### supported-01" in text
+    assert "Blocking:" in text
+    assert "Representative local datasets still need to be run" in text
+
+
 def test_internal_smoke_parse_args_accepts_repeated_cases() -> None:
     module = _load_internal_smoke_module()
 
-    args = module.parse_args(["--case", "supported", "--case", "project"])
+    args = module.parse_args(["--case", "supported", "--case", "project", "--report-markdown", "triage.md"])
 
     assert args.case == ["supported", "project"]
+    assert str(args.report_markdown).endswith("triage.md")
 
 
 def test_internal_smoke_runs_only_requested_cases(tmp_path: Path, monkeypatch) -> None:
@@ -70,3 +95,16 @@ def test_internal_smoke_runs_only_requested_cases(tmp_path: Path, monkeypatch) -
 
     assert invoked == ["custom-case.nwb", "project"]
     assert len(cases) == 2
+
+
+def test_internal_smoke_cleanup_ignores_teardown_errors(tmp_path: Path, monkeypatch) -> None:
+    module = _load_internal_smoke_module()
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    def raise_permission_error(path: Path):
+        raise PermissionError("locked")
+
+    monkeypatch.setattr(module.shutil, "rmtree", raise_permission_error)
+
+    module._cleanup_temporary_workspace(workspace)
