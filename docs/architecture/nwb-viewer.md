@@ -1,6 +1,6 @@
 # NWB Viewer
 
-Last updated: 2026-04-01
+Last updated: 2026-04-08
 
 ## Purpose
 
@@ -109,7 +109,16 @@ Responsibilities:
 - the base viewer path depends only on `PyNWB` and the desktop Qt layer
 - the optional rich renderer path uses `nwbwidgets + Panel`
 - the optional dependency group is exposed through the project extra `viewer_rich`
+- the current extra also carries `ipython-genutils`, `ipykernel`, and `ipywidgets-bokeh` because the `nwbwidgets + Panel` stack does not currently launch cleanly on the repo's baseline without them
+- the package-management catalog now exposes that same `viewer_rich` target through Optional Workflow Support in the desktop shell
 - notebook/web tooling is still not a hard dependency of the local app baseline
+
+## Environment isolation
+
+- the base viewer service now imports `hdmf` and `pynwb` through a dedicated-env isolation helper instead of trusting whatever user-site packages happen to be visible on `sys.path`
+- the optional rich renderer uses the same isolation helper before importing `panel`, `nwbwidgets`, and related dependencies
+- package-install execution now runs `python -s -m pip ...` so optional support installs do not accidentally validate against roaming user-site packages
+- the rich-render path also applies a narrow `hdmf.utils` compatibility shim for legacy `nwbwidgets` dependencies that still expect `call_docval_func` and `fmt_docval_args`
 
 ## Current limitations
 

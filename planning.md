@@ -1,6 +1,6 @@
 # NWB Forge Planning
 
-Last updated: 2026-04-03
+Last updated: 2026-04-08
 Status: First pass complete / internal testing and local-product hardening underway
 
 ## Current Execution Status
@@ -157,6 +157,9 @@ Completed:
 - Added metadata-review filtering, resolution-status/history summaries, and a clear-all-overrides action for one canonical field
 - Added a standalone read-only NWB viewer window with a PyNWB-backed lazy tree/detail browser, metadata-first initial expansion, and direct launch from the desktop shell or generated `.nwb` artifacts
 - Added `nwbwidgets + Panel` as an optional rich renderer path for selected NWB viewer nodes without changing the base PyNWB-first viewer dependency model
+- Added a curated `viewer_rich` optional support target to the package-management catalog and Optional Workflow Support flow so the integrated NWB viewer can request rich-preview dependencies through the dedicated Conda environment instead of manual ad hoc installs
+- Hardened the NWB viewer and optional rich-preview path against roaming user-site contamination by forcing `hdmf`/`pynwb` imports to resolve from the dedicated development environment and by making package-install commands run with `python -s`
+- Added current-stack compatibility handling for the optional rich viewer path, including explicit `ipython-genutils`, `ipykernel`, and `ipywidgets-bokeh` dependencies plus a narrow `hdmf.utils` compatibility shim so `nwbwidgets` can launch against the repo's current `PyNWB`/`HDMF` baseline
 - Added a shared Qt visual system with reusable header cards, metric cards, restrained color treatment, and cleaner dialog/workspace composition across the desktop shell
 - Consolidated routine desktop workflows into one integrated main-window workspace with tabs for conversion, direct ingest, packages, settings, and NWB viewing
 - Embedded the NWB viewer into the main shell while keeping the standalone viewer class only as a thin compatibility wrapper

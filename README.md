@@ -285,8 +285,10 @@ conda run -n nwbforge-dev python scripts/run_app.py --view-nwb path\\to\\file.nw
 Optional rich viewer packages:
 
 ```text
-pip install -e .[viewer_rich]
+conda run -n nwbforge-dev python -m pip install -e .[viewer_rich]
 ```
+
+The same support target is exposed inside the app as `Optional Workflow Support -> NWB Viewer Rich Preview`. The current `viewer_rich` extra includes `nwbwidgets`, `panel`, `ipython-genutils`, `ipykernel`, and `ipywidgets-bokeh`, and the viewer now isolates `PyNWB`/`HDMF` imports from roaming user-site packages so rich preview resolves against the dedicated development environment instead of whichever scientific packages happen to be installed globally.
 
 Checked-in example sessions are available under:
 - `examples/sessions/supported/session_manifest.json`
