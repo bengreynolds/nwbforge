@@ -566,3 +566,16 @@ def test_session_assembly_screen_model_absorbs_selected_structured_bundle_member
     assert len(state.sources) == 1
     assert state.sources[0].structured_bundle_member_count == 2
     assert any(issue.code == "session-assembly-structured-member-absorbed" for issue in state.issues)
+
+
+def test_session_assembly_screen_model_warns_on_heterogeneous_custom_folder_group(tmp_path: Path) -> None:
+    table_path = tmp_path / "behavior.csv"
+    table_path.write_text("time,value\n0,1\n", encoding="utf-8")
+    video_path = tmp_path / "behavior.mp4"
+    video_path.write_text("binary-placeholder", encoding="utf-8")
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+
+    state = screen.add_custom_paths((table_path, video_path))
+
+    assert len(state.groups) == 1
+    assert any(issue.code == "session-assembly-ambiguous-custom-bundle" for issue in state.issues)

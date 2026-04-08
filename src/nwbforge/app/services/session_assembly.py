@@ -813,6 +813,19 @@ class SessionAssemblyService:
                     )
                 )
 
+            if self._is_ambiguous_custom_group(sources):
+                issues.append(
+                    SessionAssemblyIssue(
+                        code="session-assembly-ambiguous-custom-bundle",
+                        message=(
+                            f"Grouped custom inputs under '{group_label}' mix different file roles or adapter hints. "
+                            "Review whether they belong to one dataset before preview."
+                        ),
+                        severity=IssueSeverity.WARNING,
+                        location=anchor_path,
+                    )
+                )
+
             if len(group_pathways) > 1 and not is_confirmed:
                 issues.append(
                     SessionAssemblyIssue(
@@ -1471,6 +1484,29 @@ class SessionAssemblyService:
         if len(sources) == 1 and sources[0].location.is_dir():
             return "directory"
         return "folder"
+
+    @staticmethod
+    def _is_ambiguous_custom_group(sources: list[SessionAssemblySource]) -> bool:
+        if len(sources) < 2:
+            return False
+        if any(source.ingest_kind != "custom" for source in sources):
+            return False
+        suffix_signatures = {
+            tuple(suffix.lower() for suffix in source.location.suffixes)
+            for source in sources
+            if source.location.is_file()
+        }
+        if len(suffix_signatures) > 1:
+            return True
+        source_types = {source.source_type for source in sources}
+        if len(source_types) > 1:
+            return True
+        adapter_hints = {
+            source.suggested_adapter_id
+            for source in sources
+            if source.suggested_adapter_id is not None
+        }
+        return len(adapter_hints) > 1
 
     @staticmethod
     def _group_reason_for(

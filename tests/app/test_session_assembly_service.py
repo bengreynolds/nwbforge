@@ -750,6 +750,19 @@ def test_session_assembly_service_groups_supported_sources_as_combined_workflow(
     assert session.sources[1].metadata["session_assembly.workflow_display_name"] == "TIFF + Suite2p Workflow"
 
 
+def test_session_assembly_service_warns_on_heterogeneous_custom_folder_group(tmp_path: Path) -> None:
+    table_path = tmp_path / "behavior.csv"
+    table_path.write_text("time,value\n0,1\n", encoding="utf-8")
+    video_path = tmp_path / "behavior.mp4"
+    video_path.write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft((table_path, video_path))
+
+    assert len(draft.groups) == 1
+    assert any(issue.code == "session-assembly-ambiguous-custom-bundle" for issue in draft.issues)
+
+
 def test_session_assembly_service_preserves_project_origin_in_created_session(tmp_path: Path) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
