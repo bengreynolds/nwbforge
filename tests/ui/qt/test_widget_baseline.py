@@ -1200,6 +1200,56 @@ def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, t
     window.close()
 
 
+def test_main_window_counts_open_sessions_from_same_project_in_header(qapp, tmp_path: Path) -> None:
+    project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
+    project_path.parent.mkdir()
+    first_session = make_session(tmp_path)
+    second_session = replace(first_session, session_id="sess-qt-02")
+    first_session = replace(
+        first_session,
+        sources=(
+            replace(
+                first_session.sources[0],
+                metadata={
+                    **first_session.sources[0].metadata,
+                    "session_assembly.project_path": str(project_path.resolve()),
+                    "session_assembly.project_name": project_path.name,
+                },
+            ),
+        ),
+    )
+    second_session = replace(
+        second_session,
+        sources=(
+            replace(
+                second_session.sources[0],
+                metadata={
+                    **second_session.sources[0].metadata,
+                    "session_assembly.project_path": str(project_path.resolve()),
+                    "session_assembly.project_name": project_path.name,
+                },
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(first_session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._load_built_session(first_session)
+    qapp.processEvents()
+    window._load_built_session(second_session)
+    qapp.processEvents()
+
+    assert "Project: saved-project | 2 open project sessions |" in window._workspace_subtitle_label.text()
+    window.close()
+
+
 def test_session_assembly_dialog_edits_source_metadata_override(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")

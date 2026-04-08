@@ -701,6 +701,7 @@ class MainWindow(QMainWindow):
             session_path=session_path,
         )
         self._set_current_conversion_tab(tab_id)
+        self._sync_workspace_header(self._conversion_screen_model.state)
         self._workspace_tabs.setCurrentWidget(self._conversion_widget)
         project_name = self._session_project_name(session)
         if project_name:
@@ -1087,6 +1088,9 @@ class MainWindow(QMainWindow):
         project_text = ""
         if project_name:
             project_text = f"Project: {project_name} | "
+            open_project_sessions = self._open_project_session_count(state.session)
+            if open_project_sessions > 1:
+                project_text += f"{open_project_sessions} open project sessions | "
         project_text += f"{state.session.pathway.value.title()} pathway | {source_count} source"
         if source_count != 1:
             project_text += "s"
@@ -1130,6 +1134,23 @@ class MainWindow(QMainWindow):
         if tab.session_path is not None:
             parts.append(str(tab.session_path))
         return "\n".join(parts)
+
+    def _open_project_session_count(self, session: ConversionSession) -> int:
+        project_path = self._session_project_path(session)
+        project_name = self._session_project_name(session)
+        if project_path is None and not project_name:
+            return 0
+        count = 0
+        for tab in self._conversion_workspace_tabs:
+            tab_session = tab.state.session
+            if tab_session is None:
+                continue
+            if project_path is not None and self._session_project_path(tab_session) == project_path:
+                count += 1
+                continue
+            if project_name and self._session_project_name(tab_session) == project_name:
+                count += 1
+        return count
 
     @staticmethod
     def _session_project_path(session: ConversionSession) -> Path | None:
