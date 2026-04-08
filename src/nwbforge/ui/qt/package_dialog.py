@@ -52,7 +52,7 @@ class PackageInstallerDialog(QWidget):
         self._route_list.itemChanged.connect(self._on_route_item_changed)
 
         self._guidance_label = QLabel(
-            "Use this screen only when a representative dataset needs optional route support in the dedicated development environment. Most direct-ingest work should start with New Session instead.",
+            "Use this screen only when a representative dataset or optional viewer capability needs extra support in the dedicated development environment. Most direct-ingest work should start with New Session instead.",
             self,
         )
         self._guidance_label.setWordWrap(True)
@@ -74,7 +74,7 @@ class PackageInstallerDialog(QWidget):
             self._header_badge_label,
         ) = build_page_header(
             "Optional Workflow Support",
-            "Add optional route support for representative datasets in the dedicated development environment without changing the main direct-ingest workflow.",
+            "Add optional route or NWB viewer support for representative datasets in the dedicated development environment without changing the main direct-ingest workflow.",
             badge_text="Secondary Setup",
             parent=self,
         )

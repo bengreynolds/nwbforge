@@ -74,6 +74,19 @@ def test_package_installer_screen_model_updates_custom_routes(tmp_path: Path) ->
     screen.shutdown()
 
 
+def test_package_installer_screen_model_accepts_rich_viewer_support_target(tmp_path: Path) -> None:
+    screen = make_screen_model(tmp_path)
+    screen.load()
+
+    state = screen.set_custom_routes(("viewer_rich",))
+
+    assert state.install_preset is InstallPreset.CUSTOM
+    assert state.selected_routes == ("viewer_rich",)
+    assert state.resolved_extras == ("viewer_rich",)
+    assert state.is_installable is True
+    screen.shutdown()
+
+
 def test_package_installer_screen_model_normalizes_string_mode_and_preset_inputs(tmp_path: Path) -> None:
     screen = make_screen_model(tmp_path)
     screen.load()

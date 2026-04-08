@@ -30,6 +30,18 @@ def test_resolve_install_plan_for_custom_routes_is_deduplicated() -> None:
     assert plan.extras == ("scanimage", "deeplabcut")
 
 
+def test_resolve_install_plan_for_rich_viewer_support_target() -> None:
+    plan = resolve_install_plan(
+        mode=InstallMode.SELECTED,
+        preset=InstallPreset.CUSTOM,
+        routes=("viewer_rich",),
+    )
+
+    assert plan.selection.routes == ("viewer_rich",)
+    assert plan.extras == ("viewer_rich",)
+    assert plan.editable_requirement == ".[viewer_rich]"
+
+
 def test_resolve_install_plan_rejects_unknown_route() -> None:
     with pytest.raises(ValueError, match="Unknown install route"):
         resolve_install_plan(

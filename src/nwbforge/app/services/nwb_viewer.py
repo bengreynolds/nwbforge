@@ -7,10 +7,21 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from hdmf.common import DynamicTable
-from hdmf.container import AbstractContainer
-from pynwb import NWBHDF5IO, TimeSeries
-from pynwb.file import NWBFile, Subject
+from nwbforge.app.runtime.python_env import import_modules_without_user_site
+
+_HDMF_COMMON, _HDMF_CONTAINER, _PYNWB, _PYNWB_FILE = import_modules_without_user_site(
+    "hdmf.common",
+    "hdmf.container",
+    "pynwb",
+    "pynwb.file",
+    purge_prefixes=("hdmf", "pynwb"),
+)
+DynamicTable = _HDMF_COMMON.DynamicTable
+AbstractContainer = _HDMF_CONTAINER.AbstractContainer
+NWBHDF5IO = _PYNWB.NWBHDF5IO
+TimeSeries = _PYNWB.TimeSeries
+NWBFile = _PYNWB_FILE.NWBFile
+Subject = _PYNWB_FILE.Subject
 
 
 @dataclass(frozen=True, slots=True)

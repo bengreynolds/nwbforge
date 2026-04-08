@@ -213,6 +213,7 @@ class PackageInstallationService:
             "-n",
             self._env_name,
             "python",
+            "-s",
             "-m",
             "pip",
             "install",

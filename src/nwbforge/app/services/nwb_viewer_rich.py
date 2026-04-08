@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import importlib
 from types import ModuleType
 from typing import Any, Protocol
 import webbrowser
 
+from nwbforge.app.runtime.python_env import import_modules_without_user_site
 from nwbforge.app.services.nwb_viewer import NwbTreeNode, NwbViewerError
 
 
@@ -77,20 +77,24 @@ class NwbWidgetsPanelRenderer(BaseRichNodeRenderer):
                 renderer_name=self.renderer_name,
                 is_available=False,
                 is_supported=False,
-                message="Optional rich preview requires the 'nwbwidgets' and 'panel' packages.",
+                message=(
+                    "Optional rich preview requires the 'viewer_rich' support target "
+                    "(`nwbwidgets` + `panel`). Install it from Optional Workflow Support or "
+                    "`pip install -e .[viewer_rich]`."
+                ),
             )
         return NwbRichRendererStatus(
             renderer_name=self.renderer_name,
             is_available=True,
             is_supported=True,
-            message="Open the selected node in an optional nwbwidgets/Panel preview.",
+            message="Open the selected node in the optional NWB rich preview renderer.",
         )
 
     def launch_for_node(self, node: NwbTreeNode) -> NwbRichRenderSession:
         if not self._is_available():
             raise NwbViewerError(
                 "Rich preview is not available.",
-                "Install the optional 'nwbwidgets' and 'panel' packages to enable rich previews.",
+                "Install the optional 'viewer_rich' support target (`nwbwidgets` + `panel`) to enable rich previews.",
             )
 
         panel_module, nwbwidgets_module = self._load_modules()
@@ -127,15 +131,37 @@ class NwbWidgetsPanelRenderer(BaseRichNodeRenderer):
 
     @staticmethod
     def _load_modules() -> tuple[ModuleType, ModuleType]:
-        panel_module = importlib.import_module("panel")
-        nwbwidgets_module = importlib.import_module("nwbwidgets")
-        return panel_module, nwbwidgets_module
+        _ensure_hdmf_docval_compat()
+        return import_modules_without_user_site(
+            "panel",
+            "nwbwidgets",
+            purge_prefixes=("panel", "nwbwidgets", "ndx_icephys_meta", "hdmf", "pynwb"),
+        )
 
     @staticmethod
     def _is_available() -> bool:
         try:
-            importlib.import_module("panel")
-            importlib.import_module("nwbwidgets")
+            NwbWidgetsPanelRenderer._load_modules()
         except Exception:
             return False
         return True
+
+
+def _ensure_hdmf_docval_compat() -> None:
+    """Patch legacy docval helpers expected by optional viewer dependencies."""
+
+    (hdmf_utils_module,) = import_modules_without_user_site(
+        "hdmf.utils",
+        purge_prefixes=("hdmf", "pynwb"),
+    )
+    if not hasattr(hdmf_utils_module, "call_docval_func"):
+        def call_docval_func(func: Any, kwargs: dict[str, Any]) -> Any:
+            return func(**kwargs)
+
+        hdmf_utils_module.call_docval_func = call_docval_func
+    if not hasattr(hdmf_utils_module, "fmt_docval_args"):
+        def fmt_docval_args(func: Any, kwargs: dict[str, Any]) -> tuple[tuple[Any, ...], dict[str, Any]]:
+            del func
+            return (), dict(kwargs)
+
+        hdmf_utils_module.fmt_docval_args = fmt_docval_args

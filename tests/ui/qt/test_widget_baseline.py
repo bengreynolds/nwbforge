@@ -514,6 +514,12 @@ def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_p
     assert package_screen.state.install_preset is InstallPreset.CUSTOM
     assert window.package_dialog._route_group.isHidden() is False
     assert window.package_dialog._route_list.isEnabled() is True
+    assert "viewer capability needs extra support" in window.package_dialog._guidance_label.text().lower()
+    route_names = {
+        window.package_dialog._route_list.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(window.package_dialog._route_list.count())
+    }
+    assert "viewer_rich" in route_names
 
     first_item = window.package_dialog._route_list.item(0)
     first_item.setCheckState(Qt.CheckState.Checked)

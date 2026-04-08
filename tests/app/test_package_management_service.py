@@ -58,6 +58,7 @@ def test_package_management_service_lists_available_routes() -> None:
     assert "scanimage" in route_names
     assert "scanimage_legacy" in route_names
     assert "thor" in route_names
+    assert "viewer_rich" in route_names
 
 
 def test_package_management_service_preview_accepts_implemented_optional_route(tmp_path: Path) -> None:
@@ -73,6 +74,21 @@ def test_package_management_service_preview_accepts_implemented_optional_route(t
 
     assert preview.is_installable is True
     assert not any(issue.code == "package-route-not-yet-implemented" for issue in preview.issues)
+
+
+def test_package_management_service_preview_accepts_rich_viewer_support_target(tmp_path: Path) -> None:
+    service = PackageManagementService(selection_path=tmp_path / "selection.json")
+
+    preview = service.preview_install(
+        PackageInstallRequest(
+            mode=InstallMode.SELECTED,
+            preset=InstallPreset.CUSTOM,
+            routes=("viewer_rich",),
+        )
+    )
+
+    assert preview.is_installable is True
+    assert preview.plan.extras == ("viewer_rich",)
 
 
 def test_package_management_service_blocks_empty_custom_selection(tmp_path: Path) -> None:
