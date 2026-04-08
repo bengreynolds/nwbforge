@@ -698,6 +698,7 @@ class ConversionSessionWidget(QWidget):
             "Selected snapshot: "
             f"{snapshot.saved_at_text} | {snapshot.status} | "
             f"{snapshot.artifact_count} artifacts | {snapshot.issue_count} issues | {review_text}. "
+            f"{self._snapshot_delta_summary(snapshot)} "
             "Restoring replaces the current session view with this saved state."
         )
 
@@ -1567,6 +1568,46 @@ class ConversionSessionWidget(QWidget):
         if snapshot_id is None:
             return
         self._screen_model.restore_snapshot(snapshot_id)
+
+    def _snapshot_delta_summary(self, snapshot) -> str:
+        state = self._screen_model.state
+        current_status = self._current_workspace_status(state)
+        current_artifacts = len(state.generated_artifacts)
+        current_issues = len(state.validation_issues)
+        current_review = state.last_review_submission is not None or state.persisted_review_outcome is not None
+        comparisons: list[str] = []
+        if current_status == snapshot.status:
+            comparisons.append("status matches current workspace")
+        else:
+            comparisons.append(f"status would change from {current_status} to {snapshot.status}")
+        comparisons.append(
+            "artifact count matches current workspace"
+            if current_artifacts == snapshot.artifact_count
+            else f"artifact count would change from {current_artifacts} to {snapshot.artifact_count}"
+        )
+        comparisons.append(
+            "issue count matches current workspace"
+            if current_issues == snapshot.issue_count
+            else f"issue count would change from {current_issues} to {snapshot.issue_count}"
+        )
+        snapshot_review = snapshot.has_review_record
+        if current_review == snapshot_review:
+            comparisons.append("review state matches current workspace")
+        elif snapshot_review:
+            comparisons.append("review state would restore a recorded review")
+        else:
+            comparisons.append("review state would remove the current recorded review")
+        return "Compared with current workspace: " + "; ".join(comparisons) + "."
+
+    @staticmethod
+    def _current_workspace_status(state: ConversionSessionScreenState) -> str:
+        if state.execution is not None:
+            return state.execution.session.status.value
+        if state.preview is not None:
+            return state.preview.session.status.value
+        if state.session is not None:
+            return state.session.status.value
+        return "not_loaded"
 
     def _open_artifact_by_type(self, artifact_type: str) -> None:
         path = self._artifact_path_for_type(artifact_type)

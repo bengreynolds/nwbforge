@@ -733,6 +733,8 @@ def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) 
     assert "2 artifacts" in window.conversion_widget._selected_snapshot_summary_label.text()
     assert "1 issues" in window.conversion_widget._selected_snapshot_summary_label.text()
     assert "not reviewed" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "Compared with current workspace:" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "artifact count matches current workspace" in window.conversion_widget._selected_snapshot_summary_label.text()
     assert "Restoring replaces the current session view with this saved state." in (
         window.conversion_widget._selected_snapshot_summary_label.text()
     )
