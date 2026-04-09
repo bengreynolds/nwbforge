@@ -8,6 +8,7 @@ from nwbforge.app.services.errors import (
     ReviewDecisionError,
     SourceNotFoundError,
 )
+from nwbforge.app.services.file_preview import FilePreviewKind, FilePreviewResult, FilePreviewTable, LocalFilePreviewService
 from nwbforge.app.services.inspection import RegistrySourceInspectionService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
 from nwbforge.app.services.nwb_viewer import NwbDetailTable, NwbFileController, NwbNodeDetail, NwbTreeModel, NwbTreeNode, NwbViewerError
@@ -41,8 +42,12 @@ __all__ = [
     "ConversionPipelineService",
     "ConversionPreview",
     "ExecutionReviewService",
+    "FilePreviewKind",
+    "FilePreviewResult",
+    "FilePreviewTable",
     "JsonSessionAssemblyWorkspaceStore",
     "JsonSessionAssemblyProjectStore",
+    "LocalFilePreviewService",
     "BaseRichNodeRenderer",
     "NwbDetailTable",
     "NwbFileController",

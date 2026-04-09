@@ -1,6 +1,6 @@
 # Qt Widget Baseline
 
-Last updated: 2026-04-03
+Last updated: 2026-04-09
 
 ## Purpose
 
@@ -52,6 +52,7 @@ Responsibilities:
 - block session creation until required grouped bundles are explicitly confirmed
 - remove selected inputs from the draft
 - edit source-specific metadata overrides for the selected source
+- preview the currently selected source path in-place so direct-ingest review can inspect common non-NWB file contents without leaving the workspace
 - create a real `ConversionSession` through `SessionAssemblyScreenModel`
 
 ### `ConversionSessionWidget`
@@ -76,6 +77,8 @@ Responsibilities:
 - open a selected generated artifact or its containing folder directly from the widget
 - open the validation report and latest review decision directly through dedicated shortcuts
 - delegate artifact-open and reveal behavior to shell-provided callbacks so missing files and failed shell launches can use the standard desktop error path
+- preview the currently selected source path from the session-summary surface
+- preview the currently selected generated artifact in the artifacts workspace when the file is readable in a bounded general-purpose preview path
 - render issue acknowledgement, reviewer, rationale, and approve/reject controls for review submission
 - render pending mixed-source metadata conflicts as explicit canonical-key comparisons with source-value context and normalization notes
 - let users promote a selected source value into a session-wide override directly from the metadata-review workspace
@@ -152,6 +155,15 @@ Responsibilities:
 - show text/scalar detail, table previews, and bounded array/time-series previews
 - stay backend-thin by consuming structured node-detail payloads instead of traversing the file directly
 
+### `FilePreviewPane`
+
+Location: `src/nwbforge/ui/qt/file_preview_pane.py`
+
+Responsibilities:
+- render shared read-only previews for selected local source and artifact paths
+- support bounded text, tabular, image, directory, and basic media preview states plus metadata-only fallback states
+- keep direct-ingest and artifact-review preview UX visually consistent without turning either workflow into a second standalone viewer
+
 ### Shell-level error presentation
 
 Location: `src/nwbforge/ui/qt/main_window.py`
@@ -213,7 +225,9 @@ Responsibilities:
   - conversion-session review submission bindings
   - source-specific direct-ingest metadata override bindings
   - direct-ingest project recovery through reopened draft state
+  - direct-ingest selected-source file preview
   - integrated NWB viewer file-open behavior, default collapsed tree behavior, metadata-first initial expansion, and shell-level launch from generated `.nwb` artifacts
+  - generated-artifact preview inside the conversion workspace
 
 ## Current limitations
 
@@ -222,6 +236,7 @@ Responsibilities:
 - no end-to-end packaged desktop entry point yet
 - NWB viewing still uses generic previews rather than richer modality-specific renderers
 - richer previews now exist only as an optional browser-backed `nwbwidgets + Panel` path rather than a native Qt rendering layer
+- generic source/artifact preview is intentionally bounded and conservative rather than a full modality-aware scientific viewer for every non-NWB format
 
 ## Temporary manual launcher
 

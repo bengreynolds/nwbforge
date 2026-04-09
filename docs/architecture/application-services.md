@@ -1,6 +1,6 @@
 # Application Service Baseline
 
-Last updated: 2026-04-01
+Last updated: 2026-04-09
 
 ## Purpose
 
@@ -126,6 +126,16 @@ Responsibilities:
 - launch a richer browser-backed preview session for the selected node when available
 - keep richer rendering optional and separate from the base `NwbFileController` path
 
+### `LocalFilePreviewService`
+
+Location: `src/nwbforge/app/services/file_preview.py`
+
+Responsibilities:
+- build bounded read-only previews for selected local paths used in direct-ingest and artifact review surfaces
+- distinguish between directory, text, tabular, image, audio/video, NWB, binary, missing, and error preview cases
+- keep file-content inspection logic out of the Qt widgets while still staying independent of conversion and validation flow
+- return conservative metadata-only fallbacks when a file should not or cannot be rendered directly in-app
+
 ## Design constraints
 
 - application services depend on domain contracts and adapter contracts only
@@ -137,6 +147,7 @@ Responsibilities:
 - direct file/folder ingestion should go through `SessionAssemblyService` instead of pushing adapter-discovery logic into the Qt layer
 - standalone NWB viewing should go through `NwbFileController` instead of embedding PyNWB file traversal directly in the Qt widgets
 - optional rich NWB rendering should stay behind a distinct renderer service so the base viewer remains usable without web/notebook tooling
+- generic non-NWB file preview should go through `LocalFilePreviewService` instead of teaching each widget its own ad hoc file-reading logic
 
 ## Immediate follow-on work
 

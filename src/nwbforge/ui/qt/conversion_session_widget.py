@@ -32,6 +32,7 @@ from nwbforge.domain.models import ConversionSession
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.models import ConversionSessionScreenState
 from nwbforge.ui.qt.bridge import StateBridge
+from nwbforge.ui.qt.file_preview_pane import FilePreviewPane
 from nwbforge.ui.qt.styling import build_metric_card
 
 
@@ -140,6 +141,7 @@ class ConversionSessionWidget(QWidget):
         self._result_label = QLabel("No preview or execution yet.", self)
         self._artifact_list = QListWidget(self)
         self._artifact_list.itemSelectionChanged.connect(self._refresh_artifact_actions)
+        self._artifact_list.itemSelectionChanged.connect(self._sync_selected_artifact_preview)
         self._snapshot_history_list = QListWidget(self)
         self._snapshot_history_list.currentItemChanged.connect(self._sync_selected_snapshot_summary)
         self._snapshot_history_list.itemSelectionChanged.connect(self._refresh_snapshot_actions)
@@ -213,11 +215,20 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._selected_snapshot_summary_label.setWordWrap(True)
+        self._source_preview_pane = FilePreviewPane(
+            self,
+            empty_message="Select a data source to preview its contents here.",
+        )
+        self._artifact_preview_pane = FilePreviewPane(
+            self,
+            empty_message="Select a generated artifact to preview it here.",
+        )
 
         self._session_summary_group = QGroupBox("Session Overview", self)
         self._execution_group = QGroupBox("Execution Status", self)
         self._review_group = QGroupBox("Quality Check and Review", self)
         self._artifact_group = QGroupBox("Generated Artifacts", self)
+        self._artifact_preview_group = QGroupBox("Selected Artifact Preview", self)
         self._history_group = QGroupBox("Saved Session History", self)
         self._diagnostics_group = QGroupBox("Runtime Diagnostics", self)
         self._workspace_tabs = QTabWidget(self)
@@ -271,6 +282,9 @@ class ConversionSessionWidget(QWidget):
         source_detail_layout.addRow("Media", self._source_media_type_label)
         self._source_detail_group = QGroupBox("Selected Data Source", self)
         self._source_detail_group.setLayout(source_detail_layout)
+        self._source_preview_group = QGroupBox("Selected Data Source Preview", self)
+        source_preview_layout = QVBoxLayout(self._source_preview_group)
+        source_preview_layout.addWidget(self._source_preview_pane)
 
         review_button_row = QHBoxLayout()
         review_button_row.addWidget(self._approve_button)
@@ -287,6 +301,7 @@ class ConversionSessionWidget(QWidget):
         session_summary_layout.addWidget(QLabel("Data sources", self))
         session_summary_layout.addWidget(self._source_list, stretch=1)
         session_summary_layout.addWidget(self._source_detail_group)
+        session_summary_layout.addWidget(self._source_preview_group)
         self._session_summary_group.setLayout(session_summary_layout)
 
         run_overview_layout = QFormLayout()
@@ -342,6 +357,9 @@ class ConversionSessionWidget(QWidget):
         artifact_layout = QVBoxLayout()
         artifact_layout.addWidget(self._artifact_list, stretch=1)
         artifact_layout.addLayout(artifact_button_row)
+        artifact_preview_layout = QVBoxLayout(self._artifact_preview_group)
+        artifact_preview_layout.addWidget(self._artifact_preview_pane)
+        artifact_layout.addWidget(self._artifact_preview_group)
         self._artifact_group.setLayout(artifact_layout)
 
         history_layout = QVBoxLayout()
@@ -591,6 +609,7 @@ class ConversionSessionWidget(QWidget):
             self._source_role_label.setText("Not available.")
             self._source_adapter_label.setText("Auto-detect")
             self._source_media_type_label.setText("Not available.")
+            self._source_preview_pane.set_preview_path(None)
             return
 
         source_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -603,12 +622,14 @@ class ConversionSessionWidget(QWidget):
             self._source_role_label.setText("Not available.")
             self._source_adapter_label.setText("Auto-detect")
             self._source_media_type_label.setText("Not available.")
+            self._source_preview_pane.set_preview_path(None)
             return
 
         self._source_location_label.setText(str(selected_source.location))
         self._source_role_label.setText(selected_source.role)
         self._source_adapter_label.setText(selected_source.adapter_hint or "Auto-detect")
         self._source_media_type_label.setText(selected_source.media_type or "Not available.")
+        self._source_preview_pane.set_preview_path(selected_source.location)
 
     def _sync_validation_issues(self, state: ConversionSessionScreenState) -> None:
         existing = {
@@ -641,6 +662,7 @@ class ConversionSessionWidget(QWidget):
                 self._issue_list.takeItem(index)
 
     def _sync_generated_artifacts(self, state: ConversionSessionScreenState) -> None:
+        selected_path = self._selected_artifact_path()
         self._artifact_list.clear()
         for artifact in state.generated_artifacts:
             label = f"[{artifact.artifact_type}] {artifact.location.name}"
@@ -651,7 +673,22 @@ class ConversionSessionWidget(QWidget):
                 tooltip = f"{artifact.description}\n{tooltip}"
             item.setToolTip(tooltip)
             self._artifact_list.addItem(item)
+        if self._artifact_list.count() > 0:
+            restored_row = 0
+            if selected_path is not None:
+                for row in range(self._artifact_list.count()):
+                    item = self._artifact_list.item(row)
+                    path_text = item.data(Qt.ItemDataRole.UserRole)
+                    if path_text and Path(path_text) == selected_path:
+                        restored_row = row
+                        break
+            self._artifact_list.setCurrentRow(restored_row)
+        else:
+            self._artifact_preview_pane.set_preview_path(None)
         self._refresh_artifact_actions()
+
+    def _sync_selected_artifact_preview(self) -> None:
+        self._artifact_preview_pane.set_preview_path(self._selected_artifact_path())
 
     def _sync_snapshot_history(self, state: ConversionSessionScreenState) -> None:
         selected_item = self._snapshot_history_list.currentItem()

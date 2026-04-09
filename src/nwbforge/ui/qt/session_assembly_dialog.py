@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 from nwbforge.domain.models import ConversionSession
 from nwbforge.ui.models import SessionAssemblySourceTypeOption, SessionAssemblyState
 from nwbforge.ui.qt.bridge import StateBridge
+from nwbforge.ui.qt.file_preview_pane import FilePreviewPane
 from nwbforge.ui.session_assembly import SessionAssemblyScreenModel
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
@@ -142,6 +143,10 @@ class SessionAssemblyDialog(QWidget):
         self._source_type_combo.currentIndexChanged.connect(self._update_add_controls)
         self._source_type_description_label = QLabel("", self)
         self._source_type_description_label.setWordWrap(True)
+        self._source_preview_pane = FilePreviewPane(
+            self,
+            empty_message="Select a data source to preview its contents here.",
+        )
 
         self._add_files_button = QPushButton("Add Files...", self)
         self._add_files_button.clicked.connect(self._add_files)
@@ -286,12 +291,22 @@ class SessionAssemblyDialog(QWidget):
         source_metadata_layout.addWidget(source_metadata_group)
         source_metadata_layout.addStretch(1)
 
+        source_preview_page = QWidget(self)
+        source_preview_layout = QVBoxLayout(source_preview_page)
+        source_preview_layout.setContentsMargins(0, 0, 0, 0)
+        source_preview_group = QGroupBox("Selected Data Source Preview", self)
+        source_preview_group_layout = QVBoxLayout(source_preview_group)
+        source_preview_group_layout.addWidget(self._source_preview_pane)
+        source_preview_layout.addWidget(source_preview_group)
+        source_preview_layout.addStretch(1)
+
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
         self._workspace_tabs.setUsesScrollButtons(True)
         self._workspace_tabs.addTab(grouping_page, "Grouping")
         self._workspace_tabs.addTab(session_metadata_page, "Session Metadata")
         self._workspace_tabs.addTab(source_metadata_page, "Selected Data Source Metadata")
+        self._workspace_tabs.addTab(source_preview_page, "Selected Data Source Preview")
 
         left_column_widget = QWidget(self)
         left_column_widget.setLayout(left_column)
@@ -561,6 +576,7 @@ class SessionAssemblyDialog(QWidget):
             self._selected_bundle_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
+            self._source_preview_pane.set_preview_path(None)
             with QSignalBlocker(self._role_combo):
                 self._role_combo.setCurrentText("primary")
             with QSignalBlocker(self._group_edit):
@@ -584,6 +600,7 @@ class SessionAssemblyDialog(QWidget):
             self._selected_bundle_label.setText("Not available.")
             self._selected_adapter_label.setText("No adapter match")
             self._selected_sidecar_label.setText("None")
+            self._source_preview_pane.set_preview_path(None)
             with QSignalBlocker(self._role_combo):
                 self._role_combo.setCurrentText("primary")
             with QSignalBlocker(self._group_edit):
@@ -600,6 +617,7 @@ class SessionAssemblyDialog(QWidget):
             return
 
         self._selected_source_label.setText(f"{source.label}\nGroup: {source.group_label}\n{source.location}")
+        self._source_preview_pane.set_preview_path(source.location)
         entry_text = "Custom or unstructured input."
         bundle_text = "Custom or unstructured input."
         if source.ingest_kind == "supported":

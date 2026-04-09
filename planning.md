@@ -1,6 +1,6 @@
 # NWB Forge Planning
 
-Last updated: 2026-04-08
+Last updated: 2026-04-09
 Status: First pass complete / internal testing and local-product hardening underway
 
 ## Current Execution Status
@@ -177,6 +177,7 @@ Completed:
 - Added snapshot-history restore context in the desktop workspace so selected saved states show status, artifact count, issue count, and review state before restore
 - Added an explicit `Close Current Session` desktop action so session removal is available through the File menu and not only through the runtime tab strip
 - Completed the mismatch A-D UX-correction pass for the current baseline: `New Session` now opens as the home workspace, secondary panels return to the right home surface, imported-session loading is grouped under compatibility, optional route support is visually secondary and hidden until invoked, advanced review tools stay hidden by default, metadata review shows recommended actions first, run-stage controls now live on the run page, and the conversion workspace includes both pre-write and post-write review checklists
+- Added a shared read-only file-preview surface for selected direct-ingest sources and generated artifacts so text, tabular files, images, directories, and other common non-NWB inputs can be inspected without leaving the integrated desktop review workflow
 - Focused tests for session, normalization, mapping, provenance, and validation models
 
 In progress:

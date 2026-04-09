@@ -381,6 +381,8 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     assert window.conversion_widget._source_count_label.text() == "1"
     assert window.conversion_widget._source_role_label.text() == "primary"
     assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
+    assert window.conversion_widget._source_preview_pane.current_path == session.sources[0].location.resolve()
+    assert "\"sess-qt\"" in window.conversion_widget._source_preview_pane._text_preview.toPlainText()
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
     assert window.conversion_widget._workflow_steps_label.text().startswith("Workflow:")
     assert window.conversion_widget._session_details_toggle.isChecked() is False
@@ -1432,6 +1434,24 @@ def test_session_assembly_dialog_absorbs_selected_structured_bundle_member(qapp,
     dialog.close()
 
 
+def test_session_assembly_dialog_previews_selected_source_contents(qapp, tmp_path: Path) -> None:
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("session assembly preview text", encoding="utf-8")
+
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+    screen.add_custom_paths((notes_path,))
+
+    dialog = SessionAssemblyDialog(screen)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog._source_list.count() == 1
+    assert dialog._source_preview_pane.current_path == notes_path.resolve()
+    assert "session assembly preview text" in dialog._source_preview_pane._text_preview.toPlainText()
+
+    dialog.close()
+
+
 def test_session_assembly_dialog_can_split_selected_group(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
@@ -1870,12 +1890,14 @@ def test_main_window_tracks_recent_sessions_menu(qapp, tmp_path: Path, monkeypat
 
 def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> None:
     session = make_session(tmp_path)
+    validation_report = tmp_path / "validation-report.json"
+    validation_report.write_text("{\"status\": \"ok\"}", encoding="utf-8")
     preview, execution = make_preview_and_execution(
         session,
         generated_artifacts=(
             ProvenanceArtifact(
                 artifact_type="validation_report",
-                location=tmp_path / "validation-report.json",
+                location=validation_report,
                 description="Validation report artifact",
             ),
         ),
@@ -1899,6 +1921,8 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
     assert window.conversion_widget._artifact_list.count() == 1
     assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
     assert window.conversion_widget._artifact_count_value_label.text() == "1 artifacts"
+    assert window.conversion_widget._artifact_preview_pane.current_path == validation_report.resolve()
+    assert "\"status\": \"ok\"" in window.conversion_widget._artifact_preview_pane._text_preview.toPlainText()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     window.close()
 

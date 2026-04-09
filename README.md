@@ -40,7 +40,7 @@ Mixed-source sessions are a first-class workflow. Route-backed proprietary sourc
 
 ## Current repository state
 
-This repository is now in a first-pass local desktop-app stage. The current work has moved beyond pure backend scaffolding: the repo has a real PySide6 shell, supported/custom/hybrid conversion flows, direct-ingest `New Session` behavior, explicit saved-project support, an integrated single-window workspace, and an internal-testing baseline. It is still not packaged or deployment-ready.
+This repository is now in a first-pass local desktop-app stage. The current work has moved beyond pure backend scaffolding: the repo has a real PySide6 shell, supported/custom/hybrid conversion flows, direct-ingest `New Session` behavior, explicit saved-project support, an integrated single-window workspace, in-place preview for selected non-NWB source/artifact files, and an internal-testing baseline. It is still not packaged or deployment-ready.
 
 Key files:
 - [planning.md](planning.md): living project plan and architecture document
@@ -214,6 +214,7 @@ Planned backend package layout is documented in [planning.md](planning.md).
 - Real `Choose Output...` desktop save dialog for NWB output selection
 - Generated-artifact visibility in the conversion-session panel for NWB, validation-report, and review outputs
 - Direct desktop actions to open generated artifacts and their folders from the conversion panel
+- Shared read-only preview panes for selected direct-ingest sources and generated artifacts, covering bounded text, tabular, image, directory, and general-file inspection without leaving the main workspace
 - Dedicated desktop shortcuts for validation reports and review decisions
 - Broader metadata-review field labeling so device, acquisition-stream, time-interval, and additional-metadata conflicts read as user-facing field/scope labels instead of only raw canonical keys
 - Shell-level user-facing errors for missing or failed artifact-open actions
