@@ -102,7 +102,7 @@ class NwbWidgetsPanelRenderer(BaseRichNodeRenderer):
         widget = nwbwidgets_module.nwb2widget(node.object_ref)
         panel_view = panel_module.panel(widget)
         server = self._serve_view(panel_module, panel_view, title=f"NWB Rich Preview - {node.label}")
-        session = PanelRenderSession(url=self._server_url(server), _server=server)
+        session = PanelRenderSession(url=self._server_url(server, panel_module), _server=server)
         webbrowser.open_new_tab(session.url)
         self._close_last_session()
         self._last_session = session
@@ -121,13 +121,68 @@ class NwbWidgetsPanelRenderer(BaseRichNodeRenderer):
         return panel_module.serve(panel_view, title=title, show=False, start=True, threaded=True, port=0)
 
     @staticmethod
-    def _server_url(server: Any) -> str:
-        if hasattr(server, "address") and hasattr(server, "port"):
-            address = server.address or "127.0.0.1"
-            return f"http://{address}:{server.port}/"
-        if hasattr(server, "url"):
-            return str(server.url)
+    def _server_url(server: Any, panel_module: ModuleType | None = None) -> str:
+        direct_url = NwbWidgetsPanelRenderer._server_url_from_candidate(server)
+        if direct_url is not None:
+            return direct_url
+
+        resolved_server = NwbWidgetsPanelRenderer._resolve_panel_server(server, panel_module)
+        if resolved_server is not None:
+            resolved_url = NwbWidgetsPanelRenderer._server_url_from_candidate(resolved_server)
+            if resolved_url is not None:
+                return resolved_url
         raise NwbViewerError("Rich preview server did not expose a usable URL.")
+
+    @staticmethod
+    def _resolve_panel_server(server: Any, panel_module: ModuleType | None) -> Any | None:
+        server_id = getattr(server, "server_id", None)
+        if not server_id or panel_module is None:
+            return None
+        panel_state = getattr(panel_module, "state", None)
+        panel_servers = getattr(panel_state, "_servers", None)
+        if isinstance(panel_servers, dict):
+            entry = panel_servers.get(server_id)
+            if isinstance(entry, tuple) and entry:
+                return entry[0]
+        return None
+
+    @staticmethod
+    def _server_url_from_candidate(candidate: Any) -> str | None:
+        if candidate is None:
+            return None
+        address = getattr(candidate, "address", None)
+        port = getattr(candidate, "port", None)
+        if port:
+            host = address or "127.0.0.1"
+            return f"http://{host}:{port}/"
+        for attribute_name in ("url", "urls"):
+            normalized = NwbWidgetsPanelRenderer._normalize_url_value(getattr(candidate, attribute_name, None))
+            if normalized is not None:
+                return normalized
+        return None
+
+    @staticmethod
+    def _normalize_url_value(value: Any) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            for nested in value.values():
+                normalized = NwbWidgetsPanelRenderer._normalize_url_value(nested)
+                if normalized is not None:
+                    return normalized
+            return None
+        if isinstance(value, (list, tuple, set)):
+            for nested in value:
+                normalized = NwbWidgetsPanelRenderer._normalize_url_value(nested)
+                if normalized is not None:
+                    return normalized
+            return None
+        stringified = str(value).strip()
+        if stringified.startswith("http://") or stringified.startswith("https://"):
+            return stringified
+        return None
 
     @staticmethod
     def _load_modules() -> tuple[ModuleType, ModuleType]:

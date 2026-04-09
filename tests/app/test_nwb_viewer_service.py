@@ -200,6 +200,90 @@ def test_nwbwidgets_panel_renderer_launches_with_fake_modules(tmp_path: Path, mo
     assert fake_server.stopped is True
 
 
+def test_nwbwidgets_panel_renderer_resolves_threaded_panel_server_url(tmp_path: Path, monkeypatch) -> None:
+    nwb_path = write_example_nwb_file(tmp_path)
+    controller = NwbFileController()
+    controller.open_file(nwb_path)
+    node = controller.node_for_path("/acquisition/raw_trace")
+
+    opened_urls: list[str] = []
+
+    class FakeThreadServer:
+        def __init__(self) -> None:
+            self.server_id = "threaded-server"
+            self.stopped = False
+
+        def stop(self) -> None:
+            self.stopped = True
+
+    class FakeResolvedServer:
+        address = None
+        port = 65078
+
+    fake_thread_server = FakeThreadServer()
+    fake_panel_calls: dict[str, object] = {}
+
+    class FakePanelModule:
+        def __init__(self) -> None:
+            self.state = type(
+                "FakePanelState",
+                (),
+                {"_servers": {"threaded-server": (FakeResolvedServer(), object(), [])}},
+            )()
+
+        def extension(self, *args):
+            fake_panel_calls["extension_args"] = args
+
+        def panel(self, widget):
+            fake_panel_calls["widget"] = widget
+            return {"wrapped": widget}
+
+        def serve(self, panel_view, *, title, show, start, threaded, port):
+            fake_panel_calls["serve"] = {
+                "panel_view": panel_view,
+                "title": title,
+                "show": show,
+                "start": start,
+                "threaded": threaded,
+                "port": port,
+            }
+            return fake_thread_server
+
+    class FakeNwbWidgetsModule:
+        def nwb2widget(self, value):
+            return {"node_type": type(value).__name__}
+
+    def fake_import_modules_without_user_site(*module_names: str, purge_prefixes=()):
+        if module_names == ("hdmf.utils",):
+            return (ModuleType("hdmf.utils"),)
+        del purge_prefixes
+        resolved = []
+        for name in module_names:
+            if name == "panel":
+                resolved.append(FakePanelModule())
+                continue
+            if name == "nwbwidgets":
+                resolved.append(FakeNwbWidgetsModule())
+                continue
+            raise ModuleNotFoundError(name)
+        return tuple(resolved)
+
+    monkeypatch.setattr(
+        "nwbforge.app.services.nwb_viewer_rich.import_modules_without_user_site",
+        fake_import_modules_without_user_site,
+    )
+    monkeypatch.setattr("nwbforge.app.services.nwb_viewer_rich.webbrowser.open_new_tab", opened_urls.append)
+
+    renderer = NwbWidgetsPanelRenderer()
+    session = renderer.launch_for_node(node)
+
+    assert session.url == "http://127.0.0.1:65078/"
+    assert opened_urls == ["http://127.0.0.1:65078/"]
+
+    renderer.close()
+    assert fake_thread_server.stopped is True
+
+
 def test_nwbwidgets_panel_renderer_checks_optional_modules_with_isolated_imports(monkeypatch) -> None:
     seen_calls: list[tuple[str, ...]] = []
 
