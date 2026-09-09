@@ -176,6 +176,11 @@ class ConversionSessionWidget(QWidget):
         _action_layout.addLayout(_action_text, 1)
 
         self._checklist_frame, _checklist_layout = build_checklist(parent=self)
+        self._review_checklist_frame, _review_layout = build_checklist(parent=self)
+        self._review_checklist_rows = {
+            key: add_checklist_row(_review_layout, caption, parent=self._review_checklist_frame)
+            for key, caption in self.REVIEW_CHECKLIST_CAPTIONS
+        }
         self._checklist_rows = {
             key: add_checklist_row(_checklist_layout, caption, parent=self._checklist_frame)
             for key, caption in self.CHECKLIST_CAPTIONS
@@ -204,12 +209,19 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._role_policy_label.setWordWrap(True)
+        # Policy reference, not run status. Kept visible rather than moved to
+        # a tooltip - hover must not be the only way to reach information -
+        # but demoted so it stops competing with the checklist.
+        self._role_policy_label.setProperty("role", "muted")
         self._acknowledgement_summary_label = QLabel("Acknowledged 0 of 0 issues.", self)
         self._review_checklist_label = QLabel(
             "Review checklist:\n- Conversion results available: pending\n- Validation issues acknowledged: waiting for results\n- Reviewer recorded: pending\n- Decision recorded: pending",
             self,
         )
         self._review_checklist_label.setWordWrap(True)
+        # Superseded by the review checklist widget; still updated, since the
+        # screen tests read this label for review state.
+        self._review_checklist_label.setVisible(False)
         self._reviewer_edit = QLineEdit(self)
         self._reviewer_edit.setPlaceholderText("Reviewer name")
         self._reviewer_edit.textChanged.connect(self._screen_model.set_reviewer_name)
@@ -396,8 +408,10 @@ class ConversionSessionWidget(QWidget):
         # created, updated and readable by the screen tests - they are just no
         # longer shown twice.
         run_overview_layout = QFormLayout()
-        run_overview_layout.addRow("Output target", self._output_value_label)
         run_overview_layout.addRow("Metadata review", self._disagreement_count_value_label)
+        # "Output target" said the same thing as the Output file field a few
+        # rows down. Still updated for the screen tests, no longer shown.
+        self._output_value_label.setVisible(False)
 
         output_form_layout = QFormLayout()
         output_form_layout.addRow("Output file", self._output_path_edit)
@@ -428,17 +442,34 @@ class ConversionSessionWidget(QWidget):
         execution_layout.addWidget(self._ready_to_write_label)
         execution_layout.addWidget(self._pre_write_checklist_label)
         execution_layout.addWidget(self._session_context_label)
+        # Disclosure controls belong in a menu, not in the middle of the run
+        # panel. They remain the state holders - the View menu actions are
+        # bound to them - but the panel no longer carries two checkboxes that
+        # have nothing to do with the conversion in front of you.
         execution_layout.addWidget(self._session_details_toggle)
         execution_layout.addWidget(self._advanced_toggle)
+        self._session_details_toggle.setVisible(False)
+        self._advanced_toggle.setVisible(False)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
         execution_layout.addStretch(1)
         self._execution_group.setLayout(execution_layout)
 
+        # Construction order put Build Preview and Write NWB before the output
+        # field and its browse button, so tabbing ran backwards through the
+        # row. WCAG 2.4.3 wants focus order to follow the visual order.
+        self.setTabOrder(self._output_path_edit, self._choose_output_button)
+        self.setTabOrder(self._choose_output_button, self._preview_button)
+        self.setTabOrder(self._preview_button, self._execute_button)
+
         review_layout = QVBoxLayout()
         review_layout.addWidget(self._review_guidance_label)
         review_layout.addWidget(self._role_policy_label)
         review_layout.addWidget(self._acknowledgement_summary_label)
+        review_heading = QLabel("Before completing review", self)
+        review_heading.setProperty("role", "sectionTitle")
+        review_layout.addWidget(review_heading)
+        review_layout.addWidget(self._review_checklist_frame)
         review_layout.addWidget(self._review_checklist_label)
         review_layout.addWidget(self._validation_summary_label)
         review_layout.addWidget(self._review_outcome_label)
@@ -650,6 +681,10 @@ class ConversionSessionWidget(QWidget):
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
         self._sync_run_overview(state)
         self._review_checklist_label.setText(self._review_checklist_text(state))
+        for _key, _caption, _status in self._review_checklist_items(state):
+            _row = self._review_checklist_rows.get(_key)
+            if _row is not None:
+                set_check_state(_row[0], _row[1], _status)
         self._session_context_label.setText(self._session_context_text(state))
         self._project_origin_label.setText(self._session_project_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
@@ -1095,6 +1130,18 @@ class ConversionSessionWidget(QWidget):
             blockers.append("choose output path")
         return blockers
 
+    @property
+    def session_details_toggle(self):
+        """Checkbox backing the View > Session Details action."""
+
+        return self._session_details_toggle
+
+    @property
+    def advanced_tools_toggle(self):
+        """Checkbox backing the View > Advanced Tools action."""
+
+        return self._advanced_toggle
+
     def _pre_write_checklist_items(
         self, state: ConversionSessionScreenState
     ) -> list[tuple[str, str, str]]:
@@ -1286,34 +1333,64 @@ class ConversionSessionWidget(QWidget):
         acknowledged = len(state.acknowledged_issue_refs)
         return f"Acknowledged {acknowledged} of {total_issues} issues."
 
+    REVIEW_CHECKLIST_CAPTIONS = (
+        ("results", "Conversion results available"),
+        ("acknowledged", "Validation issues acknowledged"),
+        ("reviewer", "Reviewer recorded"),
+        ("decision", "Decision recorded"),
+    )
+
+    @staticmethod
+    def _review_checklist_items(
+        state: ConversionSessionScreenState,
+    ) -> list[tuple[str, str, str]]:
+        """(key, caption, status) for each review gate.
+
+        Same arrangement as the pre-write checklist: one source feeding both
+        the text label the tests read and the widget the user reads.
+        """
+
+        if state.execution is None:
+            statuses = {
+                "results": "pending",
+                "acknowledged": "waiting for results",
+                "reviewer": "pending",
+                "decision": "pending",
+            }
+        else:
+            acknowledgement_status = (
+                "done"
+                if not state.validation_issues
+                or len(state.acknowledged_issue_refs) == len(state.validation_issues)
+                else "pending"
+            )
+            outcome = state.execution.review_outcome
+            if (
+                not outcome.requires_manual_review
+                and not outcome.blocks_completion
+                and not state.validation_issues
+            ):
+                decision_status = "not required"
+            else:
+                decision_status = "done" if state.last_review_submission is not None else "pending"
+            statuses = {
+                "results": "done",
+                "acknowledged": acknowledgement_status,
+                "reviewer": "done" if state.reviewer_name.strip() else "pending",
+                "decision": decision_status,
+            }
+        return [
+            (key, caption, statuses[key])
+            for key, caption in ConversionSessionWidget.REVIEW_CHECKLIST_CAPTIONS
+        ]
+
     @staticmethod
     def _review_checklist_text(state: ConversionSessionScreenState) -> str:
-        if state.execution is None:
-            return (
-                "Review checklist:\n"
-                "- Conversion results available: pending\n"
-                "- Validation issues acknowledged: waiting for results\n"
-                "- Reviewer recorded: pending\n"
-                "- Decision recorded: pending"
-            )
-        acknowledgement_status = (
-            "done"
-            if not state.validation_issues or len(state.acknowledged_issue_refs) == len(state.validation_issues)
-            else "pending"
+        lines = "\n".join(
+            f"- {caption}: {status}"
+            for _key, caption, status in ConversionSessionWidget._review_checklist_items(state)
         )
-        reviewer_status = "done" if state.reviewer_name.strip() else "pending"
-        outcome = state.execution.review_outcome
-        if not outcome.requires_manual_review and not outcome.blocks_completion and not state.validation_issues:
-            decision_status = "not required"
-        else:
-            decision_status = "done" if state.last_review_submission is not None else "pending"
-        return (
-            "Review checklist:\n"
-            "- Conversion results available: done\n"
-            f"- Validation issues acknowledged: {acknowledgement_status}\n"
-            f"- Reviewer recorded: {reviewer_status}\n"
-            f"- Decision recorded: {decision_status}"
-        )
+        return f"Review checklist:\n{lines}"
 
     @staticmethod
     def _session_context_text(state: ConversionSessionScreenState) -> str:
@@ -1378,6 +1455,10 @@ class ConversionSessionWidget(QWidget):
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
         self._sync_run_overview(state)
         self._review_checklist_label.setText(self._review_checklist_text(state))
+        for _key, _caption, _status in self._review_checklist_items(state):
+            _row = self._review_checklist_rows.get(_key)
+            if _row is not None:
+                set_check_state(_row[0], _row[1], _status)
 
     def _set_session_summary_visible(self, visible: bool) -> None:
         self._session_summary_group.setVisible(visible)

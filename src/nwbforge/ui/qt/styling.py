@@ -265,6 +265,11 @@ QTabBar::tab:selected {
 }
 
 QPushButton {
+    /* Was ~34px tall from padding alone. WCAG 2.2 target size (minimum) is
+       24px and was already met; 44px is the touch recommendation and would
+       look oversized on a mouse-driven desktop tool, so 36px is the
+       compromise - a real gain in click area without inflating the panel. */
+    min-height: 36px;
     background: ${interactive};
     color: ${on_interactive};
     border: none;

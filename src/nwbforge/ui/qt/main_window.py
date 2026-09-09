@@ -112,6 +112,18 @@ class MainWindow(QMainWindow):
             artifact_opener=self._open_artifact_path,
             artifact_revealer=self._reveal_artifact_path,
         )
+        # View menu actions are built with the menus, which run before this
+        # widget exists, so the two-way binding happens here instead.
+        for action, toggle in (
+            (self._session_details_action, self._conversion_widget.session_details_toggle),
+            (self._advanced_tools_action, self._conversion_widget.advanced_tools_toggle),
+        ):
+            action.setChecked(toggle.isChecked())
+            # Qt does not re-emit when the value is unchanged, so this pair
+            # settles rather than looping.
+            action.toggled.connect(toggle.setChecked)
+            toggle.toggled.connect(action.setChecked)
+
         self._conversion_widget._session_tabs.currentChanged.connect(self._on_conversion_tab_changed)
         self._conversion_widget._session_tabs.tabCloseRequested.connect(self._on_conversion_tab_close_requested)
         self._session_assembly_dialog = SessionAssemblyDialog(
@@ -319,6 +331,17 @@ class MainWindow(QMainWindow):
             lambda: self._shell_model.invoke_file_menu_action(FileMenuAction.TOGGLE_LOG_VIEWER)
         )
         self._file_menu.addAction(self._toggle_log_viewer_action)
+
+        # Optional panels live here rather than as checkboxes inside the run
+        # panel. Checkable actions two-way bound to the widget's own toggles,
+        # which stay the single source of truth for the state.
+        self._view_menu = self.menuBar().addMenu("&View")
+        self._session_details_action = QAction("Session Details", self)
+        self._session_details_action.setCheckable(True)
+        self._advanced_tools_action = QAction("Advanced Tools", self)
+        self._advanced_tools_action.setCheckable(True)
+        self._view_menu.addAction(self._session_details_action)
+        self._view_menu.addAction(self._advanced_tools_action)
 
     def _build_status_bar(self) -> None:
         status_bar = QStatusBar(self)
