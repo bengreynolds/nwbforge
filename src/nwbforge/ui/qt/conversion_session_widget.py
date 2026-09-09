@@ -1187,9 +1187,10 @@ class ConversionSessionWidget(QWidget):
     ) -> tuple[int, str, str]:
         """(step index, headline, one supporting line) for the action card.
 
-        Mirrors the branches in `_next_action_text` deliberately: that method
-        still feeds the label the tests assert on, and this one feeds the card
-        the user reads. Change one, change the other.
+        Follows `_next_action_text` closely - that method still feeds the
+        label the tests assert on, this one feeds the card the user reads - but
+        see the note below on completed runs, where the two deliberately part
+        company.
         """
 
         if state.session is None:
@@ -1198,18 +1199,31 @@ class ConversionSessionWidget(QWidget):
             return 2, "Building preview", "Waiting on preview results so conflicts and readiness can be checked."
         if state.preview is None:
             return 2, "Build preview", "Review the session summary, then select Build Preview."
+
+        # Finished runs are reported before outstanding conflicts. Observed on
+        # a real run: the write completed with nine conflicts still pending -
+        # readiness said "Needs Review", not "Blocked", so the write was
+        # allowed - and the card went on insisting they had to be resolved
+        # "before the write can run", which had already happened. This
+        # deliberately diverges from `_next_action_text`, which orders the
+        # branches the other way round and is pinned by the screen tests.
+        if state.is_execution_running:
+            return 3, "Writing NWB", "Conversion is running. Results and artifacts appear when it finishes."
         pending_conflicts = [item for item in state.metadata_disagreements if item.pending_resolution]
+        if state.execution is not None:
+            if pending_conflicts:
+                count = len(pending_conflicts)
+                noun = "conflict" if count == 1 else "conflicts"
+                return 3, "Review results", f"Written with {count} metadata {noun} still unresolved. Resolve them on the record."
+            return 3, "Review results", "Inspect validation issues and artifacts, then complete the review."
+
         if pending_conflicts:
             count = len(pending_conflicts)
             noun = "conflict" if count == 1 else "conflicts"
             return 1, "Review metadata", f"{count} mixed-source {noun} to resolve before the write can run."
         if not self._has_output_target(state):
             return 2, "Choose output", "Pick an NWB output path before writing."
-        if state.is_execution_running:
-            return 3, "Writing NWB", "Conversion is running. Results and artifacts appear when it finishes."
-        if state.execution is None:
-            return 3, "Write NWB", "Everything upstream is clear. Run Write NWB when the preview looks right."
-        return 3, "Review results", "Inspect validation issues and artifacts, then complete the review."
+        return 3, "Write NWB", "Everything upstream is clear. Run Write NWB when the preview looks right."
 
     def _sync_run_overview(self, state: ConversionSessionScreenState) -> None:
         """Drive the step bar, action card and checklist from screen state."""
