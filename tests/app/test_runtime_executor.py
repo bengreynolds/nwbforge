@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("nwbinspector")
+
 from nwbforge.adapters import AdapterRegistry, SessionManifestAdapter
 from nwbforge.app.runtime import PipelineRuntimeError, PipelineStage, ThreadedConversionExecutor
 from nwbforge.app.services import ConversionPipelineService, RegistrySourceInspectionService, SessionProvenanceService

@@ -1,31 +1,26 @@
 """Media-category supported adapters."""
 
-from nwbforge.adapters.supported.media.images import NeuroConvImageAdapter
+from __future__ import annotations
 
-__all__ = [
-    "NeuroConvImageAdapter",
-]
+from importlib import import_module
+
+__all__: list[str] = []
+
+_LAZY_EXPORTS = {
+    "NeuroConvImageAdapter": ("nwbforge.adapters.supported.media.images", "NeuroConvImageAdapter"),
+    "NeuroConvAudioAdapter": ("nwbforge.adapters.supported.media.audio", "NeuroConvAudioAdapter"),
+    "NeuroConvVideoAdapter": ("nwbforge.adapters.supported.media.videos", "NeuroConvVideoAdapter"),
+}
 
 
-def _try_import_optional() -> None:
+def __getattr__(name: str):
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     try:
-        from nwbforge.adapters.supported.media.audio import NeuroConvAudioAdapter
-    except ImportError:
-        return
-    globals()["NeuroConvAudioAdapter"] = NeuroConvAudioAdapter
-    __all__.append("NeuroConvAudioAdapter")
-
-
-_try_import_optional()
-
-
-def _try_import_videos() -> None:
-    try:
-        from nwbforge.adapters.supported.media.videos import NeuroConvVideoAdapter
-    except ImportError:
-        return
-    globals()["NeuroConvVideoAdapter"] = NeuroConvVideoAdapter
-    __all__.append("NeuroConvVideoAdapter")
-
-
-_try_import_videos()
+        module = import_module(target[0])
+        export = getattr(module, target[1])
+    except (AttributeError, ImportError):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    globals()[name] = export
+    return export

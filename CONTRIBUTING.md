@@ -1,69 +1,29 @@
 # Contributing to NWB Forge
 
-## Overview
+Contributions are welcome for bug fixes, conversion improvements, adapter work, documentation, and performance.
 
-NWB Forge accepts community contributions for bug fixes, conversion improvements, additional proprietary or custom data-format support, documentation, and performance work.
+## Working Model
+- Target `dev` or a short-lived branch from `dev`
+- Do not commit directly to `main`
+- Open PRs for meaningful changes
+- Keep changes scoped and reviewable
 
-This repository is maintained with a review-first workflow:
-- all meaningful changes should arrive through pull requests
-- direct commits to `main` are not permitted
-- contributors should target `dev` or a short-lived feature branch created from `dev`
+## Before You Start
+1. Read [AGENTS.md](AGENTS.md)
+2. Read [planning.md](planning.md)
+3. Check [decisions.md](decisions.md)
 
-The primary maintainer is Benjamin Reynolds.
-- Contact: benjamin.g.reynolds@ucdenver.edu
-- Affiliation: Christie Lab (Jason Christie)
+## Issues and PRs
+Include:
+- the problem or change clearly
+- reproduction steps or example data
+- expected vs actual behavior
+- relevant logs, traces, or screenshots
+- source format / route / failure stage for conversion work
+- assumptions about file structure or scientific meaning
 
-## Contribution model
-
-Contributors are expected to preserve the repository’s layered architecture:
-- UI and workflow orchestration
-- source adapters and parsers
-- metadata normalization
-- NWB mapping and assembly
-- validation and provenance
-
-Keep proprietary-format logic isolated from shared application flow. Do not hardcode lab-specific assumptions into common paths unless the behavior is explicitly planned and documented.
-
-Before making substantial implementation changes:
-1. Read [AGENTS.md](AGENTS.md).
-2. Read [planning.md](planning.md).
-3. Check [decisions.md](decisions.md) for existing architectural decisions.
-
-## Issues
-
-All users may file issues.
-
-When reporting a problem, include:
-- a clear description of the issue
-- reproduction steps
-- expected behavior versus actual behavior
-- relevant logs, tracebacks, or screenshots when available
-
-For conversion-related issues, also include:
-- source data format or acquisition system
-- NeuroConv package or route, if applicable
-- failure stage, such as ingest, grouping, preview, mapping, write, or validation
-
-## Pull requests
-
-All pull requests should:
-- target a non-`main` branch
-- describe the change clearly
-- reference related issues when applicable
-- remain consistent with the existing architecture and naming
-- avoid introducing breaking changes without justification
-
-For conversion-related pull requests, also:
-- describe the handled data format clearly
-- document assumptions about file structure and scientific meaning
-- add tests or validation coverage where practical
-- state any remaining ambiguity explicitly instead of silently claiming a mapping
-
-## Development expectations
-
-Current development and testing should use the dedicated Conda environment defined by [environment.yml](environment.yml).
-
-Recommended baseline:
+## Development and Testing
+Use the dedicated Conda environment from `environment.yml` for installs and tests.
 
 ```text
 conda env update -n nwbforge-dev -f environment.yml
@@ -71,21 +31,16 @@ conda run -n nwbforge-dev python -m pytest
 ```
 
 When behavior changes:
-- update tests where feasible
-- update planning or architectural docs when the contract changes materially
-- keep commits scoped and reviewable
-- separate documentation changes from implementation changes when practical
+- add or update tests when practical
+- update plan or docs when contracts change
+- keep assumptions explicit instead of guessing mappings
 
-## Design and scientific safety
-
-Contributions should follow these principles:
-- protect scientific interpretability
-- prefer durable contracts over ad hoc scripts
-- surface uncertain mappings for review
-- treat supported, custom, and hybrid pathways as shared-contract workflows rather than isolated products
-
-If a format is not supported by NeuroConv, say so explicitly before introducing a direct PyNWB path. If a representation would need an NWB extension, document that requirement explicitly.
+## Scientific Safety
+- Protect interpretability
+- Keep adapters, normalization, mapping, assembly, and validation separate
+- Use NeuroConv first for supported formats
+- Use PyNWB only when NeuroConv does not fit or the custom path is clearly required
+- Document uncertain mappings or NWB-extension needs
 
 ## License
-
-This project uses the MIT License. See [LICENSE](LICENSE).
+This repository uses the MIT License

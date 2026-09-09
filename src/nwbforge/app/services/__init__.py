@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib import import_module
+
 from nwbforge.app.services.errors import (
     AdapterSelectionError,
     AssemblyConfigurationError,
@@ -9,31 +11,8 @@ from nwbforge.app.services.errors import (
     SourceNotFoundError,
 )
 from nwbforge.app.services.file_preview import FilePreviewKind, FilePreviewResult, FilePreviewTable, LocalFilePreviewService
-from nwbforge.app.services.inspection import RegistrySourceInspectionService
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview, ReviewSubmission
-from nwbforge.app.services.nwb_viewer import NwbDetailTable, NwbFileController, NwbNodeDetail, NwbTreeModel, NwbTreeNode, NwbViewerError
-from nwbforge.app.services.nwb_viewer_rich import (
-    BaseRichNodeRenderer,
-    NwbRichRendererStatus,
-    NwbRichRenderSession,
-    NwbWidgetsPanelRenderer,
-    PanelRenderSession,
-)
-from nwbforge.app.services.persistence import SessionPersistenceService
-from nwbforge.app.services.pipeline import ConversionPipelineService
-from nwbforge.app.services.projects import JsonSessionAssemblyProjectStore, SessionAssemblyProjectDocument
-from nwbforge.app.services.provenance import SessionProvenanceService
-from nwbforge.app.services.review import ExecutionReviewService
-from nwbforge.app.services.session_assembly import (
-    JsonSessionAssemblyWorkspaceStore,
-    SessionAssemblyDraft,
-    SessionAssemblyIssue,
-    SessionAssemblyService,
-    SessionAssemblySource,
-    SessionAssemblyWorkspace,
-)
 from nwbforge.app.services.settings import UiSettings, UiSettingsService
-from nwbforge.app.services.supported_execution import NeuroConvSupportedExecutionService
 
 __all__ = [
     "AdapterSelectionError",
@@ -77,10 +56,56 @@ __all__ = [
     "UiSettingsService",
 ]
 
+_LAZY_EXPORTS = {
+    "ConversionPipelineService": ("nwbforge.app.services.pipeline", "ConversionPipelineService"),
+    "ExecutionReviewService": ("nwbforge.app.services.review", "ExecutionReviewService"),
+    "JsonSessionAssemblyWorkspaceStore": (
+        "nwbforge.app.services.session_assembly",
+        "JsonSessionAssemblyWorkspaceStore",
+    ),
+    "JsonSessionAssemblyProjectStore": (
+        "nwbforge.app.services.projects",
+        "JsonSessionAssemblyProjectStore",
+    ),
+    "BaseRichNodeRenderer": ("nwbforge.app.services.nwb_viewer_rich", "BaseRichNodeRenderer"),
+    "NwbDetailTable": ("nwbforge.app.services.nwb_viewer", "NwbDetailTable"),
+    "NwbFileController": ("nwbforge.app.services.nwb_viewer", "NwbFileController"),
+    "NwbNodeDetail": ("nwbforge.app.services.nwb_viewer", "NwbNodeDetail"),
+    "NwbRichRendererStatus": ("nwbforge.app.services.nwb_viewer_rich", "NwbRichRendererStatus"),
+    "NwbRichRenderSession": ("nwbforge.app.services.nwb_viewer_rich", "NwbRichRenderSession"),
+    "NwbTreeModel": ("nwbforge.app.services.nwb_viewer", "NwbTreeModel"),
+    "NwbTreeNode": ("nwbforge.app.services.nwb_viewer", "NwbTreeNode"),
+    "NwbViewerError": ("nwbforge.app.services.nwb_viewer", "NwbViewerError"),
+    "NwbWidgetsPanelRenderer": ("nwbforge.app.services.nwb_viewer_rich", "NwbWidgetsPanelRenderer"),
+    "NeuroConvSupportedExecutionService": (
+        "nwbforge.app.services.supported_execution",
+        "NeuroConvSupportedExecutionService",
+    ),
+    "PanelRenderSession": ("nwbforge.app.services.nwb_viewer_rich", "PanelRenderSession"),
+    "PackageManagementController": ("nwbforge.app.services.package_management", "PackageManagementController"),
+    "RegistrySourceInspectionService": (
+        "nwbforge.app.services.inspection",
+        "RegistrySourceInspectionService",
+    ),
+    "SessionAssemblyDraft": ("nwbforge.app.services.session_assembly", "SessionAssemblyDraft"),
+    "SessionAssemblyIssue": ("nwbforge.app.services.session_assembly", "SessionAssemblyIssue"),
+    "SessionAssemblyProjectDocument": ("nwbforge.app.services.projects", "SessionAssemblyProjectDocument"),
+    "SessionAssemblyService": ("nwbforge.app.services.session_assembly", "SessionAssemblyService"),
+    "SessionAssemblySource": ("nwbforge.app.services.session_assembly", "SessionAssemblySource"),
+    "SessionAssemblyWorkspace": ("nwbforge.app.services.session_assembly", "SessionAssemblyWorkspace"),
+    "SessionPersistenceService": ("nwbforge.app.services.persistence", "SessionPersistenceService"),
+    "SessionProvenanceService": ("nwbforge.app.services.provenance", "SessionProvenanceService"),
+}
+
 
 def __getattr__(name: str):
-    if name == "PackageManagementController":
-        from nwbforge.app.services.package_management import PackageManagementController
-
-        return PackageManagementController
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        module = import_module(target[0])
+        export = getattr(module, target[1])
+    except (AttributeError, ImportError):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    globals()[name] = export
+    return export

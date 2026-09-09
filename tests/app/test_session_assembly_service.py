@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("neuroconv")
+
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.app.desktop import build_adapter_registry
