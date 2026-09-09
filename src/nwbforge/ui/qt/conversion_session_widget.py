@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
     QGroupBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -33,11 +34,38 @@ from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.models import ConversionSessionScreenState
 from nwbforge.ui.qt.bridge import StateBridge
 from nwbforge.ui.qt.file_preview_pane import FilePreviewPane
-from nwbforge.ui.qt.styling import build_metric_card
+from nwbforge.ui.qt.styling import (
+    add_checklist_row,
+    build_checklist,
+    build_metric_card,
+    build_step_bar,
+    set_check_state,
+    set_step_states,
+)
 
 
 class ConversionSessionWidget(QWidget):
     """Widget bound to `ConversionSessionScreenModel`."""
+
+    #: The workflow the app already described in a sentence, as data the step
+    #: bar can render. Order matches the pipeline, not the order a user might
+    #: happen to touch things in.
+    WORKFLOW_STEPS = (
+        "Ingest",
+        "Review Metadata",
+        "Build Preview",
+        "Write NWB",
+    )
+
+    #: Checklist keys paired with what the row is called on screen. The keys
+    #: match `_pre_write_checklist_items` so the text label and the widget can
+    #: never drift apart.
+    CHECKLIST_CAPTIONS = (
+        ("session", "Session loaded"),
+        ("preview", "Preview built"),
+        ("metadata", "Metadata review"),
+        ("output", "Output path chosen"),
+    )
 
     def __init__(
         self,
@@ -106,11 +134,68 @@ class ConversionSessionWidget(QWidget):
             self,
         )
         self._pre_write_checklist_label.setWordWrap(True)
+
+        # ---- run overview, rebuilt ------------------------------------
+        # The four labels above still carry the authoritative strings and are
+        # still updated on every refresh - the screen tests read them, and they
+        # remain the single source of this state. They are simply no longer
+        # what the user reads: below, the same information becomes a stepper, a
+        # single next-action card, and a real checklist. Five wrapped sentences
+        # restating one instruction is what made this screen unreadable.
+        for _superseded in (
+            self._workflow_steps_label,
+            self._readiness_summary_label,
+            self._next_action_label,
+            self._ready_to_write_label,
+            self._pre_write_checklist_label,
+        ):
+            _superseded.setVisible(False)
+
+        self._step_bar, self._step_entries = build_step_bar(
+            list(self.WORKFLOW_STEPS), parent=self
+        )
+
+        self._action_card = QFrame(self)
+        self._action_card.setProperty("role", "actionCard")
+        _action_layout = QHBoxLayout(self._action_card)
+        _action_layout.setContentsMargins(16, 13, 16, 13)
+        _action_layout.setSpacing(14)
+        _action_text = QVBoxLayout()
+        _action_text.setContentsMargins(0, 0, 0, 0)
+        _action_text.setSpacing(2)
+        self._action_eyebrow = QLabel("NEXT ACTION", self._action_card)
+        self._action_eyebrow.setProperty("role", "actionEyebrow")
+        self._action_title = QLabel("Add data sources", self._action_card)
+        self._action_title.setProperty("role", "actionTitle")
+        self._action_detail = QLabel("", self._action_card)
+        self._action_detail.setProperty("role", "actionDetail")
+        self._action_detail.setWordWrap(True)
+        _action_text.addWidget(self._action_eyebrow)
+        _action_text.addWidget(self._action_title)
+        _action_text.addWidget(self._action_detail)
+        _action_layout.addLayout(_action_text, 1)
+
+        self._checklist_frame, _checklist_layout = build_checklist(parent=self)
+        self._checklist_rows = {
+            key: add_checklist_row(_checklist_layout, caption, parent=self._checklist_frame)
+            for key, caption in self.CHECKLIST_CAPTIONS
+        }
+
         self._stage_value_label = QLabel("idle", self)
         self._output_value_label = QLabel("No output selected.", self)
         self._issue_count_value_label = QLabel("0 issues", self)
         self._artifact_count_value_label = QLabel("0 artifacts", self)
         self._disagreement_count_value_label = QLabel("0 metadata conflicts", self)
+        # Removed from the run-overview form because the metric cards above
+        # already show them. A parented QLabel that belongs to no layout is
+        # still painted, at (0, 0), so these have to be hidden explicitly
+        # rather than merely left out.
+        for _duplicated in (
+            self._stage_value_label,
+            self._issue_count_value_label,
+            self._artifact_count_value_label,
+        ):
+            _duplicated.setVisible(False)
         self._issue_list = QListWidget(self)
         self._issue_list.itemChanged.connect(self._on_issue_item_changed)
         self._review_guidance_label = QLabel("Run preview or execution to unlock review guidance.", self)
@@ -304,12 +389,15 @@ class ConversionSessionWidget(QWidget):
         session_summary_layout.addWidget(self._source_preview_group)
         self._session_summary_group.setLayout(session_summary_layout)
 
+        # Stage, Validation and Artifacts are already the metric cards along the
+        # top of this screen, so printing them again as form rows made the panel
+        # look busy while telling the reader nothing new. Only the two facts the
+        # cards do not carry stay here. The three superseded labels are still
+        # created, updated and readable by the screen tests - they are just no
+        # longer shown twice.
         run_overview_layout = QFormLayout()
-        run_overview_layout.addRow("Stage", self._stage_value_label)
         run_overview_layout.addRow("Output target", self._output_value_label)
-        run_overview_layout.addRow("Validation", self._issue_count_value_label)
         run_overview_layout.addRow("Metadata review", self._disagreement_count_value_label)
-        run_overview_layout.addRow("Artifacts", self._artifact_count_value_label)
 
         output_form_layout = QFormLayout()
         output_form_layout.addRow("Output file", self._output_path_edit)
@@ -318,18 +406,30 @@ class ConversionSessionWidget(QWidget):
         output_button_row.addWidget(self._preview_button)
         output_button_row.addWidget(self._execute_button)
 
+        checklist_heading = QLabel("Before writing", self)
+        checklist_heading.setProperty("role", "sectionTitle")
+
         execution_layout = QVBoxLayout()
+        execution_layout.setSpacing(12)
         execution_layout.addLayout(run_overview_layout)
+        execution_layout.addWidget(self._step_bar)
+        execution_layout.addWidget(self._action_card)
+        execution_layout.addWidget(checklist_heading)
+        execution_layout.addWidget(self._checklist_frame)
+        execution_layout.addLayout(output_form_layout)
+        execution_layout.addLayout(output_button_row)
+        # Kept in the layout so they stay children of this widget and keep
+        # reporting state to the screen tests; hidden, so Qt gives them no
+        # space. The visible equivalents are the step bar, action card and
+        # checklist above.
         execution_layout.addWidget(self._workflow_steps_label)
-        execution_layout.addWidget(self._session_context_label)
-        execution_layout.addWidget(self._session_details_toggle)
-        execution_layout.addWidget(self._advanced_toggle)
         execution_layout.addWidget(self._readiness_summary_label)
         execution_layout.addWidget(self._next_action_label)
         execution_layout.addWidget(self._ready_to_write_label)
         execution_layout.addWidget(self._pre_write_checklist_label)
-        execution_layout.addLayout(output_form_layout)
-        execution_layout.addLayout(output_button_row)
+        execution_layout.addWidget(self._session_context_label)
+        execution_layout.addWidget(self._session_details_toggle)
+        execution_layout.addWidget(self._advanced_toggle)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
         execution_layout.addStretch(1)
@@ -548,6 +648,7 @@ class ConversionSessionWidget(QWidget):
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
+        self._sync_run_overview(state)
         self._review_checklist_label.setText(self._review_checklist_text(state))
         self._session_context_label.setText(self._session_context_text(state))
         self._project_origin_label.setText(self._session_project_text(state))
@@ -994,7 +1095,15 @@ class ConversionSessionWidget(QWidget):
             blockers.append("choose output path")
         return blockers
 
-    def _pre_write_checklist_text(self, state: ConversionSessionScreenState) -> str:
+    def _pre_write_checklist_items(
+        self, state: ConversionSessionScreenState
+    ) -> list[tuple[str, str, str]]:
+        """(key, caption, status) for each pre-write gate.
+
+        The single source for both the text label the tests read and the
+        checklist widget the user reads, so the two cannot disagree.
+        """
+
         session_status = "done" if state.session is not None else "pending"
         if state.is_preview_running:
             preview_status = "in progress"
@@ -1009,13 +1118,66 @@ class ConversionSessionWidget(QWidget):
         else:
             metadata_status = "done"
         output_status = "done" if self._has_output_target(state) else "pending"
-        return (
-            "Pre-write checklist:\n"
-            f"- Session loaded: {session_status}\n"
-            f"- Preview built: {preview_status}\n"
-            f"- Metadata review: {metadata_status}\n"
-            f"- Output path chosen: {output_status}"
+        statuses = {
+            "session": session_status,
+            "preview": preview_status,
+            "metadata": metadata_status,
+            "output": output_status,
+        }
+        return [
+            (key, caption, statuses[key]) for key, caption in self.CHECKLIST_CAPTIONS
+        ]
+
+    def _pre_write_checklist_text(self, state: ConversionSessionScreenState) -> str:
+        lines = "\n".join(
+            f"- {caption}: {status}"
+            for _key, caption, status in self._pre_write_checklist_items(state)
         )
+        return f"Pre-write checklist:\n{lines}"
+
+    def _workflow_position(
+        self, state: ConversionSessionScreenState
+    ) -> tuple[int, str, str]:
+        """(step index, headline, one supporting line) for the action card.
+
+        Mirrors the branches in `_next_action_text` deliberately: that method
+        still feeds the label the tests assert on, and this one feeds the card
+        the user reads. Change one, change the other.
+        """
+
+        if state.session is None:
+            return 0, "Add data sources", "Start in New Session and add supported or custom sources."
+        if state.is_preview_running:
+            return 2, "Building preview", "Waiting on preview results so conflicts and readiness can be checked."
+        if state.preview is None:
+            return 2, "Build preview", "Review the session summary, then select Build Preview."
+        pending_conflicts = [item for item in state.metadata_disagreements if item.pending_resolution]
+        if pending_conflicts:
+            count = len(pending_conflicts)
+            noun = "conflict" if count == 1 else "conflicts"
+            return 1, "Review metadata", f"{count} mixed-source {noun} to resolve before the write can run."
+        if not self._has_output_target(state):
+            return 2, "Choose output", "Pick an NWB output path before writing."
+        if state.is_execution_running:
+            return 3, "Writing NWB", "Conversion is running. Results and artifacts appear when it finishes."
+        if state.execution is None:
+            return 3, "Write NWB", "Everything upstream is clear. Run Write NWB when the preview looks right."
+        return 3, "Review results", "Inspect validation issues and artifacts, then complete the review."
+
+    def _sync_run_overview(self, state: ConversionSessionScreenState) -> None:
+        """Drive the step bar, action card and checklist from screen state."""
+
+        step_index, headline, detail = self._workflow_position(state)
+        set_step_states(self._step_entries, step_index)
+        self._action_title.setText(headline)
+        self._action_detail.setText(detail)
+
+        for key, _caption, status in self._pre_write_checklist_items(state):
+            row = self._checklist_rows.get(key)
+            if row is None:
+                continue
+            pill, marker = row
+            set_check_state(pill, marker, status)
 
     def _next_action_text(self, state: ConversionSessionScreenState) -> str:
         if state.session is None:
@@ -1214,6 +1376,7 @@ class ConversionSessionWidget(QWidget):
         self._next_action_label.setText(self._next_action_text(state))
         self._ready_to_write_label.setText(self._ready_to_write_text(state))
         self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
+        self._sync_run_overview(state)
         self._review_checklist_label.setText(self._review_checklist_text(state))
 
     def _set_session_summary_visible(self, visible: bool) -> None:
