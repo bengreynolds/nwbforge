@@ -1,7 +1,8 @@
 # Repository Structure Proposal
 
-## Top-level layout
+Purpose: keep the top-level layout small and predictable.
 
+Current shape:
 ```text
 .
 |-- AGENTS.md
@@ -10,20 +11,12 @@
 |-- planning.md
 |-- docs/
 |   |-- architecture/
-|   |-- research/
-|   `-- decision-log.md
+|   `-- research/
 |-- src/
-|   `-- nwbforge/
 `-- tests/
 ```
 
-## Rationale
-
-- Keep top-level guidance small and stable
-- Put deeper research and design notes in `docs/`
-- Reserve `src/nwbforge/` for implementation once contracts are defined
-- Reserve `tests/` from the start so validation is treated as a core concern rather than a later add-on
-
-## Planned expansion
-
-When implementation starts, expand `src/nwbforge/` along the layered architecture documented in [planning.md](../../planning.md).
+Rationale:
+- Keep the root docs small and stable
+- Put deeper research and design notes under `docs/`
+- Keep implementation under `src/` and validation under `tests/`

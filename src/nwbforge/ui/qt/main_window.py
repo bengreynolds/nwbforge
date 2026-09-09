@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 import logging
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtGui import QAction, QDesktopServices
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressBar, QStatusBar, QTabWidget, QVBoxLayout, QWidget
@@ -44,6 +45,15 @@ from nwbforge.ui.qt.settings_dialog import SettingsDialog
 from nwbforge.ui.qt.styling import apply_window_chrome, build_page_header
 
 
+@dataclass(slots=True)
+class _ConversionWorkspaceTab:
+    """A runtime session tab inside the conversion workspace."""
+
+    tab_id: str
+    state: ConversionSessionScreenState
+    session_path: Path | None = None
+
+
 class MainWindow(QMainWindow):
     """Minimal Qt desktop shell bound to the UI model layer."""
 
@@ -78,6 +88,10 @@ class MainWindow(QMainWindow):
         self._session_assembly_screen_model = session_assembly_screen_model
         self._conversion_screen_model = conversion_screen_model
         self._session_loader = session_loader or self._default_session_loader
+        self._conversion_workspace_tabs: list[_ConversionWorkspaceTab] = []
+        self._active_conversion_tab_id: str | None = None
+        self._loading_conversion_tab_id: str | None = None
+        self._restoring_conversion_tab = False
         self._recent_session_actions: list[QAction] = []
         self._recent_project_actions: list[QAction] = []
         self._last_recorded_output_directory: Path | None = None
@@ -98,16 +112,18 @@ class MainWindow(QMainWindow):
             artifact_opener=self._open_artifact_path,
             artifact_revealer=self._reveal_artifact_path,
         )
+        self._conversion_widget._session_tabs.currentChanged.connect(self._on_conversion_tab_changed)
+        self._conversion_widget._session_tabs.tabCloseRequested.connect(self._on_conversion_tab_close_requested)
         self._session_assembly_dialog = SessionAssemblyDialog(
             self._session_assembly_screen_model,
             self,
             session_created=self._load_built_session,
         )
-        self._session_assembly_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._session_assembly_dialog.dismissed.connect(self._dismiss_embedded_workspace_panel)
         self._package_dialog = PackageInstallerDialog(self._package_screen_model, self)
-        self._package_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._package_dialog.dismissed.connect(self._dismiss_embedded_workspace_panel)
         self._settings_dialog = SettingsDialog(self._settings_screen_model, self)
-        self._settings_dialog.dismissed.connect(self._shell_model.close_active_dialog)
+        self._settings_dialog.dismissed.connect(self._dismiss_embedded_workspace_panel)
         self._nwb_viewer_widget = NwbViewerWidget(parent=self)
         self._nwb_viewer_widget.status_message_changed.connect(self.statusBar().showMessage)
 
@@ -117,20 +133,23 @@ class MainWindow(QMainWindow):
             self._workspace_subtitle_label,
             self._workspace_badge_label,
         ) = build_page_header(
-            "Conversion Workspace",
-            "Create sessions, review metadata, run conversions, and inspect generated artifacts in one desktop workflow.",
+            "New Conversion Session",
+            "Start with direct ingest: add files or folders, review grouped bundles, and assemble a draft session inside the main workspace.",
             badge_text="Direct Ingest Ready",
             parent=self,
         )
 
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
-        self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
+        self._workspace_tabs.setUsesScrollButtons(True)
         self._workspace_tabs.addTab(self._session_assembly_dialog, "New Session")
-        self._workspace_tabs.addTab(self._package_dialog, "Packages")
+        self._workspace_tabs.addTab(self._conversion_widget, "Conversion")
+        self._workspace_tabs.addTab(self._package_dialog, "Optional Support")
         self._workspace_tabs.addTab(self._settings_dialog, "Settings")
         self._workspace_tabs.addTab(self._nwb_viewer_widget, "NWB Viewer")
         self._workspace_tabs.currentChanged.connect(self._sync_tab_header)
+        self._set_package_workspace_visible(False)
+        self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
 
         central = QWidget(self)
         central_layout = QVBoxLayout(central)
@@ -235,6 +254,16 @@ class MainWindow(QMainWindow):
         )
         self._file_menu.addAction(self._new_session_action)
 
+        self._close_current_session_action = QAction("Close Current Session", self)
+        self._close_current_session_action.setEnabled(False)
+        self._close_current_session_action.triggered.connect(self._close_current_session)
+        self._file_menu.addAction(self._close_current_session_action)
+        self._file_menu.addSeparator()
+
+        self._new_project_action = QAction("New Project", self)
+        self._new_project_action.triggered.connect(self._new_project)
+        self._file_menu.addAction(self._new_project_action)
+
         self._open_project_action = QAction("Open Project...", self)
         self._open_project_action.triggered.connect(self._open_project_from_dialog)
         self._file_menu.addAction(self._open_project_action)
@@ -247,9 +276,10 @@ class MainWindow(QMainWindow):
         self._save_project_as_action.triggered.connect(self._save_project_as)
         self._file_menu.addAction(self._save_project_as_action)
 
-        self._open_session_action = QAction("Open Session...", self)
-        self._open_session_action.triggered.connect(self._open_session_from_dialog)
-        self._file_menu.addAction(self._open_session_action)
+        self._delete_project_action = QAction("Delete Project...", self)
+        self._delete_project_action.triggered.connect(self._delete_project)
+        self._file_menu.addAction(self._delete_project_action)
+        self._file_menu.addSeparator()
 
         self._open_nwb_viewer_action = QAction("Open NWB...", self)
         self._open_nwb_viewer_action.triggered.connect(self._open_nwb_viewer_from_dialog)
@@ -258,12 +288,19 @@ class MainWindow(QMainWindow):
         self._recent_projects_menu = self._file_menu.addMenu("Open Recent Project")
         self._recent_projects_menu.setEnabled(False)
 
-        self._reopen_last_session_action = QAction("Reopen Last Session", self)
-        self._reopen_last_session_action.triggered.connect(self._reopen_last_session)
-        self._file_menu.addAction(self._reopen_last_session_action)
+        self._import_compatibility_menu = self._file_menu.addMenu("Import / Compatibility")
 
-        self._recent_sessions_menu = self._file_menu.addMenu("Open Recent")
+        self._open_session_action = QAction("Import Session JSON (Compatibility)...", self)
+        self._open_session_action.triggered.connect(self._open_session_from_dialog)
+        self._import_compatibility_menu.addAction(self._open_session_action)
+
+        self._reopen_last_session_action = QAction("Reopen Last Imported Session", self)
+        self._reopen_last_session_action.triggered.connect(self._reopen_last_session)
+        self._import_compatibility_menu.addAction(self._reopen_last_session_action)
+
+        self._recent_sessions_menu = self._import_compatibility_menu.addMenu("Open Recent Imported Session")
         self._recent_sessions_menu.setEnabled(False)
+        self._file_menu.addSeparator()
 
         self._settings_action = QAction("Settings", self)
         self._settings_action.triggered.connect(
@@ -271,7 +308,7 @@ class MainWindow(QMainWindow):
         )
         self._file_menu.addAction(self._settings_action)
 
-        self._install_packages_action = QAction("Install Extensions / Packages", self)
+        self._install_packages_action = QAction("Optional Workflow Support", self)
         self._install_packages_action.triggered.connect(
             lambda: self._shell_model.invoke_file_menu_action(FileMenuAction.INSTALL_PACKAGES)
         )
@@ -297,15 +334,20 @@ class MainWindow(QMainWindow):
     def _open_session_from_dialog(self) -> None:
         selected_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Conversion Session",
+            "Import Session JSON (Compatibility)",
             str(Path.cwd()),
-            "Conversion sessions (session_manifest.json custom_session.json hybrid_session.json);;JSON files (*.json)",
+            "Compatibility session JSON (session_manifest.json custom_session.json hybrid_session.json);;JSON files (*.json)",
         )
         if not selected_path:
-            log_event(self._logger, logging.DEBUG, "Open Session dialog canceled.")
+            log_event(self._logger, logging.DEBUG, "Compatibility session import dialog canceled.")
             return
 
-        log_event(self._logger, logging.INFO, "Selected session file from desktop dialog.", session_path=selected_path)
+        log_event(
+            self._logger,
+            logging.INFO,
+            "Selected compatibility session file from desktop dialog.",
+            session_path=selected_path,
+        )
         self._load_session(Path(selected_path))
 
     def _open_nwb_viewer_from_dialog(self) -> None:
@@ -332,6 +374,67 @@ class MainWindow(QMainWindow):
             return
 
         self._load_project(Path(selected_path))
+
+    def _new_project(self) -> None:
+        self._session_assembly_screen_model.reset()
+        self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="project:new",
+                message="Started a new direct-ingest project draft.",
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
+
+    def _delete_project(self) -> None:
+        state = self._session_assembly_screen_model.state
+        project_path = state.project_path
+        has_workspace_content = bool(state.selected_paths or state.metadata_overrides or state.source_metadata_overrides)
+        if project_path is None and not has_workspace_content:
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="project:delete:noop",
+                    message="No direct-ingest project is currently loaded.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=False,
+                )
+            )
+            return
+
+        if project_path is not None:
+            prompt_text = f"Delete the current project file?\n{project_path}"
+        else:
+            prompt_text = "Delete the current unsaved direct-ingest project draft?"
+        response = QMessageBox.question(
+            self,
+            "Delete Project",
+            prompt_text,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if response is not QMessageBox.StandardButton.Yes:
+            return
+
+        if project_path is not None and project_path.exists():
+            project_path.unlink()
+        self._session_assembly_screen_model.reset()
+        self._shell_model.invoke_file_menu_action(FileMenuAction.NEW_SESSION)
+        self._shell_model.set_status_bar(
+            StatusBarState(
+                stage_key="project:deleted",
+                message=(
+                    f"Deleted project {project_path.name}."
+                    if project_path is not None
+                    else "Deleted the current unsaved project draft."
+                ),
+                percent_complete=100,
+                is_busy=False,
+                is_error=False,
+            )
+        )
 
     def _save_project(self) -> None:
         project_path = self._session_assembly_screen_model.state.project_path
@@ -394,7 +497,7 @@ class MainWindow(QMainWindow):
                     is_error=True,
                 ),
                 user_error=UserFacingError(
-                    title="Reopen Session Error",
+                    title="Reopen Imported Session Error",
                     message="No recent session is available to reopen.",
                     category="session",
                 ),
@@ -403,6 +506,21 @@ class MainWindow(QMainWindow):
 
         log_event(self._logger, logging.INFO, "Reopening last desktop session.", session_path=str(last_path))
         self._load_session(last_path)
+
+    def _close_current_session(self) -> None:
+        current_index = self._conversion_widget._session_tabs.currentIndex()
+        if current_index < 0 or current_index >= len(self._conversion_workspace_tabs):
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:close:noop",
+                    message="No conversion session is currently open.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=False,
+                )
+            )
+            return
+        self._on_conversion_tab_close_requested(current_index)
 
     def _load_project(self, project_path: Path) -> None:
         log_event(self._logger, logging.INFO, "Loading direct-ingest project.", project_path=str(project_path))
@@ -509,7 +627,7 @@ class MainWindow(QMainWindow):
                     is_error=True,
                 ),
                 user_error=UserFacingError(
-                    title="Open Session Error",
+                    title="Import Session Error",
                     message=str(exc),
                     detail=f"Could not load session from {session_path}.",
                     category="session",
@@ -537,6 +655,7 @@ class MainWindow(QMainWindow):
         )
 
     def _load_built_session(self, session: ConversionSession) -> None:
+        project_name = self._session_project_name(session)
         log_event(
             self._logger,
             logging.INFO,
@@ -544,12 +663,16 @@ class MainWindow(QMainWindow):
             session_id=session.session_id,
             pathway=session.pathway.value,
             source_count=len(session.sources),
+            project_name=project_name or "",
         )
         self._activate_loaded_session(session)
+        message = f"Built session {session.session_id} from selected inputs."
+        if project_name:
+            message = f"Built session {session.session_id} from project {project_name}."
         self._shell_model.set_status_bar(
             StatusBarState(
                 stage_key="session:assembled",
-                message=f"Built session {session.session_id} from selected inputs.",
+                message=message,
                 percent_complete=100,
                 is_busy=False,
                 is_error=False,
@@ -559,6 +682,8 @@ class MainWindow(QMainWindow):
     def _activate_loaded_session(self, session: ConversionSession, *, session_path: Path | None = None) -> None:
         if session_path is not None:
             self._settings_screen_model.record_recent_session(session_path)
+        tab_id = self._conversion_tab_id_for_session(session, session_path=session_path)
+        self._loading_conversion_tab_id = tab_id
         self._conversion_widget.load_session(session)
         default_output_path = self._default_output_path_for_session(session)
         log_event(
@@ -569,7 +694,26 @@ class MainWindow(QMainWindow):
             default_output_path=str(default_output_path),
         )
         self._conversion_screen_model.set_output_path(default_output_path)
+        self._loading_conversion_tab_id = None
+        self._upsert_conversion_workspace_tab(
+            tab_id,
+            self._conversion_screen_model.state,
+            session_path=session_path,
+        )
+        self._set_current_conversion_tab(tab_id)
+        self._sync_workspace_header(self._conversion_screen_model.state)
         self._workspace_tabs.setCurrentWidget(self._conversion_widget)
+        project_name = self._session_project_name(session)
+        if project_name:
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:project-context",
+                    message=f"Active project session: {project_name} | {session.session_id}.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=False,
+                )
+            )
 
     def _default_output_path_for_session(self, session: ConversionSession) -> Path:
         output_directory = self._settings_screen_model.state.applied_settings.last_output_directory
@@ -718,6 +862,25 @@ class MainWindow(QMainWindow):
 
         return load_desktop_session(session_path)
 
+    def _dismiss_embedded_workspace_panel(self) -> None:
+        self._shell_model.close_active_dialog()
+        if self._workspace_tabs.currentWidget() in {
+            self._settings_dialog,
+            self._session_assembly_dialog,
+            self._package_dialog,
+        }:
+            self._workspace_tabs.setCurrentWidget(self._default_workspace_widget())
+
+    def _default_workspace_widget(self):
+        if self._conversion_workspace_tabs or self._conversion_screen_model.state.session is not None:
+            return self._conversion_widget
+        return self._session_assembly_dialog
+
+    def _set_package_workspace_visible(self, visible: bool) -> None:
+        index = self._workspace_tabs.indexOf(self._package_dialog)
+        if index >= 0:
+            self._workspace_tabs.setTabVisible(index, visible)
+
     def _apply_shell_state(self, state) -> None:
         self._status_label.setText(state.status_bar.message)
         self._progress_bar.setValue(state.status_bar.percent_complete)
@@ -729,13 +892,8 @@ class MainWindow(QMainWindow):
         elif state.active_dialog == "new_session":
             self._workspace_tabs.setCurrentWidget(self._session_assembly_dialog)
         elif state.active_dialog == "install_packages":
+            self._set_package_workspace_visible(True)
             self._workspace_tabs.setCurrentWidget(self._package_dialog)
-        elif state.active_dialog is None and self._workspace_tabs.currentWidget() in {
-            self._settings_dialog,
-            self._session_assembly_dialog,
-            self._package_dialog,
-        }:
-            self._workspace_tabs.setCurrentWidget(self._conversion_widget)
 
     def _show_user_error_if_needed(self, error: UserFacingError | None) -> None:
         if error is None:
@@ -818,6 +976,9 @@ class MainWindow(QMainWindow):
             )
 
     def _apply_conversion_state(self, state: ConversionSessionScreenState) -> None:
+        if not self._restoring_conversion_tab and self._loading_conversion_tab_id is None:
+            self._sync_active_conversion_tab_from_state(state)
+        self._refresh_close_current_session_action()
         self._sync_workspace_header(state)
         if state.output_path is not None:
             candidate_directory = state.output_path.parent.resolve()
@@ -865,11 +1026,15 @@ class MainWindow(QMainWindow):
     def _apply_session_assembly_state(self, state: SessionAssemblyState) -> None:
         self._save_project_action.setEnabled(bool(state.selected_paths))
         self._save_project_as_action.setEnabled(bool(state.selected_paths))
+        self._delete_project_action.setEnabled(
+            bool(state.project_path or state.selected_paths or state.metadata_overrides or state.source_metadata_overrides)
+        )
         if self._workspace_tabs.currentWidget() is self._session_assembly_dialog:
             self._sync_tab_header(self._workspace_tabs.currentIndex())
 
     def _sync_tab_header(self, index: int) -> None:
         widget = self._workspace_tabs.widget(index)
+        self._set_package_workspace_visible(widget is self._package_dialog)
         if widget is self._conversion_widget:
             self._sync_workspace_header(self._conversion_screen_model.state)
             return
@@ -882,12 +1047,12 @@ class MainWindow(QMainWindow):
                 self._workspace_badge_label.setText("Direct Ingest")
             return
         if widget is self._package_dialog:
-            self._workspace_title_label.setText("Extensions / Packages")
+            self._workspace_title_label.setText("Optional Workflow Support")
             self._workspace_subtitle_label.setText(
-                "Manage route-based optional dependencies in the current development environment without leaving the main window."
+                "Add optional route support only when a representative dataset needs it; direct ingest remains the primary workflow."
             )
             if self._workspace_badge_label is not None:
-                self._workspace_badge_label.setText("Environment")
+                self._workspace_badge_label.setText("Secondary Setup")
             return
         if widget is self._settings_dialog:
             self._workspace_title_label.setText("Settings")
@@ -912,14 +1077,21 @@ class MainWindow(QMainWindow):
         if state.session is None:
             self._workspace_title_label.setText("Conversion Workspace")
             self._workspace_subtitle_label.setText(
-                "Start a new conversion session, review grouped inputs, and run preview or write workflows."
+                "Start with New Session for direct ingest. Use session JSON import only for compatibility, reopen, or testing support."
             )
             if self._workspace_badge_label is not None:
                 self._workspace_badge_label.setText("Awaiting Session")
             return
 
         source_count = len(state.session.sources)
-        project_text = f"{state.session.pathway.value.title()} pathway | {source_count} source"
+        project_name = self._session_project_name(state.session)
+        project_text = ""
+        if project_name:
+            project_text = f"Project: {project_name} | "
+            open_project_sessions = self._open_project_session_count(state.session)
+            if open_project_sessions > 1:
+                project_text += f"{open_project_sessions} open project sessions | "
+        project_text += f"{state.session.pathway.value.title()} pathway | {source_count} source"
         if source_count != 1:
             project_text += "s"
         if state.output_path is not None:
@@ -928,4 +1100,229 @@ class MainWindow(QMainWindow):
         self._workspace_subtitle_label.setText(project_text)
         if self._workspace_badge_label is not None:
             badge_text = state.progress_event.stage.value if state.progress_event is not None else state.session.status.value
-            self._workspace_badge_label.setText(badge_text.replace("_", " ").title())
+            badge_label = badge_text.replace("_", " ").title()
+            if project_name:
+                badge_label = f"{project_name} | {badge_label}"
+            self._workspace_badge_label.setText(badge_label)
+
+    @staticmethod
+    def _conversion_tab_id_for_session(session: ConversionSession, *, session_path: Path | None = None) -> str:
+        if session_path is not None:
+            return str(session_path.resolve())
+        return f"runtime:{session.session_id}"
+
+    @classmethod
+    def _conversion_tab_label(cls, state: ConversionSessionScreenState) -> str:
+        session = state.session
+        if session is None:
+            return "Untitled Session"
+        project_name = cls._session_project_name(session)
+        if project_name:
+            return f"{project_name} | {session.session_id}"
+        return session.session_id
+
+    @classmethod
+    def _conversion_tab_tooltip(cls, tab: _ConversionWorkspaceTab) -> str:
+        session = tab.state.session
+        if session is None:
+            return "No session loaded."
+        parts = [session.session_id, f"pathway={session.pathway.value}", f"status={session.status.value}"]
+        project_path = cls._session_project_path(session)
+        if project_path is not None:
+            parts.append(f"project={project_path.name}")
+            parts.append(str(project_path))
+        if tab.session_path is not None:
+            parts.append(str(tab.session_path))
+        return "\n".join(parts)
+
+    def _open_project_session_count(self, session: ConversionSession) -> int:
+        project_path = self._session_project_path(session)
+        project_name = self._session_project_name(session)
+        if project_path is None and not project_name:
+            return 0
+        count = 0
+        for tab in self._conversion_workspace_tabs:
+            tab_session = tab.state.session
+            if tab_session is None:
+                continue
+            if project_path is not None and self._session_project_path(tab_session) == project_path:
+                count += 1
+                continue
+            if project_name and self._session_project_name(tab_session) == project_name:
+                count += 1
+        return count
+
+    @staticmethod
+    def _session_project_path(session: ConversionSession) -> Path | None:
+        for source in session.sources:
+            project_path_text = source.metadata.get("session_assembly.project_path", "").strip()
+            if project_path_text:
+                return Path(project_path_text)
+        return None
+
+    @classmethod
+    def _session_project_name(cls, session: ConversionSession) -> str | None:
+        for source in session.sources:
+            project_name = source.metadata.get("session_assembly.project_name", "").strip()
+            if project_name:
+                return cls._display_project_name(Path(project_name))
+        project_path = cls._session_project_path(session)
+        if project_path is not None:
+            return cls._display_project_name(project_path)
+        return None
+
+    @staticmethod
+    def _display_project_name(project_path: Path) -> str:
+        name = project_path.name
+        suffix = ".nwbforge-project.json"
+        if name.lower().endswith(suffix):
+            return name[: -len(suffix)]
+        return project_path.stem
+
+    def _conversion_tab_index(self, tab_id: str) -> int:
+        for index, tab in enumerate(self._conversion_workspace_tabs):
+            if tab.tab_id == tab_id:
+                return index
+        return -1
+
+    def _sync_active_conversion_tab_from_state(self, state: ConversionSessionScreenState) -> None:
+        if state.session is None or self._active_conversion_tab_id is None:
+            if state.session is None and not self._conversion_workspace_tabs:
+                self._conversion_widget._session_tabs.hide()
+            return
+        index = self._conversion_tab_index(self._active_conversion_tab_id)
+        if index < 0:
+            return
+        tab = replace(self._conversion_workspace_tabs[index], state=state)
+        self._conversion_workspace_tabs[index] = tab
+        self._conversion_widget._session_tabs.setTabText(index, self._conversion_tab_label(state))
+        self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
+        self._conversion_widget._session_tabs.show()
+
+    def _upsert_conversion_workspace_tab(
+        self,
+        tab_id: str,
+        state: ConversionSessionScreenState,
+        *,
+        session_path: Path | None = None,
+    ) -> None:
+        index = self._conversion_tab_index(tab_id)
+        if index >= 0:
+            existing = self._conversion_workspace_tabs[index]
+            tab = replace(existing, state=state, session_path=session_path or existing.session_path)
+            self._conversion_workspace_tabs[index] = tab
+            self._conversion_widget._session_tabs.setTabText(index, self._conversion_tab_label(state))
+            self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
+        else:
+            tab = _ConversionWorkspaceTab(tab_id=tab_id, state=state, session_path=session_path)
+            self._conversion_workspace_tabs.append(tab)
+            index = self._conversion_widget._session_tabs.addTab(self._conversion_tab_label(state))
+            self._conversion_widget._session_tabs.setTabToolTip(index, self._conversion_tab_tooltip(tab))
+        self._conversion_widget._session_tabs.show()
+        self._refresh_close_current_session_action()
+
+    def _set_current_conversion_tab(self, tab_id: str) -> None:
+        index = self._conversion_tab_index(tab_id)
+        if index < 0:
+            return
+        self._active_conversion_tab_id = tab_id
+        with QSignalBlocker(self._conversion_widget._session_tabs):
+            self._conversion_widget._session_tabs.setCurrentIndex(index)
+        self._conversion_widget._session_tabs.show()
+        self._refresh_close_current_session_action()
+
+    def _on_conversion_tab_changed(self, index: int) -> None:
+        if index < 0 or index >= len(self._conversion_workspace_tabs):
+            return
+        next_tab = self._conversion_workspace_tabs[index]
+        if next_tab.tab_id == self._active_conversion_tab_id:
+            return
+        current_state = self._conversion_screen_model.state
+        if current_state.is_preview_running or current_state.is_execution_running:
+            if self._active_conversion_tab_id is not None:
+                with QSignalBlocker(self._conversion_widget._session_tabs):
+                    self._conversion_widget._session_tabs.setCurrentIndex(
+                        self._conversion_tab_index(self._active_conversion_tab_id)
+                    )
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:tab-switch:blocked",
+                    message="Finish the active preview or write before switching sessions.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                )
+            )
+            return
+        self._active_conversion_tab_id = next_tab.tab_id
+        self._restoring_conversion_tab = True
+        try:
+            self._conversion_screen_model.restore_state(next_tab.state)
+        finally:
+            self._restoring_conversion_tab = False
+        if self._workspace_tabs.currentWidget() is self._conversion_widget:
+            self._sync_workspace_header(next_tab.state)
+        self._refresh_close_current_session_action()
+
+    def _on_conversion_tab_close_requested(self, index: int) -> None:
+        if index < 0 or index >= len(self._conversion_workspace_tabs):
+            return
+        current_state = self._conversion_screen_model.state
+        closing_active = (
+            self._active_conversion_tab_id is not None
+            and self._conversion_workspace_tabs[index].tab_id == self._active_conversion_tab_id
+        )
+        if closing_active and (current_state.is_preview_running or current_state.is_execution_running):
+            self._shell_model.set_status_bar(
+                StatusBarState(
+                    stage_key="session:tab-close:blocked",
+                    message="Finish the active preview or write before closing this session tab.",
+                    percent_complete=100,
+                    is_busy=False,
+                    is_error=True,
+                )
+            )
+            return
+        self._conversion_workspace_tabs.pop(index)
+        self._conversion_widget._session_tabs.removeTab(index)
+        if not self._conversion_workspace_tabs:
+            self._active_conversion_tab_id = None
+            self._conversion_widget._session_tabs.hide()
+            self._refresh_close_current_session_action()
+            self._conversion_screen_model.clear_session()
+            return
+        self._refresh_close_current_session_action()
+        if closing_active:
+            next_index = min(index, len(self._conversion_workspace_tabs) - 1)
+            next_tab = self._conversion_workspace_tabs[next_index]
+            self._active_conversion_tab_id = None
+            self._set_current_conversion_tab(next_tab.tab_id)
+            self._restoring_conversion_tab = True
+            try:
+                self._conversion_screen_model.restore_state(next_tab.state)
+            finally:
+                self._restoring_conversion_tab = False
+            self._refresh_close_current_session_action()
+
+    def _refresh_close_current_session_action(self) -> None:
+        if not self._conversion_workspace_tabs:
+            self._close_current_session_action.setText("Close Current Session")
+            self._close_current_session_action.setEnabled(False)
+            return
+        self._close_current_session_action.setEnabled(True)
+        active_tab: _ConversionWorkspaceTab | None = None
+        if self._active_conversion_tab_id is not None:
+            index = self._conversion_tab_index(self._active_conversion_tab_id)
+            if index >= 0:
+                active_tab = self._conversion_workspace_tabs[index]
+        if active_tab is None:
+            active_tab = self._conversion_workspace_tabs[0]
+        session = active_tab.state.session
+        if session is None:
+            self._close_current_session_action.setText("Close Current Session")
+            return
+        project_name = self._session_project_name(session)
+        if project_name:
+            self._close_current_session_action.setText(f"Close Current Session ({project_name} | {session.session_id})")
+            return
+        self._close_current_session_action.setText(f"Close Current Session ({session.session_id})")

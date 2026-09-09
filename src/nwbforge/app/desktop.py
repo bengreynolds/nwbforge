@@ -41,15 +41,6 @@ from nwbforge.ui import (
     SessionAssemblyScreenModel,
     SettingsScreenModel,
 )
-from nwbforge.validation import (
-    ArtifactValidationService,
-    CompositeValidationService,
-    DefaultValidationReviewPolicyService,
-    JsonExecutionReviewArtifactService,
-    JsonValidationReportService,
-    NWBInspectorValidationService,
-    PyNWBSchemaValidationService,
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +206,14 @@ def build_desktop_pipeline_service(registry: AdapterRegistry) -> ConversionPipel
 
     assembly_service = PyNWBAssemblyService()
     from nwbforge.app.services import NeuroConvSupportedExecutionService
+    from nwbforge.validation import (
+        ArtifactValidationService,
+        CompositeValidationService,
+        DefaultValidationReviewPolicyService,
+        JsonValidationReportService,
+        NWBInspectorValidationService,
+        PyNWBSchemaValidationService,
+    )
 
     return ConversionPipelineService(
         inspection_service=RegistrySourceInspectionService(registry),
@@ -278,6 +277,7 @@ def build_desktop_services(
     )
     pipeline_service = build_desktop_pipeline_service(registry)
     conversion_executor = ThreadedConversionExecutor(pipeline_service)
+    from nwbforge.validation import JsonExecutionReviewArtifactService
     review_service = ExecutionReviewService(JsonExecutionReviewArtifactService())
     persistence_service = SessionPersistenceService(
         JsonSessionSnapshotStore(

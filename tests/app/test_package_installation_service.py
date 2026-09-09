@@ -58,6 +58,7 @@ def test_package_installation_service_executes_install_command(tmp_path: Path) -
         "-n",
         "nwbforge-dev",
         "python",
+        "-s",
         "-m",
         "pip",
         "install",
@@ -67,6 +68,33 @@ def test_package_installation_service_executes_install_command(tmp_path: Path) -
     assert events[0].stage is PackageInstallStage.VALIDATING
     assert events[1].stage is PackageInstallStage.INSTALLING
     assert events[-1].stage is PackageInstallStage.COMPLETED
+
+
+def test_package_installation_service_executes_rich_viewer_install_command(tmp_path: Path) -> None:
+    runner = FakeRunner()
+    service = make_service(tmp_path, runner)
+
+    result = service.execute_install(
+        PackageInstallRequest(
+            mode=InstallMode.SELECTED,
+            preset=InstallPreset.CUSTOM,
+            routes=("viewer_rich",),
+        )
+    )
+
+    assert result.command == (
+        "conda",
+        "run",
+        "-n",
+        "nwbforge-dev",
+        "python",
+        "-s",
+        "-m",
+        "pip",
+        "install",
+        "-e",
+        ".[viewer_rich]",
+    )
 
 
 def test_package_installation_service_blocks_invalid_selection(tmp_path: Path) -> None:

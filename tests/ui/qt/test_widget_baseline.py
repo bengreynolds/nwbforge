@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 import logging
 from pathlib import Path
@@ -8,6 +9,8 @@ from subprocess import CompletedProcess
 from PySide6.QtCore import Qt
 import nwbforge.ui.qt.main_window as main_window_module
 
+from nwbforge.adapters.base import AdapterCapabilities
+from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.app.packages import InstallMode, InstallPreset, PackageInstallationService, PackageManagementService
 from nwbforge.app.desktop import build_adapter_registry
 from nwbforge.app.runtime import PipelineProgressEvent, PipelineRuntimeError, PipelineStage, ThreadedPackageInstallationExecutor
@@ -47,7 +50,9 @@ from nwbforge.domain.models import (
 from nwbforge.app.services.models import ConversionExecution, ConversionPreview
 from nwbforge.ui import DesktopShellModel, PackageInstallerScreenModel, SessionAssemblyScreenModel, SettingsScreenModel
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
+from nwbforge.ui.models import MetadataDisagreementItem, MetadataDisagreementSourceItem
 from nwbforge.ui.qt import MainWindow
+from nwbforge.ui.qt.session_assembly_dialog import SessionAssemblyDialog
 from nwbforge.validation import JsonExecutionReviewArtifactService
 from nwbforge.persistence import JsonSessionSnapshotStore
 
@@ -93,6 +98,61 @@ class FakeConversionExecutor:
             )
         future.set_result(self._execution_result)
         return future
+
+
+class _WorkflowRouteAdapter:
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(supported_pathways=(ConversionPathway.SUPPORTED,))
+
+    def __init__(self, adapter_id: str, *, source_type: SourceType) -> None:
+        self.adapter_id = adapter_id
+        self.display_name = adapter_id
+        self.source_types = (source_type,)
+
+    def can_handle(self, source: SourceReference) -> bool:
+        return source.adapter_hint == self.adapter_id
+
+    def inspect(self, source: SourceReference):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+
+class _TiffSuite2pWorkflowAdapter:
+    adapter_id = "workflow_tiff_suite2p"
+    display_name = "TIFF + Suite2p Workflow"
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(
+        supported_pathways=(ConversionPathway.SUPPORTED,),
+        supports_multi_source_sessions=True,
+    )
+
+    def can_handle_sources(self, sources: tuple[SourceReference, ...]) -> bool:
+        return self.match_sources(sources) is not None
+
+    def inspect_sources(self, sources: tuple[SourceReference, ...]):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+    def match_sources(self, sources: tuple[SourceReference, ...]) -> dict[str, SourceReference] | None:
+        imaging = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_tiff_imaging" and source.role == "primary"
+        ]
+        segmentation = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_suite2p_segmentation"
+        ]
+        if len(imaging) != 1 or len(segmentation) != 1:
+            return None
+        return {"imaging": imaging[0], "segmentation": segmentation[0]}
+
+
+def _build_workflow_registry() -> AdapterRegistry:
+    registry = AdapterRegistry()
+    registry.register(_WorkflowRouteAdapter("neuroconv_tiff_imaging", source_type=SourceType.DIRECTORY))
+    registry.register(_WorkflowRouteAdapter("neuroconv_suite2p_segmentation", source_type=SourceType.DIRECTORY))
+    registry.register_workflow(_TiffSuite2pWorkflowAdapter())
+    return registry
 
 
 def make_package_screen(tmp_path: Path) -> PackageInstallerScreenModel:
@@ -263,7 +323,18 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     file_actions = window.file_menu.actions()
     labels = [action.text() for action in file_actions]
     assert "New Session" in labels
-    assert "Install Extensions / Packages" in labels
+    assert "Import / Compatibility" in labels
+    assert "Optional Workflow Support" in labels
+    compatibility_labels = [action.text() for action in window._import_compatibility_menu.actions()]
+    assert "Import Session JSON (Compatibility)..." in compatibility_labels
+    assert "Reopen Last Imported Session" in compatibility_labels
+    assert window._recent_sessions_menu.title() == "Open Recent Imported Session"
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
+    assert window.workspace_tabs.tabText(0) == "New Session"
+    assert window.workspace_tabs.tabText(1) == "Conversion"
+    assert window.workspace_tabs.isTabVisible(2) is False
+    assert window._workspace_title_label.text() == "New Conversion Session"
+    assert "Add files or folders" in window._workspace_subtitle_label.text()
 
     window._toggle_log_viewer_action.trigger()
     qapp.processEvents()
@@ -279,6 +350,7 @@ def test_main_window_file_menu_and_log_dock(qapp, tmp_path: Path) -> None:
     window._install_packages_action.trigger()
     qapp.processEvents()
     assert window.workspace_tabs.currentWidget() is window.package_dialog
+    assert window.workspace_tabs.isTabVisible(window.workspace_tabs.indexOf(window.package_dialog)) is True
 
     window.close()
 
@@ -294,54 +366,121 @@ def test_conversion_widget_and_package_dialog_bind_models(qapp, tmp_path: Path) 
     qapp.processEvents()
 
     window.conversion_widget.load_session(session)
+    window.workspace_tabs.setCurrentWidget(window.conversion_widget)
     qapp.processEvents()
     assert window._workspace_title_label.text() == "sess-qt"
     assert "Supported pathway" in window._workspace_subtitle_label.text()
     assert "sess-qt" in window.conversion_widget._session_label.text()
-    assert window.conversion_widget._session_summary_group.title() == "Session Summary"
-    assert window.conversion_widget._source_detail_group.title() == "Source Details"
+    assert window.conversion_widget._session_summary_group.title() == "Session Overview"
+    assert window.conversion_widget._source_detail_group.title() == "Selected Data Source"
     assert window.conversion_widget._execution_group.title() == "Execution Status"
-    assert window.conversion_widget._review_group.title() == "Validation and Review"
+    assert window.conversion_widget._review_group.title() == "Quality Check and Review"
     assert window.conversion_widget._artifact_group.title() == "Generated Artifacts"
     assert window.conversion_widget._stage_value_label.text() == "sources_added"
     assert window.conversion_widget._pathway_label.text() == "supported"
     assert window.conversion_widget._source_count_label.text() == "1"
     assert window.conversion_widget._source_role_label.text() == "primary"
     assert window.conversion_widget._source_adapter_label.text() == "Auto-detect"
+    assert window.conversion_widget._source_preview_pane.current_path == session.sources[0].location.resolve()
+    assert "\"sess-qt\"" in window.conversion_widget._source_preview_pane._text_preview.toPlainText()
     assert window.conversion_widget._review_guidance_label.text() == "Run preview or execution to unlock review guidance."
+    assert window.conversion_widget._workflow_steps_label.text().startswith("Workflow:")
+    assert window.conversion_widget._session_details_toggle.isChecked() is False
+    assert window.conversion_widget._session_summary_group.isHidden() is True
+    assert window.conversion_widget._output_path_edit.isVisible() is True
+    assert "sess-qt | supported workflow | 1 data source" in window.conversion_widget._session_context_label.text()
+    assert window.conversion_widget._advanced_toggle.isChecked() is False
+    assert window.conversion_widget._advanced_resolution_group.isHidden() is True
+    assert window.conversion_widget._workspace_tabs.isTabVisible(4) is False
+    assert window.conversion_widget._workspace_tabs.isTabVisible(5) is False
+    assert window.conversion_widget._readiness_metric_value.text() == "Blocked"
+    assert "blocked by build preview" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Build Preview" in window.conversion_widget._next_action_label.text()
+    assert "build preview" in window.conversion_widget._ready_to_write_label.text()
+    assert "Session loaded: done" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Preview built: pending" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Metadata review: waiting for preview" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Output path chosen: pending" in window.conversion_widget._pre_write_checklist_label.text()
     assert (
         window.conversion_widget._role_policy_label.text()
-        == "Conflict precedence: primary sources override metadata sources, which override supplemental sources."
+        == "Data source priority during conflict review: primary sources take precedence over metadata sources, which take precedence over supplemental sources."
     )
     assert window.conversion_widget._workspace_tabs.count() == 6
-    assert window.conversion_widget._workspace_tabs.tabText(0) == "Run Overview"
-    assert window.conversion_widget._workspace_tabs.tabText(1) == "Review Workspace"
-    assert window.conversion_widget._workspace_tabs.tabText(2) == "Metadata Review"
-    assert window.conversion_widget._workspace_tabs.tabText(3) == "Artifacts"
+    assert window.conversion_widget._workspace_tabs.tabText(0) == "1. Run Overview"
+    assert window.conversion_widget._workspace_tabs.tabText(1) == "2. Metadata Review"
+    assert window.conversion_widget._workspace_tabs.tabText(2) == "3. Quality Review"
+    assert window.conversion_widget._workspace_tabs.tabText(3) == "4. Artifacts"
     assert window.conversion_widget._workspace_tabs.tabText(4) == "History"
     assert window.conversion_widget._workspace_tabs.tabText(5) == "Diagnostics"
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.conversion_widget._pathway_metric_value.text() == "supported"
     assert window.conversion_widget._stage_metric_value.text() == "sources added"
+    assert window._close_current_session_action.isEnabled() is False
+
+    window.conversion_widget._workspace_tabs.setCurrentIndex(2)
+    qapp.processEvents()
+    assert window.conversion_widget._reviewer_edit.isVisible() is True
+    assert window.conversion_widget._validation_summary_label.isVisible() is True
+    assert window.conversion_widget._review_outcome_label.isVisible() is True
+    assert window.conversion_widget._review_status_label.isVisible() is True
+    assert "Conversion results available: pending" in window.conversion_widget._review_checklist_label.text()
+    window.conversion_widget._workspace_tabs.setCurrentIndex(0)
+    qapp.processEvents()
+
+    window.conversion_widget._session_details_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._session_summary_group.isHidden() is False
+
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._advanced_resolution_group.isHidden() is False
+    assert window.conversion_widget._workspace_tabs.isTabVisible(4) is True
+    assert window.conversion_widget._workspace_tabs.isTabVisible(5) is True
 
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Preview status: ready_to_write"
     assert window.conversion_widget._stage_value_label.text() == "ready_to_write"
+    assert "Choose Output" in window.conversion_widget._next_action_label.text()
+    assert "choose output path" in window.conversion_widget._ready_to_write_label.text()
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     assert window.statusBar().findChild(type(window._progress_bar)) is not None
+    assert window.conversion_widget._readiness_metric_value.text() == "Blocked"
+    assert "blocked by choose output path" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Preview built: done" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Metadata review: done" in window.conversion_widget._pre_write_checklist_label.text()
+    assert "Output path chosen: pending" in window.conversion_widget._pre_write_checklist_label.text()
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._progress_history_list.count() >= 1
+    assert window.conversion_widget._progress_history_list.item(0).text().startswith("[Ready]")
 
     window.conversion_widget._output_path_edit.setText("C:/tmp/output.nwb")
+    qapp.processEvents()
+    assert window.conversion_widget._output_value_label.text() == "C:/tmp/output.nwb"
+    assert window.conversion_widget._readiness_metric_value.text() == "Ready to Write"
+    assert "ready to write" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Current step: Write NWB." in window.conversion_widget._next_action_label.text()
+    assert "Output path chosen: done" in window.conversion_widget._pre_write_checklist_label.text()
     window.conversion_widget._execute_button.click()
     qapp.processEvents()
     assert window.conversion_widget._result_label.text() == "Execution status: completed"
     assert window.conversion_widget._artifact_list.count() == 0
     assert window.conversion_widget._artifact_count_value_label.text() == "0 artifacts"
+    assert window.conversion_widget._readiness_metric_value.text() == "Completed"
+    assert "output and generated artifacts are ready" in window.conversion_widget._readiness_summary_label.text().lower()
+    assert "Conversion results available: done" in window.conversion_widget._review_checklist_label.text()
+    assert "Decision recorded: not required" in window.conversion_widget._review_checklist_label.text()
+    assert any(
+        window.conversion_widget._progress_history_list.item(index).text().startswith("[Complete]")
+        for index in range(window.conversion_widget._progress_history_list.count())
+    )
     assert window.conversion_widget._workspace_tabs.currentIndex() == 0
 
-    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    window._install_packages_action.trigger()
     qapp.processEvents()
-    assert window.package_dialog._header_title_label.text() == "Install Extensions / Packages"
+    assert window.package_dialog._header_title_label.text() == "Optional Workflow Support"
+    assert window.package_dialog._route_group.isHidden() is True
     assert window.package_dialog._route_list.count() > 0
     assert window.package_dialog._install_button.isEnabled() is True
 
@@ -359,7 +498,7 @@ def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_p
     window.show()
     qapp.processEvents()
 
-    window.workspace_tabs.setCurrentWidget(window.package_dialog)
+    window._install_packages_action.trigger()
     qapp.processEvents()
 
     full_index = window.package_dialog._mode_combo.findData(InstallMode.FULL.value)
@@ -375,7 +514,14 @@ def test_package_dialog_mode_and_preset_hooks_normalize_combo_values(qapp, tmp_p
     qapp.processEvents()
     assert package_screen.state.install_mode is InstallMode.SELECTED
     assert package_screen.state.install_preset is InstallPreset.CUSTOM
+    assert window.package_dialog._route_group.isHidden() is False
     assert window.package_dialog._route_list.isEnabled() is True
+    assert "viewer capability needs extra support" in window.package_dialog._guidance_label.text().lower()
+    route_names = {
+        window.package_dialog._route_list.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(window.package_dialog._route_list.count())
+    }
+    assert "viewer_rich" in route_names
 
     first_item = window.package_dialog._route_list.item(0)
     first_item.setCheckState(Qt.CheckState.Checked)
@@ -406,6 +552,67 @@ def test_conversion_widget_uses_split_session_and_review_layout(qapp, tmp_path: 
     assert splitter.count() == 2
     assert splitter.widget(0) is window.conversion_widget._session_summary_group
     assert splitter.widget(1).layout().itemAt(0).widget() is window.conversion_widget._workspace_tabs
+    assert window.conversion_widget._scroll_area.widgetResizable() is True
+    assert window.conversion_widget._workspace_tabs.usesScrollButtons() is True
+    assert splitter.childrenCollapsible() is True
+    assert window.conversion_widget._session_summary_group.isHidden() is True
+
+    window.conversion_widget._session_details_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._session_summary_group.isHidden() is False
+
+    window.conversion_widget._session_details_toggle.setChecked(False)
+    qapp.processEvents()
+    assert window.conversion_widget._session_summary_group.isHidden() is True
+
+    window.close()
+
+
+def test_embedded_workspace_panels_are_scrollable_and_keep_manual_tab_selection(qapp, tmp_path: Path) -> None:
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    shell = DesktopShellModel()
+    window = MainWindow(
+        shell,
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    assert window.workspace_tabs.usesScrollButtons() is True
+    assert window.package_dialog._scroll_area.widgetResizable() is True
+    assert window.settings_dialog._scroll_area.widgetResizable() is True
+    assert window.session_assembly_dialog._scroll_area.widgetResizable() is True
+    assert window.session_assembly_dialog._workspace_tabs.usesScrollButtons() is True
+    assert window.session_assembly_dialog._workspace_splitter.childrenCollapsible() is True
+
+    window._install_packages_action.trigger()
+    qapp.processEvents()
+    window._toggle_log_viewer_action.trigger()
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.package_dialog
+
+    window.workspace_tabs.setCurrentWidget(window.settings_dialog)
+    qapp.processEvents()
+    shell.set_status_bar(main_window_module.StatusBarState(stage_key="ui:test", message="Settings still focused."))
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.settings_dialog
+    assert window.workspace_tabs.isTabVisible(window.workspace_tabs.indexOf(window.package_dialog)) is False
+
+    window.settings_dialog.reject()
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
+
+    window.conversion_widget.load_session(session)
+    window.workspace_tabs.setCurrentWidget(window.conversion_widget)
+    qapp.processEvents()
+    window.workspace_tabs.setCurrentWidget(window.settings_dialog)
+    qapp.processEvents()
+    window.settings_dialog.reject()
+    qapp.processEvents()
+    assert window.workspace_tabs.currentWidget() is window.conversion_widget
 
     window.close()
 
@@ -432,6 +639,33 @@ def test_conversion_widget_chooses_output_path(qapp, tmp_path: Path, monkeypatch
     qapp.processEvents()
 
     assert window.conversion_widget._output_path_edit.text().endswith("chosen-output.nwb")
+    window.close()
+
+
+def test_conversion_widget_preserves_selected_source_across_state_updates(qapp, tmp_path: Path) -> None:
+    session = make_hybrid_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    qapp.processEvents()
+    window.conversion_widget._source_list.setCurrentRow(1)
+    qapp.processEvents()
+    assert window.conversion_widget._source_role_label.text() == "supplemental"
+
+    window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+
+    assert window.conversion_widget._source_list.currentItem() is not None
+    assert window.conversion_widget._source_list.currentItem().data(Qt.ItemDataRole.UserRole) == "custom"
+    assert window.conversion_widget._source_role_label.text() == "supplemental"
     window.close()
 
 
@@ -497,6 +731,21 @@ def test_conversion_widget_shows_recovered_snapshot_state(qapp, tmp_path: Path) 
     assert "manual review=True" in window.conversion_widget._review_outcome_label.text()
     assert window.conversion_widget._artifact_count_value_label.text() == "2 artifacts"
     assert window.conversion_widget._output_path_edit.text().endswith("recovered-output.nwb")
+    assert "Latest state: recovery" in window.conversion_widget._diagnostics_summary_label.text()
+    assert "Recovered latest saved session state." in window.conversion_widget._diagnostics_summary_label.text()
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._snapshot_history_list.count() >= 1
+    assert "results state" in window.conversion_widget._snapshot_history_list.item(0).text()
+    assert "pending review record" in window.conversion_widget._snapshot_history_list.item(0).text()
+    assert "2 artifacts" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "1 issues" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "not reviewed" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "Compared with current workspace:" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "artifact count matches current workspace" in window.conversion_widget._selected_snapshot_summary_label.text()
+    assert "Restoring replaces the current session view with this saved state." in (
+        window.conversion_widget._selected_snapshot_summary_label.text()
+    )
 
     window.close()
 
@@ -623,16 +872,23 @@ def test_conversion_widget_submits_review(qapp, tmp_path: Path) -> None:
     assert window.conversion_widget._issue_list.count() == 1
     assert "Manual review is required." in window.conversion_widget._review_guidance_label.text()
     assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 0 of 1 issues."
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 1
+    assert "Conversion results available: done" in window.conversion_widget._review_checklist_label.text()
+    assert "Validation issues acknowledged: pending" in window.conversion_widget._review_checklist_label.text()
+    assert "Reviewer recorded: pending" in window.conversion_widget._review_checklist_label.text()
+    assert "Decision recorded: pending" in window.conversion_widget._review_checklist_label.text()
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     window.conversion_widget._reviewer_edit.setText("alice")
     issue_item = window.conversion_widget._issue_list.item(0)
     issue_item.setCheckState(Qt.CheckState.Checked)
     qapp.processEvents()
     assert window.conversion_widget._acknowledgement_summary_label.text() == "Acknowledged 1 of 1 issues."
+    assert "Validation issues acknowledged: done" in window.conversion_widget._review_checklist_label.text()
+    assert "Reviewer recorded: done" in window.conversion_widget._review_checklist_label.text()
     window.conversion_widget._approve_button.click()
     qapp.processEvents()
 
     assert "approved" in window.conversion_widget._review_status_label.text()
+    assert "Decision recorded: done" in window.conversion_widget._review_checklist_label.text()
     window.close()
 
 
@@ -793,7 +1049,7 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     assert dialog._workspace_tabs.count() == 3
     assert dialog._workspace_tabs.tabText(0) == "Grouping"
     assert dialog._workspace_tabs.tabText(1) == "Session Metadata"
-    assert dialog._workspace_tabs.tabText(2) == "Selected Source Metadata"
+    assert dialog._workspace_tabs.tabText(2) == "Selected Data Source Metadata"
     dialog._add_files_button.click()
     qapp.processEvents()
     assert dialog._input_list.count() == 1
@@ -807,6 +1063,96 @@ def test_main_window_builds_session_from_new_session_dialog(qapp, tmp_path: Path
     assert "session-" in window.conversion_widget._session_label.text()
     assert window.conversion_widget._pathway_label.text() == "supported"
     assert window.conversion_widget._source_count_label.text() == "1"
+    window.close()
+
+
+def test_main_window_keeps_multiple_sessions_in_conversion_tabs(qapp, tmp_path: Path) -> None:
+    first_session = make_session(tmp_path)
+    second_session = make_custom_session(tmp_path)
+    preview, execution = make_preview_and_execution(first_session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._load_built_session(first_session)
+    qapp.processEvents()
+    window._load_built_session(second_session)
+    qapp.processEvents()
+
+    assert window.conversion_widget._session_tabs.count() == 2
+    assert window.conversion_widget._session_tabs.isHidden() is False
+    assert window.conversion_widget._session_tabs.tabText(0) == "sess-qt"
+    assert window.conversion_widget._session_tabs.tabText(1) == "custom-qt"
+    assert window._close_current_session_action.isEnabled() is True
+    assert window._close_current_session_action.text() == "Close Current Session (custom-qt)"
+    assert "custom-qt" in window.conversion_widget._session_label.text()
+
+    window.conversion_widget._session_tabs.setCurrentIndex(0)
+    qapp.processEvents()
+    assert "sess-qt" in window.conversion_widget._session_label.text()
+    assert window._close_current_session_action.text() == "Close Current Session (sess-qt)"
+
+    window._close_current_session_action.trigger()
+    qapp.processEvents()
+    assert window.conversion_widget._session_tabs.count() == 1
+    assert window.conversion_widget._session_tabs.tabText(0) == "custom-qt"
+    assert window._close_current_session_action.isEnabled() is True
+    assert "custom-qt" in window.conversion_widget._session_label.text()
+
+    window._close_current_session_action.trigger()
+    qapp.processEvents()
+    assert window.conversion_widget._session_tabs.count() == 0
+    assert window._close_current_session_action.isEnabled() is False
+    window.close()
+
+
+def test_main_window_shows_project_context_in_conversion_session_tabs(qapp, tmp_path: Path) -> None:
+    project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
+    session = make_session(tmp_path)
+    shell_model = DesktopShellModel()
+    session = replace(
+        session,
+        sources=(
+            replace(
+                session.sources[0],
+                metadata={
+                    **session.sources[0].metadata,
+                    "session_assembly.project_path": str(project_path.resolve()),
+                    "session_assembly.project_name": project_path.name,
+                },
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        shell_model,
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._load_built_session(session)
+    qapp.processEvents()
+
+    assert window.conversion_widget._session_tabs.tabText(0) == "saved-project | sess-qt"
+    tooltip = window.conversion_widget._session_tabs.tabToolTip(0)
+    assert "project=saved-project.nwbforge-project.json" in tooltip
+    assert str(project_path.resolve()) in tooltip
+    assert "Project: saved-project" in window._workspace_subtitle_label.text()
+    assert window._workspace_badge_label.text() == "saved-project | Sources Added"
+    assert window._close_current_session_action.text() == "Close Current Session (saved-project | sess-qt)"
+    assert shell_model.state.status_bar.message == "Built session sess-qt from project saved-project."
+    assert "Project: saved-project | sess-qt" in window.conversion_widget._session_context_label.text()
+    window.conversion_widget._session_details_toggle.setChecked(True)
+    qapp.processEvents()
+    assert window.conversion_widget._project_origin_label.text() == str(project_path.resolve())
     window.close()
 
 
@@ -859,6 +1205,56 @@ def test_main_window_builds_session_from_dialog_with_roles_and_overrides(qapp, t
         window.conversion_widget._screen_model.state.session.metadata_overrides["subject.subject_id"]
         == "qt-override-mouse-01"
     )
+    window.close()
+
+
+def test_main_window_counts_open_sessions_from_same_project_in_header(qapp, tmp_path: Path) -> None:
+    project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
+    project_path.parent.mkdir()
+    first_session = make_session(tmp_path)
+    second_session = replace(first_session, session_id="sess-qt-02")
+    first_session = replace(
+        first_session,
+        sources=(
+            replace(
+                first_session.sources[0],
+                metadata={
+                    **first_session.sources[0].metadata,
+                    "session_assembly.project_path": str(project_path.resolve()),
+                    "session_assembly.project_name": project_path.name,
+                },
+            ),
+        ),
+    )
+    second_session = replace(
+        second_session,
+        sources=(
+            replace(
+                second_session.sources[0],
+                metadata={
+                    **second_session.sources[0].metadata,
+                    "session_assembly.project_path": str(project_path.resolve()),
+                    "session_assembly.project_name": project_path.name,
+                },
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(first_session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window._load_built_session(first_session)
+    qapp.processEvents()
+    window._load_built_session(second_session)
+    qapp.processEvents()
+
+    assert "Project: saved-project | 2 open project sessions |" in window._workspace_subtitle_label.text()
     window.close()
 
 
@@ -985,6 +1381,75 @@ def test_session_assembly_dialog_shows_detected_group_summary(qapp, tmp_path: Pa
     assert "custom_session.json" in dialog._selected_group_members_label.text()
     assert "confirmation required" in dialog._selected_group_counts_label.text()
     window.close()
+
+
+def test_session_assembly_dialog_shows_matched_workflow_group_details(qapp, tmp_path: Path) -> None:
+    imaging_dir = tmp_path / "imaging"
+    imaging_dir.mkdir()
+    (imaging_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    suite2p_dir = tmp_path / "suite2p"
+    suite2p_dir.mkdir()
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(_build_workflow_registry()))
+    screen.add_supported_paths((imaging_dir,), route_name="tiff", route_display_name="TIFF Imaging")
+    screen.add_supported_paths((suite2p_dir,), route_name="suite2p", route_display_name="Suite2p")
+    screen.add_custom_paths((notes_path,))
+
+    dialog = SessionAssemblyDialog(screen)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog._group_list.count() == 1
+    assert dialog._selected_group_kind_label.text() == "workflow bundle"
+    assert dialog._selected_group_workflow_label.text() == "TIFF + Suite2p Workflow"
+    assert "combined NeuroConv workflow" in dialog._selected_group_reason_label.text()
+
+    dialog.close()
+
+
+def test_session_assembly_dialog_absorbs_selected_structured_bundle_member(qapp, tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+    screen.add_supported_paths((thor_file,), route_name="thor", route_display_name="Thor")
+    screen.add_custom_paths((experiment_xml,))
+
+    dialog = SessionAssemblyDialog(screen)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog._input_list.count() == 2
+    assert dialog._source_list.count() == 1
+    assert "2 resolved members" in dialog._selected_bundle_label.text()
+    assert dialog._summary_label.text().startswith("1 sources in 1 groups, 2 selected inputs")
+    assert "1 input absorbed into structured bundles." in dialog._summary_label.text()
+    assert dialog._input_list.item(1).text().endswith("(inside structured bundle)")
+    assert "Already represented by a selected structured source bundle." in dialog._input_list.item(1).toolTip()
+
+    dialog.close()
+
+
+def test_session_assembly_dialog_previews_selected_source_contents(qapp, tmp_path: Path) -> None:
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("session assembly preview text", encoding="utf-8")
+
+    screen = SessionAssemblyScreenModel(SessionAssemblyService(build_adapter_registry()))
+    screen.add_custom_paths((notes_path,))
+
+    dialog = SessionAssemblyDialog(screen)
+    dialog.show()
+    qapp.processEvents()
+
+    assert dialog._source_list.count() == 1
+    assert dialog._source_preview_pane.current_path == notes_path.resolve()
+    assert "session assembly preview text" in dialog._source_preview_pane._text_preview.toPlainText()
+
+    dialog.close()
 
 
 def test_session_assembly_dialog_can_split_selected_group(qapp, tmp_path: Path, monkeypatch) -> None:
@@ -1122,6 +1587,63 @@ def test_main_window_opens_and_saves_project_from_direct_ingest(qapp, tmp_path: 
     window.close()
 
 
+def test_main_window_can_start_and_delete_direct_ingest_projects(qapp, tmp_path: Path, monkeypatch) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    project_path = tmp_path / "projects" / "delete-me.nwbforge-project.json"
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.session_assembly_dialog.QFileDialog.getOpenFileNames",
+        lambda *args, **kwargs: ([str(manifest_path)], "All supported inputs (*.*)"),
+    )
+    monkeypatch.setattr(
+        "nwbforge.ui.qt.main_window.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (str(project_path), "NWB Forge projects (*.nwbforge-project.json)"),
+    )
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "question",
+        lambda *args, **kwargs: main_window_module.QMessageBox.StandardButton.Yes,
+    )
+
+    window._new_session_action.trigger()
+    qapp.processEvents()
+    dialog = window.session_assembly_dialog
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    window._save_project_as_action.trigger()
+    qapp.processEvents()
+
+    assert project_path.exists() is True
+
+    window._delete_project_action.trigger()
+    qapp.processEvents()
+    assert project_path.exists() is False
+    assert window.workspace_tabs.currentWidget() is window.session_assembly_dialog
+    assert dialog._input_list.count() == 0
+    assert dialog._project_label.text() == "Unsaved project"
+
+    dialog._add_files_button.click()
+    qapp.processEvents()
+    assert dialog._input_list.count() == 1
+
+    window._new_project_action.trigger()
+    qapp.processEvents()
+    assert dialog._input_list.count() == 0
+    assert dialog._project_label.text() == "Unsaved project"
+    window.close()
+
+
 def test_main_window_restores_new_session_draft(qapp, tmp_path: Path, monkeypatch) -> None:
     manifest_path = tmp_path / "session_manifest.json"
     manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
@@ -1231,6 +1753,43 @@ def test_session_assembly_dialog_shows_canonical_entry_for_structured_group(qapp
     window.close()
 
 
+def test_session_assembly_dialog_shows_resolved_bundle_summary_for_supported_source(qapp, tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    (tmp_path / "Experiment.xml").write_text("<Experiment />", encoding="utf-8")
+    session = make_session(tmp_path)
+    preview, execution = make_preview_and_execution(session)
+    session_assembly_screen = SessionAssemblyScreenModel(
+        SessionAssemblyService(build_adapter_registry()),
+    )
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+        session_assembly_screen_model=session_assembly_screen,
+    )
+    window.show()
+    qapp.processEvents()
+
+    session_assembly_screen.add_supported_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+    qapp.processEvents()
+
+    dialog = window.session_assembly_dialog
+    dialog._source_list.setCurrentRow(0)
+    qapp.processEvents()
+
+    assert "2 resolved members" in dialog._selected_bundle_label.text()
+    assert "Experiment.xml" in dialog._selected_bundle_label.text()
+    assert "Image_0001_0001.tif" in dialog._selected_bundle_label.text()
+
+    window.close()
+
+
 def test_main_window_applies_last_output_directory_default(qapp, tmp_path: Path, monkeypatch) -> None:
     session = make_session(tmp_path)
     preview, execution = make_preview_and_execution(session)
@@ -1331,12 +1890,14 @@ def test_main_window_tracks_recent_sessions_menu(qapp, tmp_path: Path, monkeypat
 
 def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> None:
     session = make_session(tmp_path)
+    validation_report = tmp_path / "validation-report.json"
+    validation_report.write_text("{\"status\": \"ok\"}", encoding="utf-8")
     preview, execution = make_preview_and_execution(
         session,
         generated_artifacts=(
             ProvenanceArtifact(
                 artifact_type="validation_report",
-                location=tmp_path / "validation-report.json",
+                location=validation_report,
                 description="Validation report artifact",
             ),
         ),
@@ -1360,7 +1921,9 @@ def test_conversion_widget_lists_generated_artifacts(qapp, tmp_path: Path) -> No
     assert window.conversion_widget._artifact_list.count() == 1
     assert "validation-report.json" in window.conversion_widget._artifact_list.item(0).text()
     assert window.conversion_widget._artifact_count_value_label.text() == "1 artifacts"
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 3
+    assert window.conversion_widget._artifact_preview_pane.current_path == validation_report.resolve()
+    assert "\"status\": \"ok\"" in window.conversion_widget._artifact_preview_pane._text_preview.toPlainText()
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 0
     window.close()
 
 
@@ -1566,12 +2129,225 @@ def test_conversion_widget_projects_metadata_review_workspace(qapp, tmp_path: Pa
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
+    window.conversion_widget._workspace_tabs.setCurrentIndex(1)
+    qapp.processEvents()
 
     assert window.conversion_widget._disagreement_list.count() == 1
-    assert window.conversion_widget._workspace_tabs.currentIndex() == 2
-    assert "subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert window.conversion_widget._workspace_tabs.currentIndex() == 1
+    assert "Field: Subject: Subject Id" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert "Canonical key: subject.subject_id" in window.conversion_widget._selected_disagreement_value_label.text()
     assert window.conversion_widget._selected_disagreement_source_list.count() == 2
+    assert "Pending Review" in window.conversion_widget._disagreement_list.item(0).text()
     assert "primary-mouse-01" in window.conversion_widget._disagreement_list.item(0).text()
+    assert not window.conversion_widget._custom_session_override_toggle.isChecked()
+    assert not window.conversion_widget._manual_session_override_edit.isVisible()
+    assert (
+        "use the selected source value as the preferred session value"
+        in window.conversion_widget._recommended_resolution_label.text().lower()
+    )
+    window.close()
+
+
+def test_conversion_widget_sorts_pending_metadata_conflicts_before_resolved(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-review-order-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._screen_model.restore_state(
+        replace(
+            window.conversion_widget._screen_model.state,
+            metadata_disagreements=(
+                MetadataDisagreementItem(
+                    canonical_key="session.session_description",
+                    resolved_value="override description",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="manifest",
+                            source_label="Structured session manifest",
+                            role="primary",
+                            extracted_key="session.session_description",
+                            value="manifest description",
+                        ),
+                        MetadataDisagreementSourceItem(
+                            source_id="custom",
+                            source_label="Custom session JSON",
+                            role="supplemental",
+                            extracted_key="session.session_description",
+                            value="custom description",
+                        ),
+                    ),
+                    session_override_value="override description",
+                    resolution_status="session_override",
+                    resolution_history=(
+                        "Session override currently resolves session.session_description to 'override description'.",
+                    ),
+                    pending_resolution=False,
+                ),
+                MetadataDisagreementItem(
+                    canonical_key="subject.subject_id",
+                    resolved_value="primary-mouse-01",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="manifest",
+                            source_label="Structured session manifest",
+                            role="primary",
+                            extracted_key="subject.subject_id",
+                            value="primary-mouse-01",
+                        ),
+                        MetadataDisagreementSourceItem(
+                            source_id="custom",
+                            source_label="Custom session JSON",
+                            role="supplemental",
+                            extracted_key="subject.subject_id",
+                            value="custom-mouse-01",
+                        ),
+                    ),
+                    resolution_status="pending",
+                    pending_resolution=True,
+                ),
+            ),
+        )
+    )
+    qapp.processEvents()
+    window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
+    qapp.processEvents()
+
+    assert window.conversion_widget._disagreement_list.count() == 2
+    assert "Pending Review" in window.conversion_widget._disagreement_list.item(0).text()
+    assert "Subject: Subject Id" in window.conversion_widget._disagreement_list.item(0).text()
+    assert "Resolved" in window.conversion_widget._disagreement_list.item(1).text()
+    assert "Session: Session Description" in window.conversion_widget._disagreement_list.item(1).text()
+    window.close()
+
+
+def test_conversion_widget_formats_broader_metadata_field_labels(qapp, tmp_path: Path) -> None:
+    session = ConversionSession(
+        session_id="hybrid-review-broad-fields-qt",
+        pathway=ConversionPathway.HYBRID,
+        status=SessionStatus.SOURCES_ADDED,
+        sources=(
+            SourceReference(
+                source_id="manifest",
+                location=tmp_path / "session_manifest.json",
+                source_type=SourceType.FILE,
+                label="Structured session manifest",
+                role="primary",
+            ),
+            SourceReference(
+                source_id="custom",
+                location=tmp_path / "custom_session.json",
+                source_type=SourceType.FILE,
+                label="Custom session JSON",
+                role="supplemental",
+            ),
+        ),
+    )
+    preview, execution = make_preview_and_execution(session)
+    window = MainWindow(
+        DesktopShellModel(),
+        make_settings_screen(tmp_path),
+        make_package_screen(tmp_path),
+        ConversionSessionScreenModel(FakeConversionExecutor(preview, execution)),
+    )
+    window.show()
+    qapp.processEvents()
+
+    window.conversion_widget.load_session(session)
+    window.conversion_widget._screen_model.restore_state(
+        replace(
+            window.conversion_widget._screen_model.state,
+            metadata_disagreements=(
+                MetadataDisagreementItem(
+                    canonical_key="devices.scope.description",
+                    resolved_value="Two-photon scope",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="manifest",
+                            source_label="Structured session manifest",
+                            role="primary",
+                            extracted_key="devices.scope.description",
+                            value="Two-photon scope",
+                        ),
+                    ),
+                    pending_resolution=True,
+                ),
+                MetadataDisagreementItem(
+                    canonical_key="acquisition_streams.behavior.start_time",
+                    resolved_value="2026-04-08T10:00:00",
+                    resolved_origin="adapter_extracted",
+                    source_ids=("manifest", "custom"),
+                    source_values=(
+                        MetadataDisagreementSourceItem(
+                            source_id="custom",
+                            source_label="Custom session JSON",
+                            role="supplemental",
+                            extracted_key="acquisition_streams.behavior.start_time",
+                            value="2026-04-08T10:00:00",
+                        ),
+                    ),
+                    pending_resolution=True,
+                ),
+            ),
+        )
+    )
+    qapp.processEvents()
+    window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
+    qapp.processEvents()
+
+    texts = [
+        window.conversion_widget._disagreement_list.item(index).text()
+        for index in range(window.conversion_widget._disagreement_list.count())
+    ]
+    assert any("Device scope: Description" in text for text in texts)
+    assert any("Acquisition Stream behavior: Start Time" in text for text in texts)
+    acquisition_row = next(
+        index
+        for index in range(window.conversion_widget._disagreement_list.count())
+        if "Acquisition Stream behavior: Start Time"
+        in window.conversion_widget._disagreement_list.item(index).text()
+    )
+    window.conversion_widget._disagreement_list.setCurrentRow(acquisition_row)
+    qapp.processEvents()
+    assert "Field: Acquisition Stream behavior: Start Time" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert "Scope: Acquisition Stream" in window.conversion_widget._selected_disagreement_value_label.text()
+    assert (
+        "Canonical key: acquisition_streams.behavior.start_time"
+        in window.conversion_widget._selected_disagreement_value_label.text()
+    )
     window.close()
 
 
@@ -1659,6 +2435,11 @@ def test_conversion_widget_can_apply_session_override_from_metadata_review(qapp,
     qapp.processEvents()
     window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
     qapp.processEvents()
+
+    recommendation_text = window.conversion_widget._recommended_resolution_label.text()
+    assert "Structured session manifest" in recommendation_text
+    assert "preferred session value" in recommendation_text
+
     window.conversion_widget._use_source_value_button.click()
     qapp.processEvents()
 
@@ -1752,6 +2533,8 @@ def test_conversion_widget_can_apply_source_override_from_metadata_review(qapp, 
 
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
     window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
     qapp.processEvents()
@@ -1851,6 +2634,8 @@ def test_conversion_widget_can_apply_manual_session_override_from_metadata_revie
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
+    window.conversion_widget._custom_session_override_toggle.setChecked(True)
+    qapp.processEvents()
     window.conversion_widget._manual_session_override_edit.setText("manual-session-01")
     qapp.processEvents()
     window.conversion_widget._apply_manual_session_override_button.click()
@@ -1945,6 +2730,8 @@ def test_conversion_widget_can_use_selected_source_value_as_source_override(qapp
 
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
+    qapp.processEvents()
+    window.conversion_widget._advanced_toggle.setChecked(True)
     qapp.processEvents()
     window.conversion_widget._selected_disagreement_source_list.setCurrentRow(1)
     qapp.processEvents()
@@ -2047,6 +2834,7 @@ def test_conversion_widget_filters_resolved_metadata_conflicts(qapp, tmp_path: P
     assert "1 resolved" in window.conversion_widget._metadata_resolution_summary_label.text()
     window.conversion_widget._disagreement_filter_combo.setCurrentText("Resolved only")
     qapp.processEvents()
+    assert "Resolved" in window.conversion_widget._disagreement_list.item(0).text()
     assert window.conversion_widget._disagreement_list.count() == 1
     window.conversion_widget._disagreement_filter_combo.setCurrentText("Pending only")
     qapp.processEvents()
@@ -2138,9 +2926,22 @@ def test_conversion_widget_can_clear_all_overrides_for_selected_field(qapp, tmp_
     window.conversion_widget.load_session(session)
     window.conversion_widget._preview_button.click()
     qapp.processEvents()
+    window.conversion_widget._advanced_toggle.setChecked(True)
+    qapp.processEvents()
     window.conversion_widget._disagreement_filter_combo.setCurrentText("All conflicts")
     qapp.processEvents()
+    assert window.conversion_widget._custom_session_override_toggle.isChecked()
+    assert (
+        window.conversion_widget._selected_session_override_status_label.text()
+        == "Preferred session value: session-value"
+    )
+    assert (
+        window.conversion_widget._selected_source_override_status_label.text()
+        == "Source-specific overrides: Custom session JSON: source-value"
+    )
     assert "session override" in window.conversion_widget._selected_resolution_status_label.text().lower()
+    assert "session override" in window.conversion_widget._disagreement_list.item(0).text().lower()
+    assert "Resolution state: session override" in window.conversion_widget._disagreement_list.item(0).toolTip()
     window.conversion_widget._clear_all_field_overrides_button.click()
     qapp.processEvents()
 

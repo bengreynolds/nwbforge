@@ -3,6 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from subprocess import CompletedProcess
 
+import pytest
+
+pytest.importorskip("neuroconv")
+pytest.importorskip("nwbinspector")
+
 from nwbforge.app.desktop import (
     build_adapter_registry,
     build_desktop_services,

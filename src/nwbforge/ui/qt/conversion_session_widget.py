@@ -19,7 +19,9 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSplitter,
+    QTabBar,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -30,6 +32,7 @@ from nwbforge.domain.models import ConversionSession
 from nwbforge.ui.conversion_session import ConversionSessionScreenModel
 from nwbforge.ui.models import ConversionSessionScreenState
 from nwbforge.ui.qt.bridge import StateBridge
+from nwbforge.ui.qt.file_preview_pane import FilePreviewPane
 from nwbforge.ui.qt.styling import build_metric_card
 
 
@@ -54,6 +57,8 @@ class ConversionSessionWidget(QWidget):
         self._session_label = QLabel("No session loaded.", self)
         self._pathway_label = QLabel("Not available.", self)
         self._source_count_label = QLabel("0", self)
+        self._project_origin_label = QLabel("Not saved from a direct-ingest project.", self)
+        self._project_origin_label.setWordWrap(True)
         self._source_list = QListWidget(self)
         self._source_list.currentItemChanged.connect(self._sync_selected_source_details)
         self._source_location_label = QLabel("No source selected.", self)
@@ -67,12 +72,40 @@ class ConversionSessionWidget(QWidget):
         self._execute_button.clicked.connect(self._on_execute_clicked)
         self._output_path_edit = QLineEdit(self)
         self._output_path_edit.setPlaceholderText("Output NWB path")
-        self._output_path_edit.textChanged.connect(self._refresh_execute_enabled)
+        self._output_path_edit.textChanged.connect(self._on_output_path_changed)
         self._choose_output_button = QPushButton("Choose Output...", self)
         self._choose_output_button.clicked.connect(self._choose_output_path)
         self._validation_summary_label = QLabel("Validation summary: not available.", self)
         self._review_outcome_label = QLabel("Review outcome: not available.", self)
         self._review_status_label = QLabel("Review status: not reviewed.", self)
+        self._workflow_steps_label = QLabel(
+            "Workflow: 1. Ingest in New Session  2. Review Metadata  3. Build Preview / Choose Output  4. Write NWB / Review Results",
+            self,
+        )
+        self._workflow_steps_label.setWordWrap(True)
+        self._session_context_label = QLabel(
+            "Session focus: no session loaded. Open Session Details only when you need source inspection.",
+            self,
+        )
+        self._session_context_label.setWordWrap(True)
+        self._session_details_toggle = QCheckBox("Show Session Details", self)
+        self._session_details_toggle.toggled.connect(self._set_session_summary_visible)
+        self._advanced_toggle = QCheckBox("Show Advanced Tools", self)
+        self._advanced_toggle.toggled.connect(self._set_advanced_ui_visible)
+        self._readiness_summary_label = QLabel("Readiness: blocked until a session is loaded.", self)
+        self._readiness_summary_label.setWordWrap(True)
+        self._next_action_label = QLabel("Next action: start with New Session and add data sources.", self)
+        self._next_action_label.setWordWrap(True)
+        self._ready_to_write_label = QLabel(
+            "Ready to write when: a session is loaded, preview is built, an output path is chosen, and remaining review blockers are understood.",
+            self,
+        )
+        self._ready_to_write_label.setWordWrap(True)
+        self._pre_write_checklist_label = QLabel(
+            "Pre-write checklist:\n- Session loaded: pending\n- Preview built: pending\n- Metadata review: waiting for preview\n- Output path chosen: pending",
+            self,
+        )
+        self._pre_write_checklist_label.setWordWrap(True)
         self._stage_value_label = QLabel("idle", self)
         self._output_value_label = QLabel("No output selected.", self)
         self._issue_count_value_label = QLabel("0 issues", self)
@@ -82,11 +115,16 @@ class ConversionSessionWidget(QWidget):
         self._issue_list.itemChanged.connect(self._on_issue_item_changed)
         self._review_guidance_label = QLabel("Run preview or execution to unlock review guidance.", self)
         self._role_policy_label = QLabel(
-            "Conflict precedence: primary sources override metadata sources, which override supplemental sources.",
+            "Data source priority during conflict review: primary sources take precedence over metadata sources, which take precedence over supplemental sources.",
             self,
         )
         self._role_policy_label.setWordWrap(True)
         self._acknowledgement_summary_label = QLabel("Acknowledged 0 of 0 issues.", self)
+        self._review_checklist_label = QLabel(
+            "Review checklist:\n- Conversion results available: pending\n- Validation issues acknowledged: waiting for results\n- Reviewer recorded: pending\n- Decision recorded: pending",
+            self,
+        )
+        self._review_checklist_label.setWordWrap(True)
         self._reviewer_edit = QLineEdit(self)
         self._reviewer_edit.setPlaceholderText("Reviewer name")
         self._reviewer_edit.textChanged.connect(self._screen_model.set_reviewer_name)
@@ -103,7 +141,9 @@ class ConversionSessionWidget(QWidget):
         self._result_label = QLabel("No preview or execution yet.", self)
         self._artifact_list = QListWidget(self)
         self._artifact_list.itemSelectionChanged.connect(self._refresh_artifact_actions)
+        self._artifact_list.itemSelectionChanged.connect(self._sync_selected_artifact_preview)
         self._snapshot_history_list = QListWidget(self)
+        self._snapshot_history_list.currentItemChanged.connect(self._sync_selected_snapshot_summary)
         self._snapshot_history_list.itemSelectionChanged.connect(self._refresh_snapshot_actions)
         self._progress_history_list = QListWidget(self)
         self._disagreement_list = QListWidget(self)
@@ -118,12 +158,28 @@ class ConversionSessionWidget(QWidget):
         self._selected_disagreement_source_list.currentItemChanged.connect(self._sync_selected_disagreement_source)
         self._selected_disagreement_notes_label = QLabel("No comparison notes.", self)
         self._selected_disagreement_notes_label.setWordWrap(True)
-        self._selected_override_status_label = QLabel("No session override applied.", self)
-        self._selected_override_status_label.setWordWrap(True)
+        self._recommended_resolution_label = QLabel(
+            "Recommended action: select a metadata review item to see the default resolution path.",
+            self,
+        )
+        self._recommended_resolution_label.setWordWrap(True)
+        self._selected_session_override_status_label = QLabel(
+            "Preferred session value: no session-wide override applied.",
+            self,
+        )
+        self._selected_session_override_status_label.setWordWrap(True)
+        self._selected_source_override_status_label = QLabel(
+            "Source-specific overrides: none applied.",
+            self,
+        )
+        self._selected_source_override_status_label.setWordWrap(True)
         self._selected_resolution_status_label = QLabel("Resolution status: not available.", self)
         self._selected_resolution_status_label.setWordWrap(True)
         self._metadata_resolution_summary_label = QLabel("No metadata conflicts loaded.", self)
         self._metadata_resolution_summary_label.setWordWrap(True)
+        self._custom_session_override_toggle = QCheckBox("Use a custom preferred session value", self)
+        self._custom_session_override_toggle.toggled.connect(self._set_custom_session_override_visible)
+        self._manual_session_override_label = QLabel("Custom preferred session value", self)
         self._manual_session_override_edit = QLineEdit(self)
         self._manual_session_override_edit.setPlaceholderText("Manual session override value for selected field")
         self._manual_session_override_edit.textChanged.connect(self._refresh_metadata_resolution_actions)
@@ -154,15 +210,36 @@ class ConversionSessionWidget(QWidget):
         self._open_review_artifact_button.clicked.connect(lambda: self._open_artifact_by_type("review_decision"))
         self._restore_snapshot_button = QPushButton("Restore Selected Snapshot", self)
         self._restore_snapshot_button.clicked.connect(self._restore_selected_snapshot)
+        self._selected_snapshot_summary_label = QLabel(
+            "Select a saved snapshot to review its restore impact.",
+            self,
+        )
+        self._selected_snapshot_summary_label.setWordWrap(True)
+        self._source_preview_pane = FilePreviewPane(
+            self,
+            empty_message="Select a data source to preview its contents here.",
+        )
+        self._artifact_preview_pane = FilePreviewPane(
+            self,
+            empty_message="Select a generated artifact to preview it here.",
+        )
 
-        self._session_summary_group = QGroupBox("Session Summary", self)
+        self._session_summary_group = QGroupBox("Session Overview", self)
         self._execution_group = QGroupBox("Execution Status", self)
-        self._review_group = QGroupBox("Validation and Review", self)
+        self._review_group = QGroupBox("Quality Check and Review", self)
         self._artifact_group = QGroupBox("Generated Artifacts", self)
+        self._artifact_preview_group = QGroupBox("Selected Artifact Preview", self)
         self._history_group = QGroupBox("Saved Session History", self)
         self._diagnostics_group = QGroupBox("Runtime Diagnostics", self)
         self._workspace_tabs = QTabWidget(self)
         self._workspace_tabs.setDocumentMode(True)
+        self._workspace_tabs.setUsesScrollButtons(True)
+        self._session_tabs = QTabBar(self)
+        self._session_tabs.setDocumentMode(True)
+        self._session_tabs.setTabsClosable(True)
+        self._session_tabs.setMovable(True)
+        self._session_tabs.setUsesScrollButtons(True)
+        self._session_tabs.hide()
 
         self._source_list.setAlternatingRowColors(True)
         self._issue_list.setAlternatingRowColors(True)
@@ -186,30 +263,28 @@ class ConversionSessionWidget(QWidget):
         self._clear_all_field_overrides_button.setProperty("danger", True)
         self._reject_button.setProperty("danger", True)
 
-        self._pathway_metric_card, self._pathway_metric_value = build_metric_card("Pathway", "Not loaded", accent=True, parent=self)
+        self._pathway_metric_card, self._pathway_metric_value = build_metric_card("Workflow", "Not loaded", accent=True, parent=self)
         self._stage_metric_card, self._stage_metric_value = build_metric_card("Stage", "idle", parent=self)
         self._validation_metric_card, self._validation_metric_value = build_metric_card("Validation", "Not available", parent=self)
         self._artifact_metric_card, self._artifact_metric_value = build_metric_card("Artifacts", "0 artifacts", parent=self)
+        self._readiness_metric_card, self._readiness_metric_value = build_metric_card("Readiness", "Blocked", parent=self)
 
         form_layout = QFormLayout()
         form_layout.addRow("Session", self._session_label)
-        form_layout.addRow("Pathway", self._pathway_label)
-        form_layout.addRow("Sources", self._source_count_label)
-        form_layout.addRow("Output", self._output_path_edit)
-        form_layout.addRow("Reviewer", self._reviewer_edit)
+        form_layout.addRow("Workflow", self._pathway_label)
+        form_layout.addRow("Data sources", self._source_count_label)
+        form_layout.addRow("Saved project", self._project_origin_label)
 
         source_detail_layout = QFormLayout()
         source_detail_layout.addRow("Location", self._source_location_label)
-        source_detail_layout.addRow("Role", self._source_role_label)
+        source_detail_layout.addRow("Data source role", self._source_role_label)
         source_detail_layout.addRow("Adapter", self._source_adapter_label)
         source_detail_layout.addRow("Media", self._source_media_type_label)
-        self._source_detail_group = QGroupBox("Source Details", self)
+        self._source_detail_group = QGroupBox("Selected Data Source", self)
         self._source_detail_group.setLayout(source_detail_layout)
-
-        button_row = QHBoxLayout()
-        button_row.addWidget(self._preview_button)
-        button_row.addWidget(self._execute_button)
-        button_row.addWidget(self._choose_output_button)
+        self._source_preview_group = QGroupBox("Selected Data Source Preview", self)
+        source_preview_layout = QVBoxLayout(self._source_preview_group)
+        source_preview_layout.addWidget(self._source_preview_pane)
 
         review_button_row = QHBoxLayout()
         review_button_row.addWidget(self._approve_button)
@@ -223,10 +298,10 @@ class ConversionSessionWidget(QWidget):
 
         session_summary_layout = QVBoxLayout()
         session_summary_layout.addLayout(form_layout)
-        session_summary_layout.addWidget(QLabel("Sources", self))
+        session_summary_layout.addWidget(QLabel("Data sources", self))
         session_summary_layout.addWidget(self._source_list, stretch=1)
         session_summary_layout.addWidget(self._source_detail_group)
-        session_summary_layout.addLayout(button_row)
+        session_summary_layout.addWidget(self._source_preview_group)
         self._session_summary_group.setLayout(session_summary_layout)
 
         run_overview_layout = QFormLayout()
@@ -236,13 +311,27 @@ class ConversionSessionWidget(QWidget):
         run_overview_layout.addRow("Metadata review", self._disagreement_count_value_label)
         run_overview_layout.addRow("Artifacts", self._artifact_count_value_label)
 
+        output_form_layout = QFormLayout()
+        output_form_layout.addRow("Output file", self._output_path_edit)
+        output_button_row = QHBoxLayout()
+        output_button_row.addWidget(self._choose_output_button)
+        output_button_row.addWidget(self._preview_button)
+        output_button_row.addWidget(self._execute_button)
+
         execution_layout = QVBoxLayout()
         execution_layout.addLayout(run_overview_layout)
+        execution_layout.addWidget(self._workflow_steps_label)
+        execution_layout.addWidget(self._session_context_label)
+        execution_layout.addWidget(self._session_details_toggle)
+        execution_layout.addWidget(self._advanced_toggle)
+        execution_layout.addWidget(self._readiness_summary_label)
+        execution_layout.addWidget(self._next_action_label)
+        execution_layout.addWidget(self._ready_to_write_label)
+        execution_layout.addWidget(self._pre_write_checklist_label)
+        execution_layout.addLayout(output_form_layout)
+        execution_layout.addLayout(output_button_row)
         execution_layout.addWidget(self._status_label)
         execution_layout.addWidget(self._result_label)
-        execution_layout.addWidget(self._validation_summary_label)
-        execution_layout.addWidget(self._review_outcome_label)
-        execution_layout.addWidget(self._review_status_label)
         execution_layout.addStretch(1)
         self._execution_group.setLayout(execution_layout)
 
@@ -250,6 +339,13 @@ class ConversionSessionWidget(QWidget):
         review_layout.addWidget(self._review_guidance_label)
         review_layout.addWidget(self._role_policy_label)
         review_layout.addWidget(self._acknowledgement_summary_label)
+        review_layout.addWidget(self._review_checklist_label)
+        review_layout.addWidget(self._validation_summary_label)
+        review_layout.addWidget(self._review_outcome_label)
+        review_layout.addWidget(self._review_status_label)
+        reviewer_form_layout = QFormLayout()
+        reviewer_form_layout.addRow("Reviewer", self._reviewer_edit)
+        review_layout.addLayout(reviewer_form_layout)
         review_layout.addWidget(QLabel("Validation issues", self))
         review_layout.addWidget(self._issue_list, stretch=1)
         review_layout.addWidget(self._override_checkbox)
@@ -261,10 +357,14 @@ class ConversionSessionWidget(QWidget):
         artifact_layout = QVBoxLayout()
         artifact_layout.addWidget(self._artifact_list, stretch=1)
         artifact_layout.addLayout(artifact_button_row)
+        artifact_preview_layout = QVBoxLayout(self._artifact_preview_group)
+        artifact_preview_layout.addWidget(self._artifact_preview_pane)
+        artifact_layout.addWidget(self._artifact_preview_group)
         self._artifact_group.setLayout(artifact_layout)
 
         history_layout = QVBoxLayout()
         history_layout.addWidget(self._snapshot_history_list, stretch=1)
+        history_layout.addWidget(self._selected_snapshot_summary_label)
         history_layout.addWidget(self._restore_snapshot_button)
         self._history_group.setLayout(history_layout)
 
@@ -281,30 +381,36 @@ class ConversionSessionWidget(QWidget):
         metadata_review_layout.addWidget(self._metadata_resolution_summary_label)
         metadata_review_layout.addWidget(self._disagreement_filter_combo)
         metadata_review_layout.addWidget(self._disagreement_list, stretch=1)
-        metadata_detail_group = QGroupBox("Selected Metadata Conflict", self)
+        metadata_detail_group = QGroupBox("Selected Metadata Review Item", self)
         metadata_detail_layout = QVBoxLayout(metadata_detail_group)
         metadata_detail_layout.addWidget(self._selected_disagreement_value_label)
+        metadata_detail_layout.addWidget(self._recommended_resolution_label)
         metadata_detail_layout.addWidget(self._selected_resolution_status_label)
-        metadata_detail_layout.addWidget(self._selected_override_status_label)
+        metadata_detail_layout.addWidget(self._selected_session_override_status_label)
+        metadata_detail_layout.addWidget(self._selected_source_override_status_label)
         metadata_detail_layout.addWidget(QLabel("Source comparison", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_source_list, stretch=1)
-        metadata_detail_layout.addWidget(QLabel("Manual session override", self))
-        metadata_detail_layout.addWidget(self._manual_session_override_edit)
-        metadata_detail_layout.addWidget(QLabel("Selected source override", self))
-        metadata_detail_layout.addWidget(self._selected_source_override_edit)
         metadata_detail_layout.addWidget(QLabel("Resolution notes", self))
         metadata_detail_layout.addWidget(self._selected_disagreement_notes_label)
         metadata_resolution_row = QHBoxLayout()
         metadata_resolution_row.addWidget(self._use_source_value_button)
-        metadata_resolution_row.addWidget(self._apply_manual_session_override_button)
         metadata_resolution_row.addWidget(self._clear_override_button)
         metadata_detail_layout.addLayout(metadata_resolution_row)
+        metadata_detail_layout.addWidget(self._custom_session_override_toggle)
+        metadata_detail_layout.addWidget(self._manual_session_override_label)
+        metadata_detail_layout.addWidget(self._manual_session_override_edit)
+        metadata_detail_layout.addWidget(self._apply_manual_session_override_button)
+        self._advanced_resolution_group = QGroupBox("Advanced Resolution Tools", self)
+        advanced_resolution_layout = QVBoxLayout(self._advanced_resolution_group)
+        advanced_resolution_layout.addWidget(QLabel("Preferred value for selected source", self))
+        advanced_resolution_layout.addWidget(self._selected_source_override_edit)
         metadata_source_resolution_row = QHBoxLayout()
         metadata_source_resolution_row.addWidget(self._use_source_value_as_source_override_button)
         metadata_source_resolution_row.addWidget(self._apply_source_override_button)
         metadata_source_resolution_row.addWidget(self._clear_source_override_button)
         metadata_source_resolution_row.addWidget(self._clear_all_field_overrides_button)
-        metadata_detail_layout.addLayout(metadata_source_resolution_row)
+        advanced_resolution_layout.addLayout(metadata_source_resolution_row)
+        metadata_detail_layout.addWidget(self._advanced_resolution_group)
         metadata_review_layout.addWidget(metadata_detail_group, stretch=1)
 
         run_overview_page = QWidget(self)
@@ -328,12 +434,14 @@ class ConversionSessionWidget(QWidget):
         diagnostics_page_layout = QVBoxLayout(diagnostics_page)
         diagnostics_page_layout.addWidget(self._diagnostics_group)
 
-        self._workspace_tabs.addTab(run_overview_page, "Run Overview")
-        self._workspace_tabs.addTab(review_page, "Review Workspace")
-        self._workspace_tabs.addTab(metadata_review_page, "Metadata Review")
-        self._workspace_tabs.addTab(artifact_page, "Artifacts")
+        self._workspace_tabs.addTab(run_overview_page, "1. Run Overview")
+        self._workspace_tabs.addTab(metadata_review_page, "2. Metadata Review")
+        self._workspace_tabs.addTab(review_page, "3. Quality Review")
+        self._workspace_tabs.addTab(artifact_page, "4. Artifacts")
         self._workspace_tabs.addTab(history_page, "History")
         self._workspace_tabs.addTab(diagnostics_page, "Diagnostics")
+        self._set_advanced_ui_visible(False)
+        self._set_custom_session_override_visible(False)
 
         right_column = QWidget(self)
         right_column_layout = QVBoxLayout(right_column)
@@ -342,10 +450,11 @@ class ConversionSessionWidget(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(self._session_summary_group)
         splitter.addWidget(right_column)
-        splitter.setChildrenCollapsible(False)
+        splitter.setChildrenCollapsible(True)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
         self._splitter = splitter
+        self._set_session_summary_visible(False)
 
         metric_row = QHBoxLayout()
         metric_row.setSpacing(10)
@@ -353,12 +462,23 @@ class ConversionSessionWidget(QWidget):
         metric_row.addWidget(self._stage_metric_card, 1)
         metric_row.addWidget(self._validation_metric_card, 1)
         metric_row.addWidget(self._artifact_metric_card, 1)
+        metric_row.addWidget(self._readiness_metric_card, 1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
-        layout.addLayout(metric_row)
-        layout.addWidget(splitter)
+        content = QWidget(self)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(12)
+        content_layout.addWidget(self._session_tabs)
+        content_layout.addLayout(metric_row)
+        content_layout.addWidget(splitter)
+
+        self._scroll_area = QScrollArea(self)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setWidget(content)
+        layout.addWidget(self._scroll_area)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
@@ -422,7 +542,15 @@ class ConversionSessionWidget(QWidget):
         self._stage_metric_value.setText(self._stage_value_label.text().replace("_", " "))
         self._validation_metric_value.setText(self._issue_count_value_label.text())
         self._artifact_metric_value.setText(self._artifact_count_value_label.text())
+        self._readiness_metric_value.setText(self._readiness_state_text(state))
         self._review_guidance_label.setText(self._review_guidance_text(state))
+        self._readiness_summary_label.setText(self._readiness_summary_text(state))
+        self._next_action_label.setText(self._next_action_text(state))
+        self._ready_to_write_label.setText(self._ready_to_write_text(state))
+        self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
+        self._review_checklist_label.setText(self._review_checklist_text(state))
+        self._session_context_label.setText(self._session_context_text(state))
+        self._project_origin_label.setText(self._session_project_text(state))
         self._acknowledgement_summary_label.setText(self._acknowledgement_summary_text(state))
         self._metadata_resolution_summary_label.setText(self._metadata_resolution_summary_text(state))
         self._diagnostics_summary_label.setText(self._diagnostics_summary_text(state))
@@ -453,9 +581,10 @@ class ConversionSessionWidget(QWidget):
         self._refresh_metadata_resolution_actions()
         self._refresh_artifact_actions()
         self._refresh_snapshot_actions()
-        self._sync_workspace_tab(state)
 
     def _sync_sources(self, state: ConversionSessionScreenState) -> None:
+        selected_item = self._source_list.currentItem()
+        selected_source_id = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
         self._source_list.clear()
         for source in state.sources:
             item = QListWidgetItem(f"{source.label} [{source.source_type}]")
@@ -463,7 +592,13 @@ class ConversionSessionWidget(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, source.source_id)
             self._source_list.addItem(item)
         if self._source_list.count() > 0:
-            self._source_list.setCurrentRow(0)
+            restored_row = 0
+            if selected_source_id is not None:
+                for row in range(self._source_list.count()):
+                    if self._source_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_source_id:
+                        restored_row = row
+                        break
+            self._source_list.setCurrentRow(restored_row)
         else:
             self._sync_selected_source_details()
 
@@ -474,6 +609,7 @@ class ConversionSessionWidget(QWidget):
             self._source_role_label.setText("Not available.")
             self._source_adapter_label.setText("Auto-detect")
             self._source_media_type_label.setText("Not available.")
+            self._source_preview_pane.set_preview_path(None)
             return
 
         source_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -486,12 +622,14 @@ class ConversionSessionWidget(QWidget):
             self._source_role_label.setText("Not available.")
             self._source_adapter_label.setText("Auto-detect")
             self._source_media_type_label.setText("Not available.")
+            self._source_preview_pane.set_preview_path(None)
             return
 
         self._source_location_label.setText(str(selected_source.location))
         self._source_role_label.setText(selected_source.role)
         self._source_adapter_label.setText(selected_source.adapter_hint or "Auto-detect")
         self._source_media_type_label.setText(selected_source.media_type or "Not available.")
+        self._source_preview_pane.set_preview_path(selected_source.location)
 
     def _sync_validation_issues(self, state: ConversionSessionScreenState) -> None:
         existing = {
@@ -524,6 +662,7 @@ class ConversionSessionWidget(QWidget):
                 self._issue_list.takeItem(index)
 
     def _sync_generated_artifacts(self, state: ConversionSessionScreenState) -> None:
+        selected_path = self._selected_artifact_path()
         self._artifact_list.clear()
         for artifact in state.generated_artifacts:
             label = f"[{artifact.artifact_type}] {artifact.location.name}"
@@ -534,25 +673,45 @@ class ConversionSessionWidget(QWidget):
                 tooltip = f"{artifact.description}\n{tooltip}"
             item.setToolTip(tooltip)
             self._artifact_list.addItem(item)
+        if self._artifact_list.count() > 0:
+            restored_row = 0
+            if selected_path is not None:
+                for row in range(self._artifact_list.count()):
+                    item = self._artifact_list.item(row)
+                    path_text = item.data(Qt.ItemDataRole.UserRole)
+                    if path_text and Path(path_text) == selected_path:
+                        restored_row = row
+                        break
+            self._artifact_list.setCurrentRow(restored_row)
+        else:
+            self._artifact_preview_pane.set_preview_path(None)
         self._refresh_artifact_actions()
+
+    def _sync_selected_artifact_preview(self) -> None:
+        self._artifact_preview_pane.set_preview_path(self._selected_artifact_path())
 
     def _sync_snapshot_history(self, state: ConversionSessionScreenState) -> None:
         selected_item = self._snapshot_history_list.currentItem()
         selected_snapshot_id = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
         self._snapshot_history_list.clear()
         for snapshot in state.snapshot_history:
+            snapshot_kind = "preview state" if snapshot.artifact_count == 0 else "results state"
+            review_state = "reviewed" if snapshot.has_review_record else "pending review record"
             label = (
                 f"{snapshot.saved_at_text} | {snapshot.status}"
+                f" | {snapshot_kind}"
                 f" | {snapshot.artifact_count} artifacts"
                 f" | {snapshot.issue_count} issues"
             )
-            if snapshot.has_review_record:
-                label += " | reviewed"
+            label += f" | {review_state}"
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, snapshot.snapshot_id)
             item.setToolTip(snapshot.snapshot_id)
             self._snapshot_history_list.addItem(item)
         if self._snapshot_history_list.count() == 0:
+            self._selected_snapshot_summary_label.setText(
+                "Select a saved snapshot to review its restore impact."
+            )
             self._refresh_snapshot_actions()
             return
         restored_row = 0
@@ -564,12 +723,30 @@ class ConversionSessionWidget(QWidget):
         self._snapshot_history_list.setCurrentRow(restored_row)
         self._refresh_snapshot_actions()
 
+    def _sync_selected_snapshot_summary(self, *_args) -> None:
+        snapshot = self._selected_snapshot_history_item()
+        if snapshot is None:
+            self._selected_snapshot_summary_label.setText(
+                "Select a saved snapshot to review its restore impact."
+            )
+            return
+        review_text = "reviewed" if snapshot.has_review_record else "not reviewed"
+        self._selected_snapshot_summary_label.setText(
+            "Selected snapshot: "
+            f"{snapshot.saved_at_text} | {snapshot.status} | "
+            f"{snapshot.artifact_count} artifacts | {snapshot.issue_count} issues | {review_text}. "
+            f"{self._snapshot_delta_summary(snapshot)} "
+            "Restoring replaces the current session view with this saved state."
+        )
+
     def _sync_progress_history(self, state: ConversionSessionScreenState) -> None:
         self._progress_history_list.clear()
         for event in state.progress_history:
             source_suffix = f" | {event.source_id}" if event.source_id is not None else ""
+            stage_prefix = self._progress_stage_prefix(event.stage)
             item = QListWidgetItem(
-                f"{event.created_at_text} | {event.stage} | {event.percent_complete}% | {event.message}{source_suffix}"
+                f"[{stage_prefix}] {event.created_at_text} | {event.stage} | {event.percent_complete}% | "
+                f"{event.message}{source_suffix}"
             )
             item.setToolTip(event.message)
             self._progress_history_list.addItem(item)
@@ -580,14 +757,33 @@ class ConversionSessionWidget(QWidget):
         selected_item = self._disagreement_list.currentItem()
         selected_key = selected_item.data(Qt.ItemDataRole.UserRole) if selected_item is not None else None
         self._disagreement_list.clear()
-        disagreements = self._filtered_metadata_disagreements(state)
-        for disagreement in disagreements:
-            item = QListWidgetItem(f"{disagreement.canonical_key} -> {disagreement.resolved_value}")
-            item.setData(Qt.ItemDataRole.UserRole, disagreement.canonical_key)
-            item.setToolTip(
-                f"Resolved from {disagreement.resolved_origin} value using source(s): "
-                f"{', '.join(disagreement.source_ids) or 'session merge'}"
+        disagreements = tuple(
+            sorted(
+                self._filtered_metadata_disagreements(state),
+                key=lambda item: (not item.pending_resolution, item.canonical_key),
             )
+        )
+        for disagreement in disagreements:
+            status_label = "Pending Review" if disagreement.pending_resolution else "Resolved"
+            resolution_suffix = ""
+            if disagreement.resolution_status == "session_override":
+                resolution_suffix = " | session override"
+            elif disagreement.resolution_status == "source_override":
+                resolution_suffix = " | source override"
+            display_label = self._metadata_field_display_label(disagreement.canonical_key)
+            item = QListWidgetItem(
+                f"[{status_label}] {display_label} -> {disagreement.resolved_value}{resolution_suffix}"
+            )
+            item.setData(Qt.ItemDataRole.UserRole, disagreement.canonical_key)
+            tooltip_lines = [
+                f"Field: {display_label}",
+                f"Resolution state: {disagreement.resolution_status.replace('_', ' ')}",
+                f"Resolved from {disagreement.resolved_origin} value using source(s): "
+                f"{', '.join(disagreement.source_ids) or 'session merge'}",
+            ]
+            if disagreement.resolution_history:
+                tooltip_lines.append(disagreement.resolution_history[-1])
+            item.setToolTip("\n".join(tooltip_lines))
             self._disagreement_list.addItem(item)
         if self._disagreement_list.count() == 0:
             self._sync_selected_disagreement()
@@ -606,8 +802,16 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_value_label.setText("No metadata disagreement selected.")
             self._selected_disagreement_source_list.clear()
             self._selected_disagreement_notes_label.setText("No comparison notes.")
-            self._selected_override_status_label.setText("No session override applied.")
+            self._recommended_resolution_label.setText(
+                "Recommended action: select a metadata review item to see the default resolution path."
+            )
+            self._selected_session_override_status_label.setText(
+                "Preferred session value: no session-wide override applied."
+            )
+            self._selected_source_override_status_label.setText("Source-specific overrides: none applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
+            with QSignalBlocker(self._custom_session_override_toggle):
+                self._custom_session_override_toggle.setChecked(False)
             with QSignalBlocker(self._manual_session_override_edit):
                 self._manual_session_override_edit.setText("")
             with QSignalBlocker(self._selected_source_override_edit):
@@ -627,20 +831,34 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_value_label.setText("No metadata disagreement selected.")
             self._selected_disagreement_source_list.clear()
             self._selected_disagreement_notes_label.setText("No comparison notes.")
-            self._selected_override_status_label.setText("No session override applied.")
+            self._recommended_resolution_label.setText(
+                "Recommended action: select a metadata review item to see the default resolution path."
+            )
+            self._selected_session_override_status_label.setText(
+                "Preferred session value: no session-wide override applied."
+            )
+            self._selected_source_override_status_label.setText("Source-specific overrides: none applied.")
             self._selected_resolution_status_label.setText("Resolution status: not available.")
+            with QSignalBlocker(self._custom_session_override_toggle):
+                self._custom_session_override_toggle.setChecked(False)
             with QSignalBlocker(self._manual_session_override_edit):
                 self._manual_session_override_edit.setText("")
             with QSignalBlocker(self._selected_source_override_edit):
                 self._selected_source_override_edit.setText("")
             self._refresh_metadata_resolution_actions()
             return
+        display_label = self._metadata_field_display_label(disagreement.canonical_key)
+        scope_label = self._metadata_field_scope_label(disagreement.canonical_key)
         self._selected_disagreement_value_label.setText(
-            f"{disagreement.canonical_key}\nResolved value: {disagreement.resolved_value}\n"
-            f"Origin: {disagreement.resolved_origin}"
+            f"Field: {display_label}\nScope: {scope_label}\nCanonical key: {disagreement.canonical_key}\n"
+            f"Resolved value: {disagreement.resolved_value}\nOrigin: {disagreement.resolved_origin}"
         )
         self._selected_resolution_status_label.setText(
             "Resolution status: " + disagreement.resolution_status.replace("_", " ")
+        )
+        selected_source_item = self._selected_disagreement_source_list.currentItem()
+        selected_source_id = (
+            selected_source_item.data(Qt.ItemDataRole.UserRole) if selected_source_item is not None else None
         )
         self._selected_disagreement_source_list.clear()
         for source_value in disagreement.source_values:
@@ -657,7 +875,13 @@ class ConversionSessionWidget(QWidget):
             item.setData(Qt.ItemDataRole.UserRole + 1, source_value.value)
             self._selected_disagreement_source_list.addItem(item)
         if self._selected_disagreement_source_list.count() > 0:
-            self._selected_disagreement_source_list.setCurrentRow(0)
+            restored_row = 0
+            if selected_source_id is not None:
+                for row in range(self._selected_disagreement_source_list.count()):
+                    if self._selected_disagreement_source_list.item(row).data(Qt.ItemDataRole.UserRole) == selected_source_id:
+                        restored_row = row
+                        break
+            self._selected_disagreement_source_list.setCurrentRow(restored_row)
         note_lines = list(disagreement.notes)
         note_lines.extend(disagreement.resolution_notes)
         note_lines.extend(disagreement.resolution_history)
@@ -665,21 +889,31 @@ class ConversionSessionWidget(QWidget):
             self._selected_disagreement_notes_label.setText("\n".join(note_lines))
         else:
             self._selected_disagreement_notes_label.setText("No comparison notes.")
-        override_lines = []
-        if disagreement.session_override_value is not None:
-            override_lines.append(f"Session override: {disagreement.session_override_value}")
         source_override_lines = [
             f"{source_value.source_label}: {source_value.override_value}"
             for source_value in disagreement.source_values
             if source_value.override_value is not None
         ]
-        if source_override_lines:
-            override_lines.append("Source overrides: " + "; ".join(source_override_lines))
-        self._selected_override_status_label.setText(
-            "\n".join(override_lines) if override_lines else "No session or source overrides applied."
+        self._selected_session_override_status_label.setText(
+            (
+                f"Preferred session value: {disagreement.session_override_value}"
+                if disagreement.session_override_value is not None
+                else "Preferred session value: no session-wide override applied."
+            )
         )
+        self._selected_source_override_status_label.setText(
+            (
+                "Source-specific overrides: " + "; ".join(source_override_lines)
+                if source_override_lines
+                else "Source-specific overrides: none applied."
+            )
+        )
+        should_show_custom_override = disagreement.session_override_value is not None
+        with QSignalBlocker(self._custom_session_override_toggle):
+            self._custom_session_override_toggle.setChecked(should_show_custom_override)
         with QSignalBlocker(self._manual_session_override_edit):
             self._manual_session_override_edit.setText(disagreement.session_override_value or "")
+        self._set_custom_session_override_visible(should_show_custom_override)
         self._sync_selected_disagreement_source()
         self._refresh_metadata_resolution_actions()
 
@@ -689,6 +923,10 @@ class ConversionSessionWidget(QWidget):
             self._selected_source_override_edit.setText(
                 selected_source.override_value if selected_source is not None and selected_source.override_value is not None else ""
             )
+        disagreement = self._selected_disagreement()
+        self._recommended_resolution_label.setText(
+            self._recommended_resolution_text(disagreement, selected_source)
+        )
         self._refresh_metadata_resolution_actions()
 
     @staticmethod
@@ -734,11 +972,116 @@ class ConversionSessionWidget(QWidget):
             return state.session.status.value
         return "idle"
 
-    @staticmethod
-    def _output_text(state: ConversionSessionScreenState) -> str:
-        if state.output_path is None:
-            return "No output selected."
-        return str(state.output_path)
+    def _output_text(self, state: ConversionSessionScreenState) -> str:
+        if state.output_path is not None:
+            return str(state.output_path)
+        if self._output_path_edit.text().strip():
+            return self._output_path_edit.text().strip()
+        return "No output selected."
+
+    def _has_output_target(self, state: ConversionSessionScreenState) -> bool:
+        return state.output_path is not None or bool(self._output_path_edit.text().strip())
+
+    def _write_blockers(self, state: ConversionSessionScreenState) -> list[str]:
+        blockers: list[str] = []
+        if state.session is None:
+            blockers.append("load or create a session")
+        if state.preview is None:
+            blockers.append("build preview")
+        if any(item.pending_resolution for item in state.metadata_disagreements):
+            blockers.append("review metadata conflicts")
+        if not self._has_output_target(state):
+            blockers.append("choose output path")
+        return blockers
+
+    def _pre_write_checklist_text(self, state: ConversionSessionScreenState) -> str:
+        session_status = "done" if state.session is not None else "pending"
+        if state.is_preview_running:
+            preview_status = "in progress"
+        elif state.preview is not None or state.execution is not None:
+            preview_status = "done"
+        else:
+            preview_status = "pending"
+        if state.preview is None and state.execution is None and not state.is_preview_running:
+            metadata_status = "waiting for preview"
+        elif any(item.pending_resolution for item in state.metadata_disagreements):
+            metadata_status = "pending"
+        else:
+            metadata_status = "done"
+        output_status = "done" if self._has_output_target(state) else "pending"
+        return (
+            "Pre-write checklist:\n"
+            f"- Session loaded: {session_status}\n"
+            f"- Preview built: {preview_status}\n"
+            f"- Metadata review: {metadata_status}\n"
+            f"- Output path chosen: {output_status}"
+        )
+
+    def _next_action_text(self, state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Next action: start with New Session and add supported or custom data sources."
+        if state.is_preview_running:
+            return "Current step: Build Preview. Wait for preview results so the app can surface metadata conflicts and readiness."
+        if state.preview is None:
+            return "Current step: Build Preview. Next action: review the session summary, then select Build Preview."
+        pending_conflicts = [item for item in state.metadata_disagreements if item.pending_resolution]
+        if pending_conflicts:
+            return "Current step: Review Metadata. Next action: inspect pending mixed-source conflicts before writing NWB."
+        if not self._has_output_target(state):
+            return "Current step: Choose Output. Next action: choose an NWB output path before writing."
+        if state.is_execution_running:
+            return "Current step: Write NWB. Wait for conversion to finish, then review validation results and artifacts."
+        if state.execution is None:
+            return "Current step: Write NWB. Next action: run Write NWB when you are satisfied with the current preview."
+        return "Current step: Review Results. Next action: inspect validation issues and artifacts, then complete review if required."
+
+    def _ready_to_write_text(self, state: ConversionSessionScreenState) -> str:
+        blockers = self._write_blockers(state)
+        if blockers:
+            return "Ready to write when: " + ", ".join(blockers) + "."
+        return "Ready to write when: the current preview looks correct and you want to generate NWB plus validation artifacts."
+
+    def _readiness_state_text(self, state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Blocked"
+        if state.is_preview_running:
+            return "Building Preview"
+        if state.is_execution_running:
+            return "Writing NWB"
+        if state.execution is not None:
+            outcome = state.execution.review_outcome
+            if outcome.blocks_completion:
+                return "Blocked by Review"
+            if outcome.requires_manual_review or state.validation_issues:
+                return "Needs Review"
+            return "Completed"
+        blockers = self._write_blockers(state)
+        if not blockers:
+            return "Ready to Write"
+        if state.preview is not None and any(item.pending_resolution for item in state.metadata_disagreements):
+            return "Needs Review"
+        return "Blocked"
+
+    def _readiness_summary_text(self, state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Readiness: blocked until a session is loaded."
+        if state.is_preview_running:
+            return "Readiness: building preview so the app can check grouping, metadata, and conversion readiness."
+        if state.is_execution_running:
+            return "Readiness: writing NWB now. Review results after conversion finishes."
+        if state.execution is not None:
+            outcome = state.execution.review_outcome
+            if outcome.blocks_completion:
+                return "Readiness: blocked by review findings. Add rationale and override only if the result is acceptable."
+            if outcome.requires_manual_review or state.validation_issues:
+                return (
+                    "Readiness: needs review. Inspect validation findings and artifacts before treating the result as complete."
+                )
+            return "Readiness: complete. Output and generated artifacts are ready for inspection or archival."
+        blockers = self._write_blockers(state)
+        if blockers:
+            return "Readiness: blocked by " + ", ".join(blockers) + "."
+        return "Readiness: ready to write. Preview is built, main conflicts are cleared, and output is selected."
 
     @staticmethod
     def _issue_count_text(state: ConversionSessionScreenState) -> str:
@@ -781,18 +1124,126 @@ class ConversionSessionWidget(QWidget):
         acknowledged = len(state.acknowledged_issue_refs)
         return f"Acknowledged {acknowledged} of {total_issues} issues."
 
+    @staticmethod
+    def _review_checklist_text(state: ConversionSessionScreenState) -> str:
+        if state.execution is None:
+            return (
+                "Review checklist:\n"
+                "- Conversion results available: pending\n"
+                "- Validation issues acknowledged: waiting for results\n"
+                "- Reviewer recorded: pending\n"
+                "- Decision recorded: pending"
+            )
+        acknowledgement_status = (
+            "done"
+            if not state.validation_issues or len(state.acknowledged_issue_refs) == len(state.validation_issues)
+            else "pending"
+        )
+        reviewer_status = "done" if state.reviewer_name.strip() else "pending"
+        outcome = state.execution.review_outcome
+        if not outcome.requires_manual_review and not outcome.blocks_completion and not state.validation_issues:
+            decision_status = "not required"
+        else:
+            decision_status = "done" if state.last_review_submission is not None else "pending"
+        return (
+            "Review checklist:\n"
+            "- Conversion results available: done\n"
+            f"- Validation issues acknowledged: {acknowledgement_status}\n"
+            f"- Reviewer recorded: {reviewer_status}\n"
+            f"- Decision recorded: {decision_status}"
+        )
+
+    @staticmethod
+    def _session_context_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Session focus: no session loaded. Open Session Details only when you need source inspection."
+        source_count = len(state.sources)
+        source_suffix = "data source" if source_count == 1 else "data sources"
+        project_name = ConversionSessionWidget._session_project_name(state.session)
+        project_prefix = f"Project: {project_name} | " if project_name else ""
+        return (
+            f"Session focus: {project_prefix}{state.session.session_id} | {state.session.pathway.value} workflow | "
+            f"{source_count} {source_suffix}. Open Session Details for per-source inspection and output setup."
+        )
+
+    @staticmethod
+    def _session_project_text(state: ConversionSessionScreenState) -> str:
+        if state.session is None:
+            return "Not saved from a direct-ingest project."
+        project_path = ConversionSessionWidget._session_project_path(state.session)
+        if project_path is None:
+            return "Not saved from a direct-ingest project."
+        return str(project_path)
+
+    @staticmethod
+    def _session_project_name(session: ConversionSession) -> str | None:
+        project_path = ConversionSessionWidget._session_project_path(session)
+        if project_path is None:
+            return None
+        return ConversionSessionWidget._display_project_name(project_path)
+
+    @staticmethod
+    def _session_project_path(session: ConversionSession) -> Path | None:
+        for source in session.sources:
+            project_path_text = source.metadata.get("session_assembly.project_path", "").strip()
+            if project_path_text:
+                return Path(project_path_text)
+        return None
+
+    @staticmethod
+    def _display_project_name(project_path: Path) -> str:
+        name = project_path.name
+        suffix = ".nwbforge-project.json"
+        if name.lower().endswith(suffix):
+            return name[: -len(suffix)]
+        return project_path.stem
+
     def _refresh_execute_enabled(self) -> None:
         state = self._screen_model.state
         self._execute_button.setEnabled(state.can_run_execution and bool(self._output_path_edit.text().strip()))
+
+    def _on_output_path_changed(self, *_args) -> None:
+        self._refresh_execute_enabled()
+        self._refresh_local_stage_guidance()
+
+    def _refresh_local_stage_guidance(self) -> None:
+        state = self._screen_model.state
+        self._output_value_label.setText(self._output_text(state))
+        self._readiness_metric_value.setText(self._readiness_state_text(state))
+        self._readiness_summary_label.setText(self._readiness_summary_text(state))
+        self._next_action_label.setText(self._next_action_text(state))
+        self._ready_to_write_label.setText(self._ready_to_write_text(state))
+        self._pre_write_checklist_label.setText(self._pre_write_checklist_text(state))
+        self._review_checklist_label.setText(self._review_checklist_text(state))
+
+    def _set_session_summary_visible(self, visible: bool) -> None:
+        self._session_summary_group.setVisible(visible)
+        if visible:
+            self._splitter.setSizes([1, 2])
+        else:
+            self._splitter.setSizes([0, 1])
+
+    def _set_advanced_ui_visible(self, visible: bool) -> None:
+        self._advanced_resolution_group.setVisible(visible)
+        self._workspace_tabs.setTabVisible(4, visible)
+        self._workspace_tabs.setTabVisible(5, visible)
+        if not visible and self._workspace_tabs.currentIndex() in {4, 5}:
+            self._workspace_tabs.setCurrentIndex(0)
+
+    def _set_custom_session_override_visible(self, visible: bool) -> None:
+        self._manual_session_override_label.setVisible(visible)
+        self._manual_session_override_edit.setVisible(visible)
+        self._apply_manual_session_override_button.setVisible(visible)
 
     def _refresh_metadata_resolution_actions(self, *_args) -> None:
         disagreement = self._selected_disagreement()
         selected_source_item = self._selected_disagreement_source_list.currentItem()
         selected_source = self._selected_disagreement_source()
         self._use_source_value_button.setEnabled(disagreement is not None and selected_source_item is not None)
-        self._manual_session_override_edit.setEnabled(disagreement is not None)
+        custom_override_enabled = disagreement is not None and self._custom_session_override_toggle.isChecked()
+        self._manual_session_override_edit.setEnabled(custom_override_enabled)
         self._apply_manual_session_override_button.setEnabled(
-            disagreement is not None and bool(self._manual_session_override_edit.text().strip())
+            custom_override_enabled and bool(self._manual_session_override_edit.text().strip())
         )
         self._clear_override_button.setEnabled(
             disagreement is not None and disagreement.session_override_value is not None
@@ -810,6 +1261,52 @@ class ConversionSessionWidget(QWidget):
             selected_source is not None and selected_source.override_value is not None
         )
         self._clear_all_field_overrides_button.setEnabled(disagreement is not None)
+
+    @staticmethod
+    def _recommended_resolution_text(disagreement, selected_source) -> str:
+        if disagreement is None:
+            return "Recommended action: select a metadata review item to see the default resolution path."
+        if disagreement.session_override_value is not None:
+            return (
+                "Recommended action: keep the current preferred session value unless you need a different session-wide "
+                f"override. Current preferred session value: {disagreement.session_override_value}."
+            )
+        selected_source_match = (
+            selected_source is not None and selected_source.value == disagreement.resolved_value
+        )
+        if selected_source_match:
+            return (
+                "Recommended action: use the selected source value as the preferred session value. "
+                f"It matches the current resolved value from {disagreement.resolved_origin}."
+            )
+        matching_source = next(
+            (
+                source_value
+                for source_value in disagreement.source_values
+                if source_value.value == disagreement.resolved_value
+            ),
+            None,
+        )
+        if matching_source is not None:
+            return (
+                "Recommended action: select "
+                f"{matching_source.source_label} and use its value as the preferred session value. "
+                f"The current resolved value comes from that {matching_source.role} source."
+            )
+        if disagreement.resolution_status == "source_override":
+            return (
+                "Recommended action: verify whether the current source-specific override should stay scoped to that "
+                "source or be promoted to the preferred session value."
+            )
+        if disagreement.pending_resolution:
+            return (
+                "Recommended action: compare the source values and set a preferred session value before writing NWB. "
+                "No source currently matches the resolved value exactly."
+            )
+        return (
+            "Recommended action: verify the current resolved value, then continue if the field reflects the intended "
+            "session-level metadata."
+        )
 
     def _selected_disagreement(self):
         selected_item = self._disagreement_list.currentItem()
@@ -918,6 +1415,24 @@ class ConversionSessionWidget(QWidget):
     def _diagnostics_summary_text(state: ConversionSessionScreenState) -> str:
         event_count = len(state.progress_history)
         snapshot_count = len(state.snapshot_history)
+        if state.error_message:
+            return (
+                f"{event_count} runtime events | "
+                f"{snapshot_count} saved snapshots | "
+                f"Latest state: error | {state.error_message}"
+            )
+        if state.recovery_message:
+            return (
+                f"{event_count} runtime events | "
+                f"{snapshot_count} saved snapshots | "
+                f"Latest state: recovery | {state.recovery_message}"
+            )
+        if state.review_message and state.review_message.startswith("Recovered "):
+            return (
+                f"{event_count} runtime events | "
+                f"{snapshot_count} saved snapshots | "
+                f"Latest state: recovered review | {state.review_message}"
+            )
         if event_count == 0:
             return "No runtime events captured yet."
         latest_event = state.progress_history[-1]
@@ -937,6 +1452,16 @@ class ConversionSessionWidget(QWidget):
         if filter_value == "Resolved only":
             return tuple(item for item in state.metadata_disagreements if not item.pending_resolution)
         return state.metadata_disagreements
+
+    @staticmethod
+    def _progress_stage_prefix(stage: str) -> str:
+        if stage == "failed":
+            return "Error"
+        if stage == "completed":
+            return "Complete"
+        if stage == "ready_to_write":
+            return "Ready"
+        return "Progress"
 
     def _on_execute_clicked(self) -> None:
         output_text = self._output_path_edit.text().strip()
@@ -975,33 +1500,21 @@ class ConversionSessionWidget(QWidget):
     def _refresh_snapshot_actions(self) -> None:
         self._restore_snapshot_button.setEnabled(self._selected_snapshot_id() is not None)
 
-    def _sync_workspace_tab(self, state: ConversionSessionScreenState) -> None:
-        if state.execution is None:
-            if state.metadata_disagreements:
-                self._workspace_tabs.setCurrentIndex(2)
-                return
-            self._workspace_tabs.setCurrentIndex(0)
-            return
-        if state.validation_issues:
-            self._workspace_tabs.setCurrentIndex(1)
-            return
-        if state.metadata_disagreements:
-            self._workspace_tabs.setCurrentIndex(2)
-            return
-        if state.generated_artifacts:
-            self._workspace_tabs.setCurrentIndex(3)
-            return
-        if state.snapshot_history:
-            self._workspace_tabs.setCurrentIndex(4)
-            return
-        self._workspace_tabs.setCurrentIndex(0)
-
     def _selected_snapshot_id(self) -> str | None:
         item = self._snapshot_history_list.currentItem()
         if item is None:
             return None
         snapshot_id = item.data(Qt.ItemDataRole.UserRole)
         return str(snapshot_id) if snapshot_id else None
+
+    def _selected_snapshot_history_item(self):
+        snapshot_id = self._selected_snapshot_id()
+        if snapshot_id is None:
+            return None
+        for snapshot in self._screen_model.state.snapshot_history:
+            if snapshot.snapshot_id == snapshot_id:
+                return snapshot
+        return None
 
     def _selected_artifact_path(self) -> Path | None:
         item = self._artifact_list.currentItem()
@@ -1034,11 +1547,104 @@ class ConversionSessionWidget(QWidget):
                 return Path(path_text)
         return None
 
+    @classmethod
+    def _metadata_field_display_label(cls, canonical_key: str) -> str:
+        parts = [part for part in canonical_key.split(".") if part]
+        if not parts:
+            return canonical_key
+        if parts[0] == "subject" and len(parts) >= 2:
+            return f"Subject: {cls._humanize_metadata_segment(parts[1])}"
+        if parts[0] == "session" and len(parts) >= 2:
+            if parts[1] == "keywords" and len(parts) >= 3 and parts[2].isdigit():
+                return f"Session: Keywords [{int(parts[2]) + 1}]"
+            return f"Session: {cls._humanize_metadata_segment(parts[1])}"
+        if parts[0] == "devices" and len(parts) >= 3:
+            device_id = parts[1]
+            field_label = " / ".join(cls._humanize_metadata_segment(part) for part in parts[2:])
+            return f"Device {device_id}: {field_label}"
+        if parts[0] == "acquisition_streams" and len(parts) >= 3:
+            stream_id = parts[1]
+            field_label = " / ".join(cls._humanize_metadata_segment(part) for part in parts[2:])
+            return f"Acquisition Stream {stream_id}: {field_label}"
+        if parts[0] == "time_intervals" and len(parts) >= 3:
+            table_id = parts[1]
+            remaining = parts[2:]
+            if len(remaining) >= 3 and remaining[0] == "rows":
+                row_id = remaining[1]
+                field_parts = remaining[2:]
+                field_label = " / ".join(cls._humanize_metadata_segment(part) for part in field_parts)
+                return f"Time Interval {table_id} / Row {row_id}: {field_label}"
+            field_label = " / ".join(cls._humanize_metadata_segment(part) for part in remaining)
+            return f"Time Interval {table_id}: {field_label}"
+        field_label = " / ".join(cls._humanize_metadata_segment(part) for part in parts[1:] or parts)
+        return f"{cls._metadata_field_scope_label(canonical_key)}: {field_label}"
+
+    @staticmethod
+    def _metadata_field_scope_label(canonical_key: str) -> str:
+        parts = [part for part in canonical_key.split(".") if part]
+        if not parts:
+            return "Metadata"
+        scope_map = {
+            "subject": "Subject",
+            "session": "Session",
+            "devices": "Device",
+            "acquisition_streams": "Acquisition Stream",
+            "time_intervals": "Time Interval Table",
+        }
+        return scope_map.get(parts[0], "Additional Metadata")
+
+    @staticmethod
+    def _humanize_metadata_segment(segment: str) -> str:
+        if segment.isdigit():
+            return segment
+        words = segment.replace("_", " ").replace("-", " ").split()
+        return " ".join(word.upper() if word.isupper() else word.capitalize() for word in words)
+
     def _restore_selected_snapshot(self) -> None:
         snapshot_id = self._selected_snapshot_id()
         if snapshot_id is None:
             return
         self._screen_model.restore_snapshot(snapshot_id)
+
+    def _snapshot_delta_summary(self, snapshot) -> str:
+        state = self._screen_model.state
+        current_status = self._current_workspace_status(state)
+        current_artifacts = len(state.generated_artifacts)
+        current_issues = len(state.validation_issues)
+        current_review = state.last_review_submission is not None or state.persisted_review_outcome is not None
+        comparisons: list[str] = []
+        if current_status == snapshot.status:
+            comparisons.append("status matches current workspace")
+        else:
+            comparisons.append(f"status would change from {current_status} to {snapshot.status}")
+        comparisons.append(
+            "artifact count matches current workspace"
+            if current_artifacts == snapshot.artifact_count
+            else f"artifact count would change from {current_artifacts} to {snapshot.artifact_count}"
+        )
+        comparisons.append(
+            "issue count matches current workspace"
+            if current_issues == snapshot.issue_count
+            else f"issue count would change from {current_issues} to {snapshot.issue_count}"
+        )
+        snapshot_review = snapshot.has_review_record
+        if current_review == snapshot_review:
+            comparisons.append("review state matches current workspace")
+        elif snapshot_review:
+            comparisons.append("review state would restore a recorded review")
+        else:
+            comparisons.append("review state would remove the current recorded review")
+        return "Compared with current workspace: " + "; ".join(comparisons) + "."
+
+    @staticmethod
+    def _current_workspace_status(state: ConversionSessionScreenState) -> str:
+        if state.execution is not None:
+            return state.execution.session.status.value
+        if state.preview is not None:
+            return state.preview.session.status.value
+        if state.session is not None:
+            return state.session.status.value
+        return "not_loaded"
 
     def _open_artifact_by_type(self, artifact_type: str) -> None:
         path = self._artifact_path_for_type(artifact_type)

@@ -1,31 +1,29 @@
 """Behavior-category supported adapters."""
 
+from __future__ import annotations
+
 from importlib import import_module
 
-from nwbforge.adapters.supported.behavior.neuroconv import (
-    NeuroConvDeepLabCutAdapter,
-    NeuroConvFicTracAdapter,
-)
+__all__: list[str] = []
 
-__all__ = [
-    "NeuroConvDeepLabCutAdapter",
-    "NeuroConvFicTracAdapter",
-]
+_LAZY_EXPORTS = {
+    "NeuroConvDeepLabCutAdapter": "NeuroConvDeepLabCutAdapter",
+    "NeuroConvFicTracAdapter": "NeuroConvFicTracAdapter",
+    "NeuroConvLightningPoseAdapter": "NeuroConvLightningPoseAdapter",
+    "NeuroConvMedPCAdapter": "NeuroConvMedPCAdapter",
+    "NeuroConvNeuralynxNvtAdapter": "NeuroConvNeuralynxNvtAdapter",
+    "NeuroConvSLEAPAdapter": "NeuroConvSLEAPAdapter",
+}
 
 
-def _try_import_optional(export_name: str) -> None:
+def __getattr__(name: str):
+    export_name = _LAZY_EXPORTS.get(name)
+    if export_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     try:
         module = import_module("nwbforge.adapters.supported.behavior.neuroconv")
-    except ImportError:
-        return
-    adapter_cls = getattr(module, export_name, None)
-    if adapter_cls is None:
-        return
-    globals()[export_name] = adapter_cls
-    __all__.append(export_name)
-
-
-_try_import_optional("NeuroConvLightningPoseAdapter")
-_try_import_optional("NeuroConvMedPCAdapter")
-_try_import_optional("NeuroConvNeuralynxNvtAdapter")
-_try_import_optional("NeuroConvSLEAPAdapter")
+        export = getattr(module, export_name)
+    except (AttributeError, ImportError):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    globals()[export_name] = export
+    return export

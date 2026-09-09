@@ -78,6 +78,10 @@ class ConversionSessionScreenModel:
         )
         return self._set_state(self._recover_state(base_state))
 
+    def restore_state(self, state: ConversionSessionScreenState) -> ConversionSessionScreenState:
+        self._last_completed_preview = state.preview
+        return self._set_state(state)
+
     def clear_session(self) -> ConversionSessionScreenState:
         self._last_completed_preview = None
         return self._set_state(ConversionSessionScreenState())

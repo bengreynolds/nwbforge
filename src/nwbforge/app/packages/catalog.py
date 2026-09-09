@@ -161,6 +161,14 @@ ROUTE_PACKAGE_CATALOG: tuple[RoutePackageSpec, ...] = (
         implemented_in_code=True,
     ),
     RoutePackageSpec(
+        route_name="viewer_rich",
+        display_name="NWB Viewer Rich Preview",
+        extra_name="viewer_rich",
+        description="Optional `nwbwidgets + Panel` support for browser-backed rich preview from the integrated NWB viewer.",
+        required_modules=("nwbwidgets", "panel", "ipython_genutils", "ipykernel", "ipywidgets_bokeh"),
+        implemented_in_code=True,
+    ),
+    RoutePackageSpec(
         route_name="sleap",
         display_name="SLEAP",
         extra_name="sleap",

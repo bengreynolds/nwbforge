@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -50,6 +51,11 @@ class PackageInstallerDialog(QWidget):
         self._route_list = QListWidget(self)
         self._route_list.itemChanged.connect(self._on_route_item_changed)
 
+        self._guidance_label = QLabel(
+            "Use this screen only when a representative dataset or optional viewer capability needs extra support in the dedicated development environment. Most direct-ingest work should start with New Session instead.",
+            self,
+        )
+        self._guidance_label.setWordWrap(True)
         self._status_label = QLabel("Loading package options...", self)
         self._extras_label = QLabel("Resolved extras: none", self)
         self._issues_label = QLabel("No issues.", self)
@@ -67,9 +73,9 @@ class PackageInstallerDialog(QWidget):
             self._header_subtitle_label,
             self._header_badge_label,
         ) = build_page_header(
-            "Install Extensions / Packages",
-            "Choose route-based optional dependencies for the dedicated development environment without reinstalling everything.",
-            badge_text="Route Packages",
+            "Optional Workflow Support",
+            "Add optional route or NWB viewer support for representative datasets in the dedicated development environment without changing the main direct-ingest workflow.",
+            badge_text="Secondary Setup",
             parent=self,
         )
 
@@ -79,11 +85,12 @@ class PackageInstallerDialog(QWidget):
         options_group = QGroupBox("Install Options", self)
         options_group.setLayout(form_layout)
 
-        route_group = QGroupBox("Route Packages", self)
-        route_layout = QVBoxLayout(route_group)
+        self._route_group = QGroupBox("Custom Route Selection", self)
+        route_layout = QVBoxLayout(self._route_group)
+        route_layout.addWidget(self._guidance_label)
         route_layout.addWidget(self._route_list)
 
-        summary_group = QGroupBox("Resolution Summary", self)
+        summary_group = QGroupBox("Support Summary", self)
         summary_layout = QVBoxLayout(summary_group)
         summary_layout.addWidget(self._extras_label)
         summary_layout.addWidget(self._issues_label)
@@ -96,11 +103,20 @@ class PackageInstallerDialog(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(14)
-        layout.addWidget(self._header_frame)
-        layout.addWidget(options_group)
-        layout.addWidget(route_group, stretch=1)
-        layout.addWidget(summary_group)
-        layout.addWidget(buttons)
+        content = QWidget(self)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(14)
+        content_layout.addWidget(self._header_frame)
+        content_layout.addWidget(options_group)
+        content_layout.addWidget(self._route_group, stretch=1)
+        content_layout.addWidget(summary_group)
+        content_layout.addWidget(buttons)
+
+        self._scroll_area = QScrollArea(self)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setWidget(content)
+        layout.addWidget(self._scroll_area)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
@@ -136,6 +152,7 @@ class PackageInstallerDialog(QWidget):
             self._status_label.setText("Loading package options...")
 
         route_list_enabled = state.install_mode is InstallMode.SELECTED and state.install_preset is InstallPreset.CUSTOM
+        self._route_group.setVisible(route_list_enabled)
         self._route_list.setEnabled(route_list_enabled)
         self._preset_combo.setEnabled(state.install_mode is InstallMode.SELECTED)
         self._install_button.setEnabled(state.is_installable and not state.is_install_running)

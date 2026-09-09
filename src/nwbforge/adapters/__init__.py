@@ -1,96 +1,104 @@
 """Adapter layer exports."""
 
+from __future__ import annotations
+
 from importlib import import_module
 
 from nwbforge.adapters.base import AdapterCapabilities, SourceAdapter
 from nwbforge.adapters.custom import CustomJsonSessionAdapter
 from nwbforge.adapters.registry import AdapterRegistry
-from nwbforge.adapters.supported import (
-    NeuroConvCsvTimeIntervalsAdapter,
-    NeuroConvDeepLabCutAdapter,
-    NeuroConvExcelTimeIntervalsAdapter,
-    NeuroConvFicTracAdapter,
-    NeuroConvImageAdapter,
-    SessionManifestAdapter,
-)
+from nwbforge.adapters.supported.session_manifest import SessionManifestAdapter
 
 __all__ = [
     "AdapterCapabilities",
     "AdapterRegistry",
     "CustomJsonSessionAdapter",
-    "NeuroConvCsvTimeIntervalsAdapter",
-    "NeuroConvDeepLabCutAdapter",
-    "NeuroConvExcelTimeIntervalsAdapter",
-    "NeuroConvFicTracAdapter",
-    "NeuroConvImageAdapter",
     "SessionManifestAdapter",
     "SourceAdapter",
 ]
 
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "NeuroConvAudioAdapter": ("nwbforge.adapters.supported", "NeuroConvAudioAdapter"),
+    "NeuroConvVideoAdapter": ("nwbforge.adapters.supported", "NeuroConvVideoAdapter"),
+    "NeuroConvLightningPoseAdapter": ("nwbforge.adapters.supported", "NeuroConvLightningPoseAdapter"),
+    "NeuroConvMedPCAdapter": ("nwbforge.adapters.supported", "NeuroConvMedPCAdapter"),
+    "NeuroConvNeuralynxNvtAdapter": ("nwbforge.adapters.supported", "NeuroConvNeuralynxNvtAdapter"),
+    "NeuroConvSLEAPAdapter": ("nwbforge.adapters.supported", "NeuroConvSLEAPAdapter"),
+    "NeuroConvAlphaOmegaAdapter": ("nwbforge.adapters.supported", "NeuroConvAlphaOmegaAdapter"),
+    "NeuroConvAxonAdapter": ("nwbforge.adapters.supported", "NeuroConvAxonAdapter"),
+    "NeuroConvAxonaAdapter": ("nwbforge.adapters.supported", "NeuroConvAxonaAdapter"),
+    "NeuroConvBiocamAdapter": ("nwbforge.adapters.supported", "NeuroConvBiocamAdapter"),
+    "NeuroConvBlackrockAdapter": ("nwbforge.adapters.supported", "NeuroConvBlackrockAdapter"),
+    "NeuroConvEdfAdapter": ("nwbforge.adapters.supported", "NeuroConvEdfAdapter"),
+    "NeuroConvIntanAdapter": ("nwbforge.adapters.supported", "NeuroConvIntanAdapter"),
+    "NeuroConvMaxOneAdapter": ("nwbforge.adapters.supported", "NeuroConvMaxOneAdapter"),
+    "NeuroConvMCSRawAdapter": ("nwbforge.adapters.supported", "NeuroConvMCSRawAdapter"),
+    "NeuroConvMEArecAdapter": ("nwbforge.adapters.supported", "NeuroConvMEArecAdapter"),
+    "NeuroConvNeuralynxAdapter": ("nwbforge.adapters.supported", "NeuroConvNeuralynxAdapter"),
+    "NeuroConvNeuroScopeAdapter": ("nwbforge.adapters.supported", "NeuroConvNeuroScopeAdapter"),
+    "NeuroConvOpenEphysBinaryAnalogAdapter": ("nwbforge.adapters.supported", "NeuroConvOpenEphysBinaryAnalogAdapter"),
+    "NeuroConvOpenEphysBinaryAdapter": ("nwbforge.adapters.supported", "NeuroConvOpenEphysBinaryAdapter"),
+    "NeuroConvOpenEphysLegacyAdapter": ("nwbforge.adapters.supported", "NeuroConvOpenEphysLegacyAdapter"),
+    "NeuroConvPlexonAdapter": ("nwbforge.adapters.supported", "NeuroConvPlexonAdapter"),
+    "NeuroConvPlexon2Adapter": ("nwbforge.adapters.supported", "NeuroConvPlexon2Adapter"),
+    "NeuroConvSpike2Adapter": ("nwbforge.adapters.supported", "NeuroConvSpike2Adapter"),
+    "NeuroConvSpikeGadgetsAdapter": ("nwbforge.adapters.supported", "NeuroConvSpikeGadgetsAdapter"),
+    "NeuroConvSpikeGLXAdapter": ("nwbforge.adapters.supported", "NeuroConvSpikeGLXAdapter"),
+    "NeuroConvTdtAdapter": ("nwbforge.adapters.supported", "NeuroConvTdtAdapter"),
+    "NeuroConvWhiteMatterAdapter": ("nwbforge.adapters.supported", "NeuroConvWhiteMatterAdapter"),
+    "NeuroConvHdf5ImagingAdapter": ("nwbforge.adapters.supported", "NeuroConvHdf5ImagingAdapter"),
+    "NeuroConvBrukerTiffSinglePlaneAdapter": (
+        "nwbforge.adapters.supported",
+        "NeuroConvBrukerTiffSinglePlaneAdapter",
+    ),
+    "NeuroConvBrukerTiffMultiPlaneAdapter": (
+        "nwbforge.adapters.supported",
+        "NeuroConvBrukerTiffMultiPlaneAdapter",
+    ),
+    "NeuroConvFemtonicsAdapter": ("nwbforge.adapters.supported", "NeuroConvFemtonicsAdapter"),
+    "NeuroConvInscopixAdapter": ("nwbforge.adapters.supported", "NeuroConvInscopixAdapter"),
+    "NeuroConvMicroManagerTiffAdapter": ("nwbforge.adapters.supported", "NeuroConvMicroManagerTiffAdapter"),
+    "NeuroConvMiniscopeAdapter": ("nwbforge.adapters.supported", "NeuroConvMiniscopeAdapter"),
+    "NeuroConvScanboxAdapter": ("nwbforge.adapters.supported", "NeuroConvScanboxAdapter"),
+    "NeuroConvScanImageAdapter": ("nwbforge.adapters.supported", "NeuroConvScanImageAdapter"),
+    "NeuroConvScanImageLegacyAdapter": ("nwbforge.adapters.supported", "NeuroConvScanImageLegacyAdapter"),
+    "NeuroConvTiffImagingAdapter": ("nwbforge.adapters.supported", "NeuroConvTiffImagingAdapter"),
+    "NeuroConvThorAdapter": ("nwbforge.adapters.supported", "NeuroConvThorAdapter"),
+    "NeuroConvCaimanSegmentationAdapter": ("nwbforge.adapters.supported", "NeuroConvCaimanSegmentationAdapter"),
+    "NeuroConvCnmfeSegmentationAdapter": ("nwbforge.adapters.supported", "NeuroConvCnmfeSegmentationAdapter"),
+    "NeuroConvExtractSegmentationAdapter": ("nwbforge.adapters.supported", "NeuroConvExtractSegmentationAdapter"),
+    "NeuroConvInscopixSegmentationAdapter": ("nwbforge.adapters.supported", "NeuroConvInscopixSegmentationAdapter"),
+    "NeuroConvSuite2pSegmentationAdapter": ("nwbforge.adapters.supported", "NeuroConvSuite2pSegmentationAdapter"),
+    "NeuroConvBlackrockSortingAdapter": ("nwbforge.adapters.supported", "NeuroConvBlackrockSortingAdapter"),
+    "NeuroConvCellExplorerSortingAdapter": ("nwbforge.adapters.supported", "NeuroConvCellExplorerSortingAdapter"),
+    "NeuroConvKiloSortSortingAdapter": ("nwbforge.adapters.supported", "NeuroConvKiloSortSortingAdapter"),
+    "NeuroConvNeuralynxSortingAdapter": ("nwbforge.adapters.supported", "NeuroConvNeuralynxSortingAdapter"),
+    "NeuroConvNeuroScopeSortingAdapter": ("nwbforge.adapters.supported", "NeuroConvNeuroScopeSortingAdapter"),
+    "NeuroConvPhySortingAdapter": ("nwbforge.adapters.supported", "NeuroConvPhySortingAdapter"),
+    "NeuroConvPlexonSortingAdapter": ("nwbforge.adapters.supported", "NeuroConvPlexonSortingAdapter"),
+    "NeuroConvTdtFiberPhotometryAdapter": ("nwbforge.adapters.supported", "NeuroConvTdtFiberPhotometryAdapter"),
+    "NeuroConvSpikeGLXPhyWorkflowAdapter": ("nwbforge.adapters.supported", "NeuroConvSpikeGLXPhyWorkflowAdapter"),
+    "NeuroConvTiffSuite2pWorkflowAdapter": ("nwbforge.adapters.supported", "NeuroConvTiffSuite2pWorkflowAdapter"),
+    "NeuroConvOpenEphysDeepLabCutWorkflowAdapter": (
+        "nwbforge.adapters.supported",
+        "NeuroConvOpenEphysDeepLabCutWorkflowAdapter",
+    ),
+    "NeuroConvCsvTimeIntervalsAdapter": ("nwbforge.adapters.supported", "NeuroConvCsvTimeIntervalsAdapter"),
+    "NeuroConvExcelTimeIntervalsAdapter": ("nwbforge.adapters.supported", "NeuroConvExcelTimeIntervalsAdapter"),
+    "NeuroConvFicTracAdapter": ("nwbforge.adapters.supported", "NeuroConvFicTracAdapter"),
+    "NeuroConvDeepLabCutAdapter": ("nwbforge.adapters.supported", "NeuroConvDeepLabCutAdapter"),
+    "NeuroConvImageAdapter": ("nwbforge.adapters.supported", "NeuroConvImageAdapter"),
+}
 
-def _try_import_optional(module_name: str, export_name: str) -> None:
+
+def __getattr__(name: str):
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     try:
-        module = import_module(module_name)
-        export = getattr(module, export_name)
+        module = import_module(target[0])
+        export = getattr(module, target[1])
     except (AttributeError, ImportError):
-        return
-    globals()[export_name] = export
-    __all__.append(export_name)
-
-
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvAudioAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvVideoAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvLightningPoseAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvMedPCAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvNeuralynxNvtAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvSLEAPAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvAlphaOmegaAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvAxonAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvAxonaAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvBiocamAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvBlackrockAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvEdfAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvIntanAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvMaxOneAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvMCSRawAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvMEArecAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvNeuralynxAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvNeuroScopeAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvOpenEphysBinaryAnalogAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvOpenEphysBinaryAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvOpenEphysLegacyAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvPlexonAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvPlexon2Adapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvSpike2Adapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvSpikeGadgetsAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvSpikeGLXAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvTdtAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvWhiteMatterAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvHdf5ImagingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvBrukerTiffSinglePlaneAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvBrukerTiffMultiPlaneAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvFemtonicsAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvInscopixAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvMicroManagerTiffAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvMiniscopeAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvScanboxAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvScanImageAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvScanImageLegacyAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvTiffImagingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvThorAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvCaimanSegmentationAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvCnmfeSegmentationAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvExtractSegmentationAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvInscopixSegmentationAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvSuite2pSegmentationAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvBlackrockSortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvCellExplorerSortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvKiloSortSortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvNeuralynxSortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvNeuroScopeSortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvPhySortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvPlexonSortingAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvTdtFiberPhotometryAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvSpikeGLXPhyWorkflowAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvTiffSuite2pWorkflowAdapter")
-_try_import_optional("nwbforge.adapters.supported", "NeuroConvOpenEphysDeepLabCutWorkflowAdapter")
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    globals()[name] = export
+    return export

@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("neuroconv")
+
 from nwbforge.adapters.base import AdapterCapabilities
 from nwbforge.adapters.registry import AdapterRegistry
 from nwbforge.app.desktop import build_adapter_registry
@@ -23,6 +27,64 @@ class _AlwaysMatchingAdapter:
 
     def inspect(self, source: SourceReference):  # pragma: no cover - not used in this test
         raise NotImplementedError
+
+
+class _WorkflowRouteAdapter:
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(supported_pathways=(ConversionPathway.SUPPORTED,))
+
+    def __init__(self, adapter_id: str, *, source_type: SourceType) -> None:
+        self.adapter_id = adapter_id
+        self.display_name = adapter_id
+        self.source_types = (source_type,)
+
+    def can_handle(self, source: SourceReference) -> bool:
+        return source.adapter_hint == self.adapter_id
+
+    def inspect(self, source: SourceReference):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+
+class _TiffSuite2pWorkflowAdapter:
+    adapter_id = "workflow_tiff_suite2p"
+    display_name = "TIFF + Suite2p Workflow"
+    version = "0.0.0"
+    capabilities = AdapterCapabilities(
+        supported_pathways=(ConversionPathway.SUPPORTED,),
+        supports_multi_source_sessions=True,
+    )
+
+    def can_handle_sources(self, sources: tuple[SourceReference, ...]) -> bool:
+        return self.match_sources(sources) is not None
+
+    def inspect_sources(self, sources: tuple[SourceReference, ...]):  # pragma: no cover - not used in this test
+        raise NotImplementedError
+
+    def match_sources(self, sources: tuple[SourceReference, ...]) -> dict[str, SourceReference] | None:
+        imaging = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_tiff_imaging" and source.role == "primary"
+        ]
+        segmentation = [
+            source
+            for source in sources
+            if source.adapter_hint == "neuroconv_suite2p_segmentation"
+        ]
+        if len(imaging) != 1 or len(segmentation) != 1:
+            return None
+        return {
+            "imaging": imaging[0],
+            "segmentation": segmentation[0],
+        }
+
+
+def _build_workflow_registry() -> AdapterRegistry:
+    registry = AdapterRegistry()
+    registry.register(_WorkflowRouteAdapter("neuroconv_tiff_imaging", source_type=SourceType.DIRECTORY))
+    registry.register(_WorkflowRouteAdapter("neuroconv_suite2p_segmentation", source_type=SourceType.DIRECTORY))
+    registry.register_workflow(_TiffSuite2pWorkflowAdapter())
+    return registry
 
 
 def test_session_assembly_service_builds_supported_manifest_session(tmp_path: Path) -> None:
@@ -402,6 +464,8 @@ def test_session_assembly_service_rejects_obviously_wrong_supported_entry_path(t
 def test_session_assembly_service_validates_thor_entries_as_tiff_files(tmp_path: Path) -> None:
     thor_file = tmp_path / "Image_0001_0001.tif"
     thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
     wrong_dir = tmp_path / "thor"
     wrong_dir.mkdir()
 
@@ -423,6 +487,53 @@ def test_session_assembly_service_validates_thor_entries_as_tiff_files(tmp_path:
     assert intents[str(thor_file.resolve())]["entry_role_label"] == "main imaging file"
     assert rejected_dir
     assert "main imaging file" in rejected_dir[0]
+
+
+def test_session_assembly_service_summarizes_resolved_structured_bundle_members(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (thor_file,),
+        route_name="thor",
+        route_display_name="Thor",
+    )
+    draft = service.assemble_draft(accepted, source_intents=intents)
+    session = service.create_session(draft)
+
+    assert rejected == ()
+    assert draft.sources[0].structured_bundle_member_count == 2
+    assert draft.sources[0].structured_bundle_member_labels == ("Experiment.xml", "Image_0001_0001.tif")
+    assert draft.groups[0].canonical_bundle_member_count == 2
+    assert draft.groups[0].grouping_reason.endswith("with 2 resolved bundle members.")
+    assert session.sources[0].metadata["session_assembly.structured_bundle_member_count"] == "2"
+    assert json.loads(session.sources[0].metadata["session_assembly.structured_bundle_member_labels_json"]) == [
+        "Experiment.xml",
+        "Image_0001_0001.tif",
+    ]
+
+
+def test_session_assembly_service_summarizes_directory_supported_bundle_members(tmp_path: Path) -> None:
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    (image_dir / "frame-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    (image_dir / "frame-02.tif").write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    accepted, intents, rejected = service.validate_supported_selected_paths(
+        (image_dir,),
+        route_name="image",
+        route_display_name="Images",
+    )
+    draft = service.assemble_draft(accepted, source_intents=intents)
+
+    assert rejected == ()
+    assert draft.sources[0].structured_bundle_member_count == 2
+    assert draft.sources[0].structured_bundle_member_labels == ("frame-01.tif", "frame-02.tif")
+    assert draft.groups[0].canonical_bundle_member_count == 2
 
 
 def test_session_assembly_service_filters_bruker_route_matches_with_current_adapter_ids(tmp_path: Path) -> None:
@@ -519,6 +630,35 @@ def test_session_assembly_service_attaches_custom_input_to_single_supported_anch
     assert draft.groups[0].canonical_selection_label == "Session Manifest"
     assert any(issue.code == "session-assembly-custom-context-association" for issue in draft.issues)
 
+    confirmed = service.assemble_draft(
+        (manifest_path, notes_path),
+        source_intents={
+            str(manifest_path.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "session_manifest",
+                "route_display_name": "Session Manifest",
+                "entry_path_kind": "file",
+                "entry_role_label": "manifest file or session directory",
+                "entry_validation_status": "validated",
+            }
+        },
+        confirmed_group_keys=(draft.groups[0].group_key,),
+    )
+    session = service.create_session(confirmed)
+
+    assert session.sources[0].metadata["session_assembly.group_kind"] == "supported_anchor"
+    assert session.sources[0].metadata["session_assembly.group_pathway"] == "hybrid"
+    assert session.sources[0].metadata["session_assembly.group_canonical_source_label"] == "session_manifest.json"
+    assert session.sources[1].metadata["session_assembly.group_canonical_selection_label"] == "Session Manifest"
+    assert json.loads(session.sources[0].metadata["session_assembly.group_member_labels_json"]) == [
+        "session_manifest.json",
+        "notes.txt",
+    ]
+    assert json.loads(session.sources[1].metadata["session_assembly.group_source_ids_json"]) == [
+        manifest_source.source_id,
+        notes_source.source_id,
+    ]
+
 
 def test_session_assembly_service_leaves_custom_input_separate_when_multiple_supported_anchors_exist(
     tmp_path: Path,
@@ -550,3 +690,180 @@ def test_session_assembly_service_leaves_custom_input_separate_when_multiple_sup
     assert notes_source.context_source_id is None
     assert len(draft.groups) == 3
     assert any(issue.code == "session-assembly-ambiguous-custom-context" for issue in draft.issues)
+
+
+def test_session_assembly_service_groups_supported_sources_as_combined_workflow(tmp_path: Path) -> None:
+    imaging_dir = tmp_path / "imaging"
+    imaging_dir.mkdir()
+    (imaging_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    suite2p_dir = tmp_path / "suite2p"
+    suite2p_dir.mkdir()
+
+    service = SessionAssemblyService(_build_workflow_registry())
+    draft = service.assemble_draft(
+        (imaging_dir, suite2p_dir),
+        source_intents={
+            str(imaging_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "tiff",
+                "route_display_name": "TIFF Imaging",
+            },
+            str(suite2p_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "suite2p",
+                "route_display_name": "Suite2p",
+            },
+        },
+    )
+    confirmed = service.assemble_draft(
+        (imaging_dir, suite2p_dir),
+        source_intents={
+            str(imaging_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "tiff",
+                "route_display_name": "TIFF Imaging",
+            },
+            str(suite2p_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "suite2p",
+                "route_display_name": "Suite2p",
+            },
+        },
+        confirmed_group_keys=(draft.groups[0].group_key,),
+    )
+    session = service.create_session(confirmed)
+
+    assert len(draft.groups) == 1
+    assert draft.groups[0].group_kind == "workflow_bundle"
+    assert draft.groups[0].workflow_adapter_id == "workflow_tiff_suite2p"
+    assert draft.groups[0].workflow_display_name == "TIFF + Suite2p Workflow"
+    assert "combined NeuroConv workflow" in draft.groups[0].grouping_reason
+    assert {source.workflow_display_name for source in draft.sources} == {"TIFF + Suite2p Workflow"}
+    assert session.sources[0].metadata["session_assembly.group_kind"] == "workflow_bundle"
+    assert session.sources[0].metadata["session_assembly.group_pathway"] == "supported"
+    assert "combined NeuroConv workflow" in session.sources[0].metadata["session_assembly.grouping_reason"]
+    assert json.loads(session.sources[0].metadata["session_assembly.group_member_labels_json"]) == [
+        "imaging",
+        "suite2p",
+    ]
+    assert json.loads(session.sources[1].metadata["session_assembly.group_source_ids_json"]) == [
+        draft.sources[0].source_id,
+        draft.sources[1].source_id,
+    ]
+    assert session.sources[0].metadata["session_assembly.workflow_adapter_id"] == "workflow_tiff_suite2p"
+    assert session.sources[1].metadata["session_assembly.workflow_display_name"] == "TIFF + Suite2p Workflow"
+
+
+def test_session_assembly_service_warns_on_heterogeneous_custom_folder_group(tmp_path: Path) -> None:
+    table_path = tmp_path / "behavior.csv"
+    table_path.write_text("time,value\n0,1\n", encoding="utf-8")
+    video_path = tmp_path / "behavior.mp4"
+    video_path.write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft((table_path, video_path))
+
+    assert len(draft.groups) == 1
+    assert any(issue.code == "session-assembly-ambiguous-custom-bundle" for issue in draft.issues)
+
+
+def test_session_assembly_service_preserves_project_origin_in_created_session(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "session_manifest.json"
+    manifest_path.write_text(json.dumps({"session": {"session_id": "supported-01"}}), encoding="utf-8")
+    project_path = tmp_path / "projects" / "saved-project.nwbforge-project.json"
+    project_path.parent.mkdir()
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft((manifest_path,), project_path=project_path)
+    session = service.create_session(draft)
+
+    assert session.sources[0].metadata["session_assembly.project_path"] == str(project_path.resolve())
+    assert session.sources[0].metadata["session_assembly.project_name"] == "saved-project.nwbforge-project.json"
+
+
+def test_session_assembly_service_attaches_custom_input_to_matched_workflow_group(tmp_path: Path) -> None:
+    imaging_dir = tmp_path / "imaging"
+    imaging_dir.mkdir()
+    (imaging_dir / "plane-01.tif").write_text("binary-placeholder", encoding="utf-8")
+    suite2p_dir = tmp_path / "suite2p"
+    suite2p_dir.mkdir()
+    notes_path = tmp_path / "notes.txt"
+    notes_path.write_text("operator notes", encoding="utf-8")
+
+    service = SessionAssemblyService(_build_workflow_registry())
+    draft = service.assemble_draft(
+        (imaging_dir, suite2p_dir, notes_path),
+        source_intents={
+            str(imaging_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "tiff",
+                "route_display_name": "TIFF Imaging",
+            },
+            str(suite2p_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "suite2p",
+                "route_display_name": "Suite2p",
+            },
+        },
+    )
+
+    notes_source = next(source for source in draft.sources if source.location == notes_path.resolve())
+
+    assert len(draft.groups) == 1
+    assert notes_source.context_label == "TIFF + Suite2p Workflow"
+    assert draft.groups[0].workflow_display_name == "TIFF + Suite2p Workflow"
+    assert "supplemental or custom inputs attached for review" in draft.groups[0].grouping_reason
+
+
+def test_session_assembly_service_absorbs_selected_thor_bundle_member(tmp_path: Path) -> None:
+    thor_file = tmp_path / "Image_0001_0001.tif"
+    thor_file.write_text("binary-placeholder", encoding="utf-8")
+    experiment_xml = tmp_path / "Experiment.xml"
+    experiment_xml.write_text("<Experiment />", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (thor_file, experiment_xml),
+        source_intents={
+            str(thor_file.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "thor",
+                "route_display_name": "Thor",
+                "entry_path_kind": "file",
+                "entry_role_label": "main imaging file",
+                "entry_validation_status": "validated",
+            }
+        },
+    )
+
+    assert len(draft.sources) == 1
+    assert draft.sources[0].location == thor_file.resolve()
+    assert draft.sources[0].structured_bundle_member_count == 2
+    assert any(issue.code == "session-assembly-structured-member-absorbed" for issue in draft.issues)
+
+
+def test_session_assembly_service_absorbs_selected_file_inside_supported_directory_bundle(tmp_path: Path) -> None:
+    image_dir = tmp_path / "images"
+    image_dir.mkdir()
+    image_file = image_dir / "frame-01.tif"
+    image_file.write_text("binary-placeholder", encoding="utf-8")
+
+    service = SessionAssemblyService(build_adapter_registry())
+    draft = service.assemble_draft(
+        (image_dir, image_file),
+        source_intents={
+            str(image_dir.resolve()): {
+                "ingest_kind": "supported",
+                "route_name": "image",
+                "route_display_name": "Image",
+                "entry_path_kind": "directory",
+                "entry_role_label": "image file or root directory",
+                "entry_validation_status": "validated",
+            }
+        },
+    )
+
+    assert len(draft.sources) == 1
+    assert draft.sources[0].location == image_dir.resolve()
+    assert draft.groups[0].canonical_bundle_member_count == 1
+    assert any(issue.code == "session-assembly-structured-member-absorbed" for issue in draft.issues)

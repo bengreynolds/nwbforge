@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+from types import ModuleType
 
 from pynwb import NWBHDF5IO, NWBFile, TimeSeries
 from pynwb.behavior import Position, SpatialSeries
@@ -97,11 +98,28 @@ def test_nwbwidgets_panel_renderer_reports_missing_optional_packages(tmp_path: P
     controller.open_file(nwb_path)
     renderer = NwbWidgetsPanelRenderer()
 
-    status = renderer.status_for_node(controller.root_nodes[0])
+    def fake_import_modules_without_user_site(*module_names: str, purge_prefixes=()):
+        if module_names == ("hdmf.utils",):
+            return (ModuleType("hdmf.utils"),)
+        del purge_prefixes
+        raise ModuleNotFoundError(",".join(module_names))
+
+    from pytest import MonkeyPatch
+
+    monkeypatch = MonkeyPatch()
+    monkeypatch.setattr(
+        "nwbforge.app.services.nwb_viewer_rich.import_modules_without_user_site",
+        fake_import_modules_without_user_site,
+    )
+    try:
+        status = renderer.status_for_node(controller.root_nodes[0])
+    finally:
+        monkeypatch.undo()
 
     assert status.renderer_name == "nwbwidgets-panel"
     assert status.is_available is False
     assert status.is_supported is False
+    assert "viewer_rich" in status.message
     assert "nwbwidgets" in status.message
 
 
@@ -149,14 +167,25 @@ def test_nwbwidgets_panel_renderer_launches_with_fake_modules(tmp_path: Path, mo
         def nwb2widget(self, value):
             return {"node_type": type(value).__name__}
 
-    def fake_import_module(name: str):
-        if name == "panel":
-            return FakePanelModule()
-        if name == "nwbwidgets":
-            return FakeNwbWidgetsModule()
-        raise ModuleNotFoundError(name)
+    def fake_import_modules_without_user_site(*module_names: str, purge_prefixes=()):
+        if module_names == ("hdmf.utils",):
+            return (ModuleType("hdmf.utils"),)
+        del purge_prefixes
+        resolved = []
+        for name in module_names:
+            if name == "panel":
+                resolved.append(FakePanelModule())
+                continue
+            if name == "nwbwidgets":
+                resolved.append(FakeNwbWidgetsModule())
+                continue
+            raise ModuleNotFoundError(name)
+        return tuple(resolved)
 
-    monkeypatch.setattr("nwbforge.app.services.nwb_viewer_rich.importlib.import_module", fake_import_module)
+    monkeypatch.setattr(
+        "nwbforge.app.services.nwb_viewer_rich.import_modules_without_user_site",
+        fake_import_modules_without_user_site,
+    )
     monkeypatch.setattr("nwbforge.app.services.nwb_viewer_rich.webbrowser.open_new_tab", opened_urls.append)
 
     renderer = NwbWidgetsPanelRenderer()
@@ -169,3 +198,128 @@ def test_nwbwidgets_panel_renderer_launches_with_fake_modules(tmp_path: Path, mo
 
     renderer.close()
     assert fake_server.stopped is True
+
+
+def test_nwbwidgets_panel_renderer_resolves_threaded_panel_server_url(tmp_path: Path, monkeypatch) -> None:
+    nwb_path = write_example_nwb_file(tmp_path)
+    controller = NwbFileController()
+    controller.open_file(nwb_path)
+    node = controller.node_for_path("/acquisition/raw_trace")
+
+    opened_urls: list[str] = []
+
+    class FakeThreadServer:
+        def __init__(self) -> None:
+            self.server_id = "threaded-server"
+            self.stopped = False
+
+        def stop(self) -> None:
+            self.stopped = True
+
+    class FakeResolvedServer:
+        address = None
+        port = 65078
+
+    fake_thread_server = FakeThreadServer()
+    fake_panel_calls: dict[str, object] = {}
+
+    class FakePanelModule:
+        def __init__(self) -> None:
+            self.state = type(
+                "FakePanelState",
+                (),
+                {"_servers": {"threaded-server": (FakeResolvedServer(), object(), [])}},
+            )()
+
+        def extension(self, *args):
+            fake_panel_calls["extension_args"] = args
+
+        def panel(self, widget):
+            fake_panel_calls["widget"] = widget
+            return {"wrapped": widget}
+
+        def serve(self, panel_view, *, title, show, start, threaded, port):
+            fake_panel_calls["serve"] = {
+                "panel_view": panel_view,
+                "title": title,
+                "show": show,
+                "start": start,
+                "threaded": threaded,
+                "port": port,
+            }
+            return fake_thread_server
+
+    class FakeNwbWidgetsModule:
+        def nwb2widget(self, value):
+            return {"node_type": type(value).__name__}
+
+    def fake_import_modules_without_user_site(*module_names: str, purge_prefixes=()):
+        if module_names == ("hdmf.utils",):
+            return (ModuleType("hdmf.utils"),)
+        del purge_prefixes
+        resolved = []
+        for name in module_names:
+            if name == "panel":
+                resolved.append(FakePanelModule())
+                continue
+            if name == "nwbwidgets":
+                resolved.append(FakeNwbWidgetsModule())
+                continue
+            raise ModuleNotFoundError(name)
+        return tuple(resolved)
+
+    monkeypatch.setattr(
+        "nwbforge.app.services.nwb_viewer_rich.import_modules_without_user_site",
+        fake_import_modules_without_user_site,
+    )
+    monkeypatch.setattr("nwbforge.app.services.nwb_viewer_rich.webbrowser.open_new_tab", opened_urls.append)
+
+    renderer = NwbWidgetsPanelRenderer()
+    session = renderer.launch_for_node(node)
+
+    assert session.url == "http://127.0.0.1:65078/"
+    assert opened_urls == ["http://127.0.0.1:65078/"]
+
+    renderer.close()
+    assert fake_thread_server.stopped is True
+
+
+def test_nwbwidgets_panel_renderer_checks_optional_modules_with_isolated_imports(monkeypatch) -> None:
+    seen_calls: list[tuple[str, ...]] = []
+
+    def fake_import_modules_without_user_site(*module_names: str, purge_prefixes=()):
+        seen_calls.append(module_names)
+        if module_names == ("hdmf.utils",):
+            assert purge_prefixes == ("hdmf", "pynwb")
+            return (ModuleType("hdmf.utils"),)
+        assert purge_prefixes == ("panel", "nwbwidgets", "ndx_icephys_meta", "hdmf", "pynwb")
+        return (object(), object())
+
+    monkeypatch.setattr(
+        "nwbforge.app.services.nwb_viewer_rich.import_modules_without_user_site",
+        fake_import_modules_without_user_site,
+    )
+
+    assert NwbWidgetsPanelRenderer._is_available() is True
+    assert seen_calls == [("hdmf.utils",), ("panel", "nwbwidgets")]
+
+
+def test_nwbwidgets_panel_renderer_adds_hdmf_docval_compat_symbols(monkeypatch) -> None:
+    fake_hdmf_utils = ModuleType("hdmf.utils")
+
+    def fake_import_modules_without_user_site(*module_names: str, purge_prefixes=()):
+        del purge_prefixes
+        if module_names == ("hdmf.utils",):
+            return (fake_hdmf_utils,)
+        if module_names == ("panel", "nwbwidgets"):
+            return (object(), object())
+        raise ModuleNotFoundError(",".join(module_names))
+
+    monkeypatch.setattr(
+        "nwbforge.app.services.nwb_viewer_rich.import_modules_without_user_site",
+        fake_import_modules_without_user_site,
+    )
+
+    assert NwbWidgetsPanelRenderer._is_available() is True
+    assert hasattr(fake_hdmf_utils, "call_docval_func")
+    assert hasattr(fake_hdmf_utils, "fmt_docval_args")

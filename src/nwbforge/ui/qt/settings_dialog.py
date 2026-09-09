@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -105,11 +106,21 @@ class SettingsDialog(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(14)
-        layout.addWidget(self._header_frame)
-        layout.addWidget(logging_group)
-        layout.addWidget(recovery_group)
-        layout.addWidget(self._status_label)
-        layout.addWidget(button_widget)
+        content = QWidget(self)
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(14)
+        content_layout.addWidget(self._header_frame)
+        content_layout.addWidget(logging_group)
+        content_layout.addWidget(recovery_group)
+        content_layout.addWidget(self._status_label)
+        content_layout.addWidget(button_widget)
+        content_layout.addStretch(1)
+
+        self._scroll_area = QScrollArea(self)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setWidget(content)
+        layout.addWidget(self._scroll_area)
 
         self._bridge = StateBridge(self)
         self._bridge.state_changed.connect(self._apply_state)
