@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from string import Template
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
@@ -10,21 +12,83 @@ from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QVBoxLa
 #: supported and are silently ignored, so emphasis here is carried by weight,
 #: size and colour only; anything that needs to read as a caption is cased in
 #: Python instead.
-_NWB_FORGE_STYLESHEET = """
+#: Role-based design tokens. Names describe the job a value does, not what
+#: it looks like, so a theme change is one edit here rather than a hunt
+#: through the sheet. Collapsed from 72 raw literals that had accumulated
+#: five near-identical off-whites and seven near-identical borders -
+#: differences nobody chose, which simply drifted in over time.
+_COLOR = {
+    "surface_page": "#f4f1ea",
+    "surface": "#fcfaf6",
+    "surface_raised": "#fffdf9",
+    "surface_sunken": "#ede8df",
+    "surface_subtle": "#f7f4ee",
+    "surface_alt": "#f6f2ea",
+    "surface_tab": "#ebe4d7",
+    "outline": "#d9d0c2",
+    "outline_strong": "#c7bdae",
+    "outline_stronger": "#ab9f8c",
+    "text": "#1e2a2d",
+    "text_heading": "#17333a",
+    "text_muted": "#4e5d61",
+    "text_subtle": "#607072",
+    "interactive": "#1f5c64",
+    "interactive_hover": "#17484f",
+    "interactive_pressed": "#123940",
+    "on_interactive": "#f7fbfa",
+    "accent_surface": "#e7f0ec",
+    "accent_surface_hover": "#d7e4de",
+    "accent_outline": "#a9c2b7",
+    "accent_text": "#46655f",
+    "disabled_surface": "#ddd8ce",
+    "disabled_text": "#575c58",
+    "state_done_bg": "#dcebe4",
+    "state_done_fg": "#1c4f43",
+    "state_done_outline": "#a9c8ba",
+    "state_active_bg": "#f6e8cd",
+    "state_active_fg": "#6d4d12",
+    "state_active_outline": "#ddbf82",
+    "state_active_dot": "#d8a24a",
+    "state_active_dot_outline": "#b98526",
+    "state_idle_bg": "#ece6da",
+    "progress_fill": "#2f7a72",
+    "danger": "#8b4a43",
+    "danger_hover": "#733a34",
+    "selection_bg": "#b9d3c6",
+}
+
+#: Modular scale, base 14px, minor third (1.2): 12 / 14 / 17 / 20 / 24.
+#: Five derived steps replacing seven arbitrary sizes. Base is 14 rather
+#: than the 16 a web target would take - this is a dense Windows desktop
+#: tool in a fixed window, where native body text sits nearer 12px. Change
+#: t_body to rescale the whole sheet.
+_TYPE = {
+    "t_caption": "12",
+    "t_body": "14",
+    "t_section": "17",
+    "t_value": "20",
+    "t_title": "24",
+}
+
+#: QSS has no variables and str.format would collide with CSS braces,
+#: so substitution is string.Template - '$' never appears in QSS.
+_TOKENS = {**_COLOR, **_TYPE}
+
+_NWB_FORGE_STYLESHEET = Template("""
 QWidget {
-    background: #f4f1ea;
-    color: #1e2a2d;
+    background: ${surface_page};
+    color: ${text};
     /* Named explicitly rather than inherited. Qt's default on Windows falls
        back through a stack that can land on MS Shell Dlg 2, which renders a
        full step smaller and without the hinting the rest of the desktop
        gets. */
     font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-    font-size: 13px;
+    font-size: ${t_body}px;
 }
 
 /* The rule above paints EVERY widget opaque in the page colour, including
    labels and the plain QWidgets used as layout rows. Sat inside a group box
-   (#fcfaf6) or a card (#fffdf9) those repaint the page colour behind their own
+   (${surface}) or a card (${surface_raised}) those repaint the page colour behind their own
    text, which is the mismatched band showing behind every line on the
    conversion screen.
 
@@ -44,12 +108,12 @@ QWidget[role="stepCell"] {
 }
 
 QMainWindow, QDialog {
-    background: #ede8df;
+    background: ${surface_sunken};
 }
 
 QMenuBar {
-    background: #f7f4ee;
-    border-bottom: 1px solid #d6cec0;
+    background: ${surface_subtle};
+    border-bottom: 1px solid ${outline};
     padding: 4px 8px;
 }
 
@@ -61,12 +125,12 @@ QMenuBar::item {
 
 QMenuBar::item:selected,
 QMenu::item:selected {
-    background: #d9e7e0;
+    background: ${accent_surface};
 }
 
 QMenu {
-    background: #fffdf8;
-    border: 1px solid #d6cec0;
+    background: ${surface_raised};
+    border: 1px solid ${outline};
     padding: 6px;
 }
 
@@ -76,13 +140,13 @@ QMenu::item {
 }
 
 QStatusBar {
-    background: #f7f4ee;
-    border-top: 1px solid #d6cec0;
+    background: ${surface_subtle};
+    border-top: 1px solid ${outline};
 }
 
 QGroupBox {
-    background: #fcfaf6;
-    border: 1px solid #d9d0c2;
+    background: ${surface};
+    border: 1px solid ${outline};
     border-radius: 12px;
     margin-top: 14px;
     padding: 16px 14px 14px 14px;
@@ -93,81 +157,81 @@ QGroupBox::title {
     subcontrol-origin: margin;
     left: 12px;
     padding: 0 8px;
-    color: #47605f;
+    color: ${text_muted};
 }
 
 QLabel[role="pageTitle"] {
-    font-size: 24px;
+    font-size: ${t_title}px;
     font-weight: 700;
-    color: #17333a;
+    color: ${text_heading};
 }
 
 QLabel[role="sectionTitle"] {
-    font-size: 16px;
+    font-size: ${t_section}px;
     font-weight: 700;
-    color: #234248;
+    color: ${text_heading};
 }
 
 /* 4.71:1 against the page previously, which clears AA by a hair and fails it
    outright once a display is dimmed. Darkened to ~6:1 so subtitles and helper
    text stay legible without becoming a second body colour. */
 QLabel[role="muted"] {
-    color: #4e5d61;
+    color: ${text_muted};
 }
 
 QLabel[role="badge"] {
-    background: #1f5c64;
-    color: #f8fffd;
+    background: ${interactive};
+    color: ${on_interactive};
     border-radius: 12px;
     padding: 5px 10px;
-    font-size: 11px;
+    font-size: ${t_caption}px;
     font-weight: 700;
 }
 
 QLabel[role="cardLabel"] {
-    color: #607072;
-    font-size: 11px;
+    color: ${text_subtle};
+    font-size: ${t_caption}px;
     font-weight: 700;
 }
 
 QLabel[role="cardValue"] {
-    color: #18353a;
-    font-size: 18px;
+    color: ${text_heading};
+    font-size: ${t_value}px;
     font-weight: 700;
 }
 
 QFrame[role="headerCard"] {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 1, y2: 1,
-        stop: 0 #fbf8f2,
-        stop: 1 #efe6d8
+        stop: 0 ${surface_raised},
+        stop: 1 ${surface_sunken}
     );
-    border: 1px solid #d9d0c2;
+    border: 1px solid ${outline};
     border-radius: 16px;
 }
 
 QFrame[role="metricCard"] {
-    background: #fffdf9;
-    border: 1px solid #ddd4c5;
+    background: ${surface_raised};
+    border: 1px solid ${outline};
     border-radius: 12px;
 }
 
 QFrame[role="metricCard"][accent="true"] {
-    background: #e7f0ec;
-    border: 1px solid #a9c2b7;
+    background: ${accent_surface};
+    border: 1px solid ${accent_outline};
 }
 
 QLineEdit, QPlainTextEdit, QListWidget, QTreeWidget, QTableWidget, QComboBox {
-    background: #fffdfa;
-    border: 1px solid #d1c7b8;
+    background: ${surface_raised};
+    border: 1px solid ${outline};
     border-radius: 10px;
     padding: 7px 9px;
-    selection-background-color: #b9d3c6;
-    selection-color: #17333a;
+    selection-background-color: ${selection_bg};
+    selection-color: ${text_heading};
 }
 
 QListWidget, QTreeWidget, QTableWidget {
-    alternate-background-color: #f6f2ea;
+    alternate-background-color: ${surface_alt};
 }
 
 QListWidget::item,
@@ -177,32 +241,32 @@ QTreeWidget::item {
 }
 
 QTabWidget::pane {
-    border: 1px solid #d9d0c2;
+    border: 1px solid ${outline};
     border-radius: 12px;
-    background: #fcfaf6;
+    background: ${surface};
     top: -1px;
 }
 
 QTabBar::tab {
-    background: #ebe4d7;
-    border: 1px solid #d5cbbd;
+    background: ${surface_tab};
+    border: 1px solid ${outline};
     border-bottom: none;
     padding: 8px 14px;
     margin-right: 4px;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-    color: #556769;
+    color: ${text_subtle};
     font-weight: 600;
 }
 
 QTabBar::tab:selected {
-    background: #fcfaf6;
-    color: #17333a;
+    background: ${surface};
+    color: ${text_heading};
 }
 
 QPushButton {
-    background: #1f5c64;
-    color: #f7fbfa;
+    background: ${interactive};
+    color: ${on_interactive};
     border: none;
     border-radius: 10px;
     padding: 8px 14px;
@@ -210,80 +274,80 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background: #17484f;
+    background: ${interactive_hover};
 }
 
 QPushButton:pressed {
-    background: #123940;
+    background: ${interactive_pressed};
 }
 
-/* Was #eef2f2 on #c0c8c8: a contrast ratio of 1.51:1, which is not a dim
+/* Was ${disabled_text} on ${disabled_surface}: a contrast ratio of 1.51:1, which is not a dim
    label but an unreadable one - and this app disables its primary action
    constantly, because "Write NWB" stays blocked until the pre-write checklist
    clears. The label naming the blocked action has to stay readable, so this is
    now a recessed surface with real text on it rather than white-on-grey. */
 QPushButton:disabled {
-    background: #ddd8ce;
-    color: #575c58;
-    border: 1px solid #cdc6b9;
+    background: ${disabled_surface};
+    color: ${disabled_text};
+    border: 1px solid ${outline};
 }
 
 QPushButton[secondary="true"] {
-    background: #e6ece8;
-    color: #1e3538;
-    border: 1px solid #bfd0c8;
+    background: ${accent_surface};
+    color: ${text_heading};
+    border: 1px solid ${accent_outline};
 }
 
 QPushButton[secondary="true"]:hover {
-    background: #d7e4de;
+    background: ${accent_surface_hover};
 }
 
 QPushButton[danger="true"] {
-    background: #8b4a43;
+    background: ${danger};
 }
 
 QPushButton[danger="true"]:hover {
-    background: #733a34;
+    background: ${danger_hover};
 }
 
 QProgressBar {
     min-width: 180px;
-    background: #e7dfd2;
-    border: 1px solid #cfc3b1;
+    background: ${surface_tab};
+    border: 1px solid ${outline};
     border-radius: 10px;
     text-align: center;
-    color: #17333a;
+    color: ${text_heading};
 }
 
 QProgressBar::chunk {
-    background: #2f7a72;
+    background: ${progress_fill};
     border-radius: 9px;
 }
 
 QDockWidget {
-    color: #17333a;
+    color: ${text_heading};
 }
 
 QDockWidget::title {
-    background: #f7f4ee;
-    border-bottom: 1px solid #d6cec0;
+    background: ${surface_subtle};
+    border-bottom: 1px solid ${outline};
     padding: 8px 10px;
     text-align: left;
     font-weight: 700;
 }
 
 QHeaderView::section {
-    background: #efe8dc;
-    color: #35545a;
+    background: ${surface_subtle};
+    color: ${text_muted};
     padding: 6px;
     border: none;
-    border-right: 1px solid #d9d0c2;
-    border-bottom: 1px solid #d9d0c2;
+    border-right: 1px solid ${outline};
+    border-bottom: 1px solid ${outline};
     font-weight: 700;
 }
 
 QSplitter::handle {
-    background: #ddd4c5;
+    background: ${outline};
     width: 3px;
     height: 3px;
 }
@@ -291,50 +355,50 @@ QSplitter::handle {
 /* ---- step bar ---------------------------------------------------------- */
 
 QFrame[role="stepBar"] {
-    background: #fffdf9;
-    border: 1px solid #ddd4c5;
+    background: ${surface_raised};
+    border: 1px solid ${outline};
     border-radius: 12px;
 }
 
 QLabel[role="stepNumber"] {
     border-radius: 12px;
-    font-size: 12px;
+    font-size: ${t_caption}px;
     font-weight: 700;
-    background: #e7e1d6;
-    color: #6b736f;
-    border: 1px solid #d3cabc;
+    background: ${surface_tab};
+    color: ${text_subtle};
+    border: 1px solid ${outline};
 }
 
 QLabel[role="stepNumber"][state="done"] {
-    background: #1f5c64;
-    color: #f7fbfa;
-    border: 1px solid #1f5c64;
+    background: ${interactive};
+    color: ${on_interactive};
+    border: 1px solid ${interactive};
 }
 
 QLabel[role="stepNumber"][state="current"] {
-    background: #fffdf9;
-    color: #17333a;
-    border: 2px solid #1f5c64;
+    background: ${surface_raised};
+    color: ${text_heading};
+    border: 2px solid ${interactive};
 }
 
 QLabel[role="stepCaption"] {
-    font-size: 12px;
-    color: #6b736f;
+    font-size: ${t_caption}px;
+    color: ${text_subtle};
 }
 
 QLabel[role="stepCaption"][state="done"] {
-    color: #2c4a4a;
+    color: ${text};
 }
 
 /* The only step rendered at full strength, so the eye lands on "you are here"
    before it reads any of the words. */
 QLabel[role="stepCaption"][state="current"] {
-    color: #17333a;
+    color: ${text_heading};
     font-weight: 700;
 }
 
 QLabel[role="stepConnector"] {
-    background: #ddd4c5;
+    background: ${outline};
     max-height: 1px;
     min-height: 1px;
     margin: 0 10px;
@@ -345,31 +409,31 @@ QLabel[role="stepConnector"] {
 /* One card carrying the single thing to do next, replacing three sentences
    that each restated it. */
 QFrame[role="actionCard"] {
-    background: #eef4f1;
-    border: 1px solid #b8cfc6;
+    background: ${accent_surface};
+    border: 1px solid ${accent_outline};
     border-radius: 12px;
 }
 
 QLabel[role="actionEyebrow"] {
-    color: #46655f;
-    font-size: 11px;
+    color: ${accent_text};
+    font-size: ${t_caption}px;
     font-weight: 700;
 }
 
 QLabel[role="actionTitle"] {
-    color: #17333a;
-    font-size: 17px;
+    color: ${text_heading};
+    font-size: ${t_section}px;
     font-weight: 700;
 }
 
 QLabel[role="actionDetail"] {
-    color: #40534f;
+    color: ${text_muted};
 }
 
 /* ---- checklist --------------------------------------------------------- */
 
 QLabel[role="checkName"] {
-    color: #26383b;
+    color: ${text};
 }
 
 /* A filled dot for done, a hollow ring for everything outstanding: the shape
@@ -377,46 +441,46 @@ QLabel[role="checkName"] {
    relying on the pill's tint. */
 QLabel[role="checkMarker"] {
     border-radius: 7px;
-    background: #fffdf9;
-    border: 2px solid #c3bbab;
+    background: ${surface_raised};
+    border: 2px solid ${outline_strong};
 }
 
 QLabel[role="checkMarker"][state="done"] {
-    background: #1f5c64;
-    border: 2px solid #1f5c64;
+    background: ${interactive};
+    border: 2px solid ${interactive};
 }
 
 QLabel[role="checkMarker"][state="active"] {
-    background: #d8a24a;
-    border: 2px solid #b98526;
+    background: ${state_active_dot};
+    border: 2px solid ${state_active_dot_outline};
 }
 
 QLabel[role="statePill"] {
     border-radius: 9px;
     padding: 2px 9px;
-    font-size: 11px;
+    font-size: ${t_caption}px;
     font-weight: 700;
-    background: #ece6da;
-    color: #575c58;
-    border: 1px solid #d5cbbd;
+    background: ${state_idle_bg};
+    color: ${disabled_text};
+    border: 1px solid ${outline};
 }
 
 QLabel[role="statePill"][state="done"] {
-    background: #dcebe4;
-    color: #1c4f43;
-    border: 1px solid #a9c8ba;
+    background: ${state_done_bg};
+    color: ${state_done_fg};
+    border: 1px solid ${state_done_outline};
 }
 
 QLabel[role="statePill"][state="active"] {
-    background: #f6e8cd;
-    color: #6d4d12;
-    border: 1px solid #ddbf82;
+    background: ${state_active_bg};
+    color: ${state_active_fg};
+    border: 1px solid ${state_active_outline};
 }
 
 QLabel[role="statePill"][state="waiting"] {
-    background: #ece6da;
-    color: #5d5a52;
-    border: 1px solid #d5cbbd;
+    background: ${state_idle_bg};
+    color: ${text_subtle};
+    border: 1px solid ${outline};
 }
 
 /* ---- keyboard focus --------------------------------------------------- */
@@ -432,25 +496,25 @@ QListWidget:focus,
 QTreeWidget:focus,
 QTableWidget:focus,
 QAbstractSpinBox:focus {
-    border: 2px solid #1f5c64;
+    border: 2px solid ${interactive};
     /* Padding drops by the extra border pixel so the control does not grow
        and nudge the layout when it takes focus. */
     padding: 6px 8px;
 }
 
 QPushButton:focus {
-    border: 2px solid #17333a;
+    border: 2px solid ${text_heading};
     padding: 7px 13px;
 }
 
 QTabBar::tab:focus {
-    background: #f3ede1;
-    color: #17333a;
+    background: ${surface_alt};
+    color: ${text_heading};
 }
 
 QCheckBox:focus,
 QRadioButton:focus {
-    color: #17333a;
+    color: ${text_heading};
 }
 
 /* ---- scrollbars -------------------------------------------------------- */
@@ -472,7 +536,7 @@ QScrollBar:horizontal {
 
 QScrollBar::handle:vertical,
 QScrollBar::handle:horizontal {
-    background: #c7bdae;
+    background: ${outline_strong};
     border-radius: 4px;
 }
 
@@ -485,7 +549,7 @@ QScrollBar::handle:horizontal {
 }
 
 QScrollBar::handle:hover {
-    background: #ab9f8c;
+    background: ${outline_stronger};
 }
 
 /* The stepper buttons and the track either side of the handle. Hidden rather
@@ -503,7 +567,7 @@ QScrollBar::add-page,
 QScrollBar::sub-page {
     background: none;
 }
-"""
+""").substitute(_TOKENS)
 
 
 def apply_nwbforge_application_style(app: QApplication) -> None:
