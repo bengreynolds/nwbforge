@@ -157,7 +157,16 @@ class _NeuroConvEcephysRecordingAdapter(NeuroConvDirectConversionAdapter):
                 "source_format": self.source_format,
                 "device_name": device_metadata[0].get("name", self.default_device_name),
                 "electrode_group_count": len(electrode_groups),
-                "electrical_series_name": config.interface_kwargs.get("es_key", "ElectricalSeries"),
+                # NeuroConv derives es_key itself when the caller does not supply one:
+                # SpikeGLX, for instance, builds f"ElectricalSeries{stream_kind_caps}" from the
+                # stream, giving ElectricalSeriesAP or ElectricalSeriesLF. Reporting the
+                # unsuffixed literal here named a container the written file does not contain,
+                # so prefer the value the constructed interface will actually use.
+                "electrical_series_name": (
+                    getattr(interface, "es_key", None)
+                    or config.interface_kwargs.get("es_key")
+                    or "ElectricalSeries"
+                ),
                 "has_session_start_time": "session_start_time" in metadata.get("NWBFile", {}),
                 **self.additional_payload(source=source, metadata=metadata, config=config),
             },

@@ -640,6 +640,68 @@ def test_spikeglx_adapter_auto_resolves_single_stream_folder(tmp_path: Path, mon
     assert result.fields["ecephys.spikeglx.stream_count"].value == 1
 
 
+def test_spikeglx_adapter_reports_the_series_name_neuroconv_will_use(tmp_path: Path, monkeypatch) -> None:
+    """NeuroConv derives es_key from the stream when the caller supplies none.
+
+    SpikeGLX builds f"ElectricalSeries{stream_kind_caps}", so an imec0.ap stream is
+    written as ElectricalSeriesAP. The extracted field has to name the container the
+    file will really contain, or the inspection report cites something absent from the
+    output.
+    """
+    source_dir = tmp_path / "spikeglx"
+    source_dir.mkdir()
+    (source_dir / "sample_g0_t0.imec0.ap.bin").write_bytes(b"fake-bin")
+    source = SourceReference(
+        source_id="spikeglx-es-key",
+        location=source_dir,
+        source_type=SourceType.DIRECTORY,
+        label="SpikeGLX folder",
+    )
+
+    class FakeInterface:
+        es_key = "ElectricalSeriesAP"
+
+        def get_metadata(self):
+            return {
+                "NWBFile": {"session_start_time": "2026-04-01T09:00:00-06:00"},
+                "Ecephys": {"Device": [{"name": "NeuropixelsImec0"}], "ElectrodeGroup": [{"name": "Shank0"}]},
+            }
+
+    adapter = NeuroConvSpikeGLXAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert result.fields["ecephys.spikeglx.electrical_series_name"].value == "ElectricalSeriesAP"
+
+
+def test_ecephys_adapter_falls_back_when_no_series_name_is_available(tmp_path: Path, monkeypatch) -> None:
+    """An interface exposing no es_key keeps the previous unsuffixed default."""
+    source_dir = tmp_path / "spikeglx-plain"
+    source_dir.mkdir()
+    (source_dir / "sample_g0_t0.imec0.ap.bin").write_bytes(b"fake-bin")
+    source = SourceReference(
+        source_id="spikeglx-no-es-key",
+        location=source_dir,
+        source_type=SourceType.DIRECTORY,
+        label="SpikeGLX folder",
+    )
+
+    class FakeInterface:
+        def get_metadata(self):
+            return {
+                "NWBFile": {"session_start_time": "2026-04-01T09:00:00-06:00"},
+                "Ecephys": {"Device": [{"name": "NeuropixelsImec0"}], "ElectrodeGroup": [{"name": "Shank0"}]},
+            }
+
+    adapter = NeuroConvSpikeGLXAdapter()
+    monkeypatch.setattr(adapter, "build_interface", lambda source, config: FakeInterface())
+
+    result = adapter.inspect(source)
+
+    assert result.fields["ecephys.spikeglx.electrical_series_name"].value == "ElectricalSeries"
+
+
 def test_tdt_adapter_requires_gain_and_extracts_configuration(tmp_path: Path, monkeypatch) -> None:
     source_dir = tmp_path / "tdt"
     source_dir.mkdir()
