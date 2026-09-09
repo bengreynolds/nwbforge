@@ -22,6 +22,27 @@ QWidget {
     font-size: 13px;
 }
 
+/* The rule above paints EVERY widget opaque in the page colour, including
+   labels and the plain QWidgets used as layout rows. Sat inside a group box
+   (#fcfaf6) or a card (#fffdf9) those repaint the page colour behind their own
+   text, which is the mismatched band showing behind every line on the
+   conversion screen.
+
+   Text and the containers that only exist to hold a layout are therefore
+   transparent, and colour is painted by the panels that actually own a
+   surface. Anything that genuinely needs its own fill - badges, pills, step
+   numbers, the checklist markers, the step connector - sets it through an
+   attribute selector, which outranks the bare type selector here and so keeps
+   working. */
+QLabel,
+QCheckBox,
+QRadioButton,
+QFrame[role="checklist"],
+QWidget[role="checkRow"],
+QWidget[role="stepCell"] {
+    background: transparent;
+}
+
 QMainWindow, QDialog {
     background: #ede8df;
 }
@@ -581,6 +602,9 @@ def build_step_bar(
             layout.addWidget(connector, 1)
 
         cell = QWidget(frame)
+        # Marked so the sheet can keep it transparent; an unmarked QWidget
+        # would paint the page colour over the step bar's own surface.
+        cell.setProperty("role", "stepCell")
         cell_layout = QHBoxLayout(cell)
         cell_layout.setContentsMargins(0, 0, 0, 0)
         cell_layout.setSpacing(8)
@@ -644,6 +668,7 @@ def add_checklist_row(
     """
 
     row = QWidget(parent)
+    row.setProperty("role", "checkRow")
     row_layout = QHBoxLayout(row)
     row_layout.setContentsMargins(0, 3, 0, 3)
     row_layout.setSpacing(10)
